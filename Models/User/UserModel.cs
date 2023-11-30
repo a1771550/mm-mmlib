@@ -39,5 +39,9 @@ namespace MMLib.Models.User
         CRMSalesPerson = 7,
         SalesManager = 8,
         ARAdmin = 9,
-    }
+		DeptHead = 10,
+		FinanceDept = 11,
+		MuseumDirector = 12,
+        DirectorBoard = 13,
+	}
 }

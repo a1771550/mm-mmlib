@@ -29,7 +29,12 @@ namespace MMLib.Models.User
         [Required(ErrorMessageResourceName = "UserNameRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
         public string UserName { get; set; }
 
-        [Display(Name = "Password", ResourceType = typeof(Resources.Resource))]
+		[Display(Name = "Email", ResourceType = typeof(Resources.Resource))]
+		[Required(ErrorMessageResourceName = "EmailRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        [EmailAddress(ErrorMessageResourceName = "EmailFormatErrMsg", ErrorMessageResourceType = typeof(Resources.Resource))]
+		public string Email { get; set; }
+
+		[Display(Name = "Password", ResourceType = typeof(Resources.Resource))]
         [Required(ErrorMessageResourceName = "PasswordRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
         [StringLength(10, ErrorMessageResourceName = "PasswordStrengthError", ErrorMessageResourceType = typeof(Resources.Resource), MinimumLength = 6)]
         [DataType(DataType.Password)]
@@ -60,8 +65,7 @@ namespace MMLib.Models.User
 
 
         public string MaxSalesCode { get; set; }
-        public string Email { get; set; }
-
+      
         public List<UserModel> PosAdminList { get; set; }
         //public List<UserModel> AddableEmployeeList { getPG; set; }
         //public string JsonAddableEmployeeList { getPG { return Newtonsoft.Json.JsonConvert.SerializeObject(AddableEmployeeList); } }
@@ -76,10 +80,10 @@ namespace MMLib.Models.User
             AccessRights = new List<AccessRight>();
             if (foradd)
             {
-                MaxSalesCode = context.GetMaxUserCode("sales").FirstOrDefault();
+                MaxSalesCode = context.GetMaxUserCode("staff").FirstOrDefault();
                 if (string.IsNullOrEmpty(MaxSalesCode))
                 {
-                    MaxSalesCode = "sales00";
+                    MaxSalesCode = "staff00";
                 }
 
                 var resultString = Regex.Match(MaxSalesCode, @"\d+").Value;
@@ -87,8 +91,9 @@ namespace MMLib.Models.User
 
                 resultString = icode < 10 ? icode.ToString().PadLeft(2, '0') : icode.ToString(); //RIGHT HERE!!!
 
-                MaxSalesCode = String.Concat("sales", resultString);
-                var _accessrights = context.GetDefaultSalesmanAccessRights1("lcm").ToList();
+                MaxSalesCode = string.Concat("staff", resultString);
+				//GetDefaultAccessRights
+				var _accessrights = context.GetDefaultAccessRights("staff01").ToList();
 
                 foreach (var a in _accessrights)
                 {
@@ -102,45 +107,23 @@ namespace MMLib.Models.User
         }
     
 
-        public static List<UserModel> GetUserList(ComInfo comInfo, MMDbContext context = null, string scope = "pos")
+        public static List<UserModel> GetUserList(MMDbContext context = null)
         {
             if (context == null)
             {
                 using (context = new MMDbContext())
                 {
-                    return getUserList(context, comInfo, scope);
+                    return getUserList(context);
                 }
             }
-            return getUserList(context, comInfo, scope);
+            return getUserList(context);
         }
+      
 
-        public static List<UserModel> GetUserList(MMDbContext context = null, string shop = "", int apId = 0, string scope = "pos")
-        {
-            if (context == null)
-            {
-                using (context = new MMDbContext())
-                {
-                    Session session = ModelHelper.GetCurrentSession(context);
-
-                    if (string.IsNullOrEmpty(shop))
-                    {
-                        shop = session.sesShop;
-                    }
-
-                    apId = session.AccountProfileId;
-                    return getUserList(context, shop, apId, scope);
-                }
-            }
-
-            return getUserList(context, shop, apId, scope);
-
-        }
-
-        private static List<UserModel> getUserList(MMDbContext context, string shop, int apId, string scope)
+        private static List<UserModel> getUserList(MMDbContext context)
         {
             List<UserModel> users = new List<UserModel>();
-            shop = shop.ToLower();
-            var _users = context.GetUserList3(apId, true, shop, true, scope).ToList();
+            var _users = context.GetUserList4(comInfo.AccountProfileId, true).ToList();
             if (_users != null && _users.Count > 0)
             {
                 foreach (var u in _users)
@@ -169,41 +152,6 @@ namespace MMLib.Models.User
 
             return users;
         }
-
-
-        private static List<UserModel> getUserList(MMDbContext context, ComInfo comInfo, string scope)
-        {
-            List<UserModel> users = new List<UserModel>();
-            var _users = context.GetUserList3(comInfo.AccountProfileId, false, comInfo.Shop.ToLower(), true, scope).ToList();
-            if (_users != null && _users.Count > 0)
-            {
-                foreach (var u in _users)
-                {
-                    users.Add(new UserModel
-                    {
-                        surUID = u.surUID,
-                        UserCode = u.UserCode,
-                        UserName = u.UserName,
-                        Email = u.Email,
-                        surIsActive = u.surIsActive,
-                        ManagerId = u.ManagerId,
-                        dvcCode = u.dvcCode,
-                        shopCode = u.shopCode
-                    });
-                }
-            }
-
-            foreach (var user in users)
-            {
-                if (user.ManagerId > 0)
-                {
-                    user.ManagerName = ModelHelper.GetManagerName(users, user.ManagerId);
-                }
-            }
-
-            return users;
-        }
-
 
         public static List<UserModel> GetStaffList(List<UserModel> userlist)
         {
@@ -240,7 +188,7 @@ namespace MMLib.Models.User
                     staff.ManagerId = u.ManagerId;
                     staff.dvcCode = u.dvcCode;
                     staff.shopCode = u.shopCode;
-                    staff.ManagerName = ModelHelper.GetManagerName(GetUserList(comInfo, context, "crm"), u.ManagerId);
+                    staff.ManagerName = ModelHelper.GetManagerName(GetUserList(context), u.ManagerId);
                     staff.AccountProfileId = u.AccountProfileId;
                 }
                 return staff;
@@ -252,7 +200,7 @@ namespace MMLib.Models.User
             using (var context = new MMDbContext())
             {
                 var apId = ModelHelper.GetAccountProfileId(context);
-                var salesman = new SysUser
+                var staffman = new SysUser
                 {
                     UserCode = model.UserCode,
                     UserName = model.UserName,
@@ -263,7 +211,7 @@ namespace MMLib.Models.User
                     surModifyTime = DateTime.Now,
                     AccountProfileId = apId,
                 };
-                context.SysUsers.Add(salesman);
+                context.SysUsers.Add(staffman);
                 context.SaveChanges();
             }
         }

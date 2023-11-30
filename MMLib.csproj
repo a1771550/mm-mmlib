@@ -313,6 +313,8 @@
     <Compile Include="Models\Promotion\PromotionModel.cs" />
     <Compile Include="Models\Purchase\BatchModel.cs" />
     <Compile Include="Models\Purchase\PayBillLnView.cs" />
+    <Compile Include="Models\Purchase\PoQtyAmtModel.cs" />
+    <Compile Include="Models\Purchase\PoSettingsEditModel.cs" />
     <Compile Include="Models\Purchase\PurchaseEditModel.cs" />
     <Compile Include="Models\Purchase\PurchaseItemModel.cs" />
     <Compile Include="Models\Purchase\PurchaseModel.cs" />
