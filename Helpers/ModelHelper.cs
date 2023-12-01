@@ -1835,7 +1835,7 @@ namespace MMLib.Helpers
 						foreach (var item in psilist)
 						{
 							model.ItemCodes.Add(item.itmCode);
-							var itemnamedesc = (bool)item.itmUseDesc && !string.IsNullOrEmpty(item.itmDesc) ? item.itmDesc : item.itmName;
+						
 							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
 							item.JobNumber = job != null ? job.JobNumber : "";
 
@@ -1856,8 +1856,7 @@ namespace MMLib.Helpers
 								pstCode = ps.pstCode,
 								itmCode = item.itmCode,
 								itmName = item.itmName,
-								itmDesc = item.itmDesc,
-								itmNameDesc = itemnamedesc,
+								itmDesc = item.itmDesc,								
 								itmUseDesc = item.itmUseDesc,
 								piBaseUnit = item.piBaseUnit,
 								piQty = item.piQty,
@@ -2010,8 +2009,7 @@ namespace MMLib.Helpers
 
 						foreach (var item in psilist)
 						{
-							model.ItemCodes.Add(item.itmCode);
-							var itemnamedesc = (bool)item.itmUseDesc && !string.IsNullOrEmpty(item.itmDesc) ? item.itmDesc : item.itmName;
+							model.ItemCodes.Add(item.itmCode);						
 							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
 							item.JobNumber = job != null ? job.JobNumber : "";
 
@@ -2032,8 +2030,7 @@ namespace MMLib.Helpers
 								pstCode = ps.pstCode,
 								itmCode = item.itmCode,
 								itmName = item.itmName,
-								itmDesc = item.itmDesc,
-								itmNameDesc = itemnamedesc,
+								itmDesc = item.itmDesc,							
 								itmUseDesc = item.itmUseDesc,
 								piBaseUnit = item.piBaseUnit,
 								piQty = item.piQty,
@@ -2056,12 +2053,7 @@ namespace MMLib.Helpers
 								pstPromisedDate = ps.pstPromisedDate,
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,
-								//qtyToReturn = 0,
-								//returnableQty = -1,
-								//returnedQty = 0,
-								//snbatseqvtlist = new List<SnBatSeqVt>(),
-								//batchList = new List<BatchModel>(),
+								Myob_DiscountDays = item.Myob_DiscountDays,								
 								IsPartial = ps.pstIsPartial,
 								supCode = ps.supCode,
 								pstCurrency = ps.pstCurrency,
@@ -3693,7 +3685,6 @@ namespace MMLib.Helpers
 				message.IsBodyHtml = true;
 
 				string approvaltxt = ireviewmode == 0 ? "approval" : "approval after the revision from the sales person";
-				// var key = string.Concat(admin.UserName, ":", admin.Email, ":", salescode);
 
 				foreach (var item in DicInvoice)
 				{

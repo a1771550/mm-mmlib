@@ -29,7 +29,7 @@ namespace MMLib.Helpers
 		
 		public static bool CheckIfApprover(List<RoleType> Roles)
 		{
-			return Roles.Any(x => x == RoleType.DeptHead || x==RoleType.FinanceDept || x == RoleType.MuseumDirector);
+			return Roles.Any(x => x != RoleType.Staff);
 		}
 		public static bool CheckIfARAdmin(SessUser user)
 		{

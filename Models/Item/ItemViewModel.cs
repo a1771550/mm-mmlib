@@ -33,9 +33,10 @@ namespace MMLib.Models.Item
         public Dictionary<string, List<BatSnVt>> DicItemBatSnVt;
         public Dictionary<int, List<SeqSnVtList>> DicSeqSnVtList { get; set; }
         public string PrimaryLocation { get; set; }
-      
+		public bool EnableItemVari { get; set; }
+		public bool EnableItemOptions { get; set; }
 
-        public Dictionary<string, List<DistinctItem>> DicLocItemList;
+		public Dictionary<string, List<DistinctItem>> DicLocItemList;
 
         //for nonitemoptions items
         public Dictionary<string, Dictionary<string, int>> DicLocItemQty;

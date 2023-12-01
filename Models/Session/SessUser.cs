@@ -18,8 +18,9 @@ namespace MMLib.Models
         public DeviceModel Device { get; set; }
 		public List<RoleType> Roles { get; set; }
         public int? SalesGroupId { get; set; }
+		public string PurchasePrefix { get; set; }
 
-        public SessUser()
+		public SessUser()
 		{
 			StaffList = new List<UserModel>();
 		}

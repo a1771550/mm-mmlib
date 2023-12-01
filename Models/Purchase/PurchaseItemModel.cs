@@ -33,7 +33,7 @@ namespace MMLib.Models.Purchase
         public string itmName { get; set; }
         public bool? itmUseDesc { get; set; }
         public string itmDesc { get; set; }
-        public string itmNameDesc { get; set; }
+        public string itmNameDesc { get { return (bool)itmUseDesc && !string.IsNullOrEmpty(itmDesc) ? itmDesc : itmName; } }
 
         public ItemModel Item { get; set; }
         public List<SerialNoView> SerialNoList { get; set; }

@@ -63,10 +63,9 @@ namespace MMLib.Models.User
 
         public List<UserModel> StaffList { get; set; }
 
-
-        public string MaxSalesCode { get; set; }
+		public string MaxSalesCode { get; set; }
       
-        public List<UserModel> PosAdminList { get; set; }
+        public List<UserModel> SuperiorList { get; set; }
         //public List<UserModel> AddableEmployeeList { getPG; set; }
         //public string JsonAddableEmployeeList { getPG { return Newtonsoft.Json.JsonConvert.SerializeObject(AddableEmployeeList); } }
         public UserEditModel()
@@ -123,7 +122,7 @@ namespace MMLib.Models.User
         private static List<UserModel> getUserList(MMDbContext context)
         {
             List<UserModel> users = new List<UserModel>();
-            var _users = context.GetUserList4(comInfo.AccountProfileId, true).ToList();
+            var _users = context.GetUserList6(comInfo.AccountProfileId, true).ToList();
             if (_users != null && _users.Count > 0)
             {
                 foreach (var u in _users)
@@ -137,7 +136,8 @@ namespace MMLib.Models.User
                         surIsActive = u.surIsActive,
                         ManagerId = u.ManagerId,
                         dvcCode = u.dvcCode,
-                        shopCode = u.shopCode
+                        shopCode = u.shopCode,
+                        UserRole = u.Roles,
                     });
                 }
             }
@@ -168,8 +168,9 @@ namespace MMLib.Models.User
 
         public List<string> StaffCodeList { get; set; }
         public int ManagerId { get; set; }
+		public string SuperiorIds { get; set; }
 
-        public static UserModel Get(int staffId)
+		public static UserModel Get(int staffId)
         {
             UserModel staff = new UserModel();
             using (var context = new MMDbContext())
@@ -251,28 +252,25 @@ namespace MMLib.Models.User
             }
         }
 
-        public static List<UserModel> GetPosAdminList(MMDbContext context)
+        public void GetSuperiorList(MMDbContext context)
         {
-            var apId = ModelHelper.GetAccountProfileId(context);
-            var _posadminlist = context.GetPosAdminList2(apId).ToList();
-            var PosAdminList = new List<UserModel>();
-            foreach (var a in _posadminlist)
+            var userlist = context.GetUserList6(apId, true);
+            var _superiorlist = userlist.Where(x=>!x.Roles.Contains(RoleType.Staff.ToString()));
+            SuperiorList = new List<UserModel>();
+            foreach (var a in _superiorlist)
             {
-                PosAdminList.Add(
+                SuperiorList.Add(
                     new UserModel
                     {
                         surUID = a.surUID,
                         UserCode = a.UserCode,
                         UserName = a.UserName,
-                        DisplayName = a.DisplayName,
+                        //DisplayName = a.DisplayName,
                         Email = a.Email,
-                        shopCode = a.shopCode,
+                        //shopCode = a.shopCode,
                     }
                     );
             }
-            return PosAdminList;
         }
-
-		
 	}
 }

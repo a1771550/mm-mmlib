@@ -43,5 +43,6 @@ namespace MMLib.Models.User
 		FinanceDept = 11,
 		MuseumDirector = 12,
         DirectorBoard = 13,
+		Staff = 14,
 	}
 }

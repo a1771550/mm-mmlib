@@ -33,11 +33,22 @@ namespace MMLib.Models
    
         public string SelectedEmail { get; set; }
         public string CompanyCode { get; set; }
+        public Dictionary<int, string> DicUserEmail { get; set; }
 
         public LoginUserModel()
         {           
             AccountProfiles = new List<AccountProfileView>();
-            UserNameIdList = new List<SelectListItem>();  
+            UserNameIdList = new List<SelectListItem>();
+            DicUserEmail = new Dictionary<int, string>();
+            using var context = new MMDbContext();
+            var users = context.SysUsers.Where(x=>x.AccountProfileId==AccountProfileId).ToList();
+            foreach(var user in users)
+            {
+                if (!DicUserEmail.ContainsKey(user.surUID))
+                {
+                    DicUserEmail[user.surUID] = user.Email;
+                }
+            }
         }
 
     }
