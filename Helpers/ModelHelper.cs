@@ -1621,13 +1621,20 @@ namespace MMLib.Helpers
 		{
 			return GetCurrentSession(context).AccountProfileId;
 		}
-
-		public static string GetNewPurchaseCode(DeviceModel model, MMDbContext context, bool plusone = true)
+		public static string GetNewPurchaseOrderCode(DeviceModel model, MMDbContext context, bool plusone = true)
 		{
 			var device = context.Devices.Find(model.dvcUID);
-			var purchaseprefix = device.dvcPurchasePrefix;
-			var nextpurchaseno = plusone ? device.dvcNextPurchaseNo + 1 : device.dvcNextPurchaseNo;
-			string purchaseno = device.dvcNextPurchaseNo > device.dvcPurchaseInitNo ? $"{nextpurchaseno:000000}" : device.dvcPurchaseInitNo.ToString();
+			var purchaseprefix = device.dvcPurchaseOrderPrefix;
+			var nextpurchaseno = plusone ? device.dvcNextPurchaseOrderNo + 1 : device.dvcNextPurchaseOrderNo;
+			string purchaseno = device.dvcNextPurchaseOrderNo > device.dvcPurchaseInitNo ? $"{nextpurchaseno:000000}" : device.dvcPurchaseInitNo.ToString();
+			return string.Concat(purchaseprefix, purchaseno);
+		}
+		public static string GetNewPurchaseRequestCode(DeviceModel model, MMDbContext context, bool plusone = true)
+		{
+			var device = context.Devices.Find(model.dvcUID);
+			var purchaseprefix = device.dvcPurchaseRequestPrefix;
+			var nextpurchaseno = plusone ? device.dvcNextPurchaseRequestNo + 1 : device.dvcNextPurchaseRequestNo;
+			string purchaseno = device.dvcNextPurchaseRequestNo > device.dvcPurchaseInitNo ? $"{nextpurchaseno:000000}" : device.dvcPurchaseInitNo.ToString();
 			return string.Concat(purchaseprefix, purchaseno);
 		}
 		public static string GetNewWholeSalesCode(DeviceModel model, MMDbContext context, bool plusone = true)
@@ -1875,16 +1882,11 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate,
+								pstPurchaseDate = ps.pstPurchaseDate??DateTime.Now,
+								pstPromisedDate = ps.pstPromisedDate??DateTime.Now.AddDays(1),
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,
-								//qtyToReturn = 0,
-								//returnableQty = -1,
-								//returnedQty = 0,
-								//snbatseqvtlist = new List<SnBatSeqVt>(),
-								//batchList = new List<BatchModel>(),
+								Myob_DiscountDays = item.Myob_DiscountDays,							
 								IsPartial = ps.pstIsPartial,
 								supCode = ps.supCode,
 								pstCurrency = ps.pstCurrency,
@@ -2049,8 +2051,8 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate,
+								pstPurchaseDate = ps.pstPurchaseDate??DateTime.Now,
+								pstPromisedDate = ps.pstPromisedDate??DateTime.Now.AddDays(1),
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
 								Myob_DiscountDays = item.Myob_DiscountDays,								
@@ -2225,7 +2227,8 @@ namespace MMLib.Helpers
 
 			device.dvcInvoicePrefix = dev.dvcInvoicePrefix;
 			device.dvcRefundPrefix = dev.dvcRefundPrefix;
-			device.dvcPurchasePrefix = dev.dvcPurchasePrefix;
+			device.dvcPurchaseRequestPrefix = dev.dvcPurchaseRequestPrefix;
+			device.dvcPurchaseOrderPrefix = dev.dvcPurchaseOrderPrefix;
 			device.dvcWholesalesPrefix = dev.dvcWholesalesPrefix;
 			device.dvcDepositPrefix = dev.dvcDepositPrefix;
 			device.dvcPreorderPrefix = dev.dvcPreorderPrefix;
@@ -2241,7 +2244,8 @@ namespace MMLib.Helpers
 			device.dvcNextRtlSalesNo = dev.dvcNextRtlSalesNo;
 			device.dvcNextRefundNo = dev.dvcNextRefundNo;
 			device.dvcNextDepositNo = dev.dvcNextDepositNo;
-			device.dvcNextPurchaseNo = dev.dvcNextPurchaseNo;
+			device.dvcNextPurchaseRequestNo = dev.dvcNextPurchaseRequestNo;
+			device.dvcNextPurchaseOrderNo = dev.dvcNextPurchaseOrderNo;
 			device.dvcNextPsReturnNo = dev.dvcNextPsReturnNo;
 			device.dvcNextDepositNo = dev.dvcNextDepositNo;
 			device.dvcNextPreorderNo = dev.dvcNextPreorderNo;
@@ -2921,7 +2925,8 @@ namespace MMLib.Helpers
 						AccountNo = (int)d.AccountNo,
 						dvcRtlSalesCode = d.dvcRtlSalesCode,
 						dvcRtlRefundCode = d.dvcRtlRefundCode,
-						dvcPurchasePrefix = d.dvcPurchasePrefix,
+						dvcPurchaseRequestPrefix = d.dvcPurchaseRequestPrefix,
+						dvcPurchaseOrderPrefix = d.dvcPurchaseOrderPrefix,
 						dvcPsReturnCode = d.dvcPsReturnCode,
 						dvcRtlSalesInitNo = d.dvcRtlSalesInitNo,
 						dvcRtlRefundInitNo = d.dvcRtlRefundInitNo,
@@ -3624,10 +3629,10 @@ namespace MMLib.Helpers
 				context.SaveChanges();
 			}
 		}
-		public static string GetNewPurchaseCode(SessUser user, MMDbContext context)
+		public static string GetNewPurchaseRequestCode(SessUser user, MMDbContext context)
 		{
-			Device device = (ApprovalMode) ? context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID) : HttpContext.Current.Session["Device"] as Device;
-			return device != null ? string.Concat(device.dvcPurchasePrefix, device.dvcNextPurchaseNo) : string.Empty;
+			Device device = context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID);
+			return device != null ? string.Concat(device.dvcPurchaseRequestPrefix, device.dvcNextPurchaseRequestNo) : string.Empty;
 		}
 		public static string GetNewWholeSalesCode(SessUser user, MMDbContext context)
 		{
@@ -3638,7 +3643,7 @@ namespace MMLib.Helpers
 		{
 			Device device = ApprovalMode ? context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID) : HttpContext.Current.Session["Device"] as Device;
 			//int nextsalesno = string.IsNullOrEmpty(type) ? device.dvcNextRtlSalesNo : device.dvcNextPreorderNo;
-			int nextsalesno = device.dvcNextRtlSalesNo;
+			int nextsalesno = device.dvcNextRtlSalesNo??100001;
 			//if (device.dvcUsedInvoiceNo.Split(',').Contains(nextsalesno.ToString())) nextsalesno++;
 			nextsalesno++;
 			return string.IsNullOrEmpty(type) ? string.Concat(device.dvcInvoicePrefix, nextsalesno) : string.Concat(device.dvcPreorderPrefix, nextsalesno);
@@ -3736,11 +3741,11 @@ namespace MMLib.Helpers
 
 
 
-		public static void SetNewPurchaseCode(MMDbContext context, bool save)
+		public static void SetNewPurchaseRequestCode(MMDbContext context, bool save)
 		{
 			var Device = HttpContext.Current.Session["Device"] as DeviceModel;
 			Device device = context.Devices.Find(Device.dvcUID);
-			device.dvcNextPurchaseNo++;
+			device.dvcNextPurchaseRequestNo++;
 			if (save)
 				context.SaveChanges();
 		}

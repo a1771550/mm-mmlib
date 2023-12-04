@@ -19,7 +19,7 @@ using ItemModel = MMLib.Models.Item.ItemModel;
 using MMLib.Models.MYOB;
 using MMLib.Models.User;
 using System.Collections;
-
+using System.Runtime.CompilerServices;
 
 namespace MMLib.Models.Purchase
 {
@@ -72,8 +72,8 @@ namespace MMLib.Models.Purchase
 				};
 				if (device != null)
 				{
-					var purchaseinitcode = device.dvcPurchasePrefix ?? "IP";
-					var purchaseno = $"{device.dvcNextPurchaseNo:000000}";
+					var purchaseinitcode = device.dvcPurchaseRequestPrefix;
+					var purchaseno = $"{device.dvcNextPurchaseRequestNo:000000}";
 					Purchase.pstCode = string.Concat(purchaseinitcode, purchaseno);
 					Purchase.pstStatus = type;
 				}
@@ -326,7 +326,10 @@ namespace MMLib.Models.Purchase
 			string status = "";
 			string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
 			string purchasestatus = string.Empty;
-			SessUser user = HttpContext.Current.Session["User"] as SessUser;
+			bool isstaff = user.Roles.Contains(RoleType.Staff);
+			bool isdepthead = user.Roles.Contains(RoleType.DeptHead);
+			bool isfinancedept = user.Roles.Contains(RoleType.FinanceDept);
+			bool ismuseumdirector = user.Roles.Contains(RoleType.MuseumDirector);
 			bool isdirectorboard = user.Roles.Contains(RoleType.DirectorBoard);
 
 			DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
@@ -345,16 +348,16 @@ namespace MMLib.Models.Purchase
 			}
 			else
 			{
-				purchasestatus = isdirectorboard ? model.pstStatus : (model.Id == 0 || model.pstStatus.ToLower() == "created") ? "REQUESTING" : model.pstStatus;
+				if (isstaff) purchasestatus = PurchaseStatus.requestingByStaff.ToString();
+				if (isdepthead) purchasestatus = PurchaseStatus.requestingByDeptHead.ToString();
+				if(isfinancedept)purchasestatus = PurchaseStatus.requestingByFinanceDept.ToString();
+				if (ismuseumdirector) purchasestatus = PurchaseStatus.passed.ToString();
 			}
 
 			List<string> reviewurls = new();
 			List<GetSuperior4Notification2_Result> superiors = new();
 			Dictionary<string, string> DicInvoice = new Dictionary<string, string>();
 			Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
-
-			
-			bool isStaff = user.Roles.Contains(RoleType.Staff);
 
 			if (isdirectorboard)
 			{
@@ -393,7 +396,7 @@ namespace MMLib.Models.Purchase
 
 					if (recurOrder == null || recurOrder.IsRecurring == 0)
 					{						
-						if (isStaff)
+						if (!isdirectorboard && !ismuseumdirector)
 						{
 							#region Send Notification Email   
 							if ((bool)comInfo.enableEmailNotification)
@@ -408,7 +411,7 @@ namespace MMLib.Models.Purchase
 							#endregion
 						}
 
-						msg = isStaff ? string.Format(Resources.Resource.NotificationEmailWillBeSentToFormat, string.Join(",", superiornames)) : Resources.Resource.OrderSavedSuccessfully;
+						msg = (!isdirectorboard && !ismuseumdirector) ? string.Format(Resources.Resource.NotificationEmailWillBeSentToFormat, string.Join(",", superiornames)) : Resources.Resource.OrderSavedSuccessfully;
 					}
 					else
 					{
@@ -480,6 +483,23 @@ namespace MMLib.Models.Purchase
 					ps.pstStatus = ispartial ? PurchaseStatus.partialreceival.ToString() : PurchaseStatus.opened.ToString();
 					ps.pstIsPartial = ispartial;
 					ps.ModifyTime = dateTime;
+					context.SaveChanges();
+					#endregion
+
+					#region Add New Purchase Order				
+					var device = context.Devices.AsNoTracking().FirstOrDefault(x => x.dvcUID == dev.dvcUID);
+					var purchaseinitcode = device.dvcPurchaseOrderPrefix;
+					var purchaseno = $"{device.dvcNextPurchaseOrderNo:000000}";
+					string code = string.Concat(purchaseinitcode, purchaseno);
+					MMDAL.Purchase purchase = new MMDAL.Purchase
+					{
+						pstCode = code,
+						pstRefCode = ps.pstCode,
+						AccountProfileId = apId,
+						CreateTime = dateTime,						
+					};
+					context.Purchases.Add(purchase);
+					device.dvcNextPurchaseOrderNo++;
 					context.SaveChanges();
 					#endregion
 				}
@@ -564,7 +584,7 @@ namespace MMLib.Models.Purchase
 			ps = context.Purchases.Add(ps);
 			context.SaveChanges();
 			Device device = context.Devices.Find(dev.dvcUID);
-			device.dvcNextPurchaseNo++;
+			device.dvcNextPurchaseRequestNo++;
 			device.dvcModifyTime = dateTime;
 			context.SaveChanges();
 			AddPurchaseItems(model, PurchaseItems, context, ps, ref dicItemLocQty);
@@ -581,6 +601,7 @@ namespace MMLib.Models.Purchase
 				review = new PurchaseOrderReview
 				{
 					PurchaseOrder = purchasecode,
+					AccountProfileId = apId,
 					CreateTime = dateTime,
 					ModifyTime = dateTime
 				};
@@ -856,8 +877,8 @@ namespace MMLib.Models.Purchase
 		{
 			if (pendinglist.Count > 0)
 			{
-				DateTime purchasedate = ps.pstPurchaseDate;
-				DateTime promiseddate = ps.pstPromisedDate;
+				DateTime purchasedate = ps.pstPurchaseDate??DateTime.Now;
+				DateTime promiseddate = ps.pstPromisedDate??DateTime.Now.AddDays(1);
 				var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 				var _ps = new MMDAL.Purchase
 				{
@@ -1524,25 +1545,11 @@ namespace MMLib.Models.Purchase
 
 			return sqllist;
 		}
+
+		
 	}
 
-	public enum PurchaseStatus
-	{
-		all = -1,
-		order = 0,
-		quote = 1,
-		receiveitems = 2,
-		opened = 3,
-		closed = 4,
-		returned = 5,
-		REQUESTING = 8,
-		PASSED = 9,
-		APPROVED = 10,
-		rejected = 14,
-		created = 11,
-		VOIDED = 12,
-		partialreceival = 13,
-	}
+	
 
 	public class PurchaseReturnMsg
 	{

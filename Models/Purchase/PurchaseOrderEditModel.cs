@@ -48,7 +48,7 @@ namespace MMLib.Models.Purchase
 
 
             SessUser user = HttpContext.Current.Session["User"] as SessUser;
-            if (user.Roles.Any(x => x == RoleType.Admin || x == RoleType.SalesManager))
+            if (user.Roles.Any(x => x != RoleType.Staff))
             {
                 using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
                 connection.Open();

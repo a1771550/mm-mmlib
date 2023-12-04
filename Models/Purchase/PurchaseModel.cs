@@ -11,6 +11,7 @@ using MMDAL;
 using MMLib.Models.Purchase.Supplier;
 using MMLib.Models.MYOB;
 using MMLib.Models.Item;
+using CommonLib.App_GlobalResources;
 
 namespace MMLib.Models.Purchase
 {
@@ -25,12 +26,12 @@ namespace MMLib.Models.Purchase
         public string JsPurchaseDate { get; set; }
         public string JsPromisedDate { get; set; }
         public string SupplierName { get; set; }
-        public string ReturnDateDisplay { get { return pstReturnDate==null?"N/A": CommonHelper.FormatDate((DateTime)pstReturnDate, true); } }
-        public string PromisedDateDisplay { get { return CommonHelper.FormatDate(pstPromisedDate, true); } }
-        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate, true); } }
+      
+        public string PromisedDateDisplay { get { return CommonHelper.FormatDate(pstPromisedDate??DateTime.Now, true); } }
+        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate??DateTime.Now.AddDays(1), true); } }
         public string PurchaseTimeDisplay { get { return pstPurchaseTime==null?"N/A": CommonHelper.FormatDate((DateTime)pstPurchaseTime, true); } }
         public string CreateTimeDisplay { get { return CommonHelper.FormatDate(CreateTime, true); } }
-        public string ModifyTimeDisplay { get { return CommonHelper.FormatDate(ModifyTime, true); } }
+        public string ModifyTimeDisplay { get { return ModifyTime==null?"N/A": CommonHelper.FormatDate((DateTime)ModifyTime, true); } }
         public string TrimmedRemark { get { return string.IsNullOrEmpty(pstRemark) ? "N/A" : CommonHelper.GetTrimmedCharacters(pstRemark, int.Parse(ConfigurationManager.AppSettings["MaxCharacterNumInList"])); } }
         public List<SelectListItem> SupplierList { get; set; }
         public List<SelectListItem> LocationList { get; set; }
@@ -80,6 +81,27 @@ namespace MMLib.Models.Purchase
         public string JsonDicItemGroupedVariations { get { return DicItemGroupedVariations == null ? "" : JsonSerializer.Serialize(DicItemGroupedVariations); } }
         public List<string> ImgList;
         public List<string> FileList;
+
+        public string StatusDisplay
+        {
+            get
+            {
+                string statustxt = "";
+                if(pstStatus!=null) {
+                    switch(pstStatus)
+                    {
+                        case "requestingByStaff":
+                            statustxt = string.Format(Resource.RequestingByFormat, Resource.Staff); break;
+						case "requestingByDeptHead":
+							statustxt = string.Format(Resource.RequestingByFormat, Resource.DeptHead); break;
+						case "requestingByFinanceDept":
+							statustxt = string.Format(Resource.RequestingByFormat, Resource.FinanceDept); break;
+					}
+                }
+
+                return statustxt;
+            }
+        }
         public PurchaseModel()
         {
             DicCurrencyExRate = new Dictionary<string, double>();
