@@ -31,6 +31,7 @@ using MMLib.Models.MYOB;
 using System.IO;
 using MMLib.Models.Journal;
 using MMLib.Models.User;
+using System.Web.Mvc;
 
 namespace MMLib.Helpers
 {
@@ -195,18 +196,18 @@ namespace MMLib.Helpers
 		{
 			if (!string.IsNullOrEmpty(uploadfilename))
 			{
-				var fileList = uploadfilename.Split(',');
+				var fileList = uploadfilename.Split(',');				
 				foreach (var file in fileList)
 				{
 					var _file = Path.Combine(apId.ToString(), filecode, file);
 					if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(file).ToUpperInvariant()))
 					{
-						_file = $"<a href='{_file}' target='_blank'><img src='{_file}'/></a>";
+						_file = $"<a href='{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/{_file}'/></a>";
 						ImgList.Add(_file);
 					}
 					else
 					{
-						_file = $"<a class='btn btn-success' href='{_file}' target='_blank'>{file}</a>";
+						_file = $"<a class='' href='{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{Path.GetFileName(file)}</a>";
 						FileList.Add(_file);
 					}
 				}

@@ -18,13 +18,12 @@ using System.Text;
 using ItemModel = MMLib.Models.Item.ItemModel;
 using MMLib.Models.MYOB;
 using MMLib.Models.User;
-using System.Collections;
-using System.Runtime.CompilerServices;
 
 namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		static string PurchaseType = "PS";
 		public PurchaseStatus ListMode { get; set; }
 		public PurchaseModel Purchase { get; set; }
 
@@ -35,18 +34,20 @@ namespace MMLib.Models.Purchase
 		{
 			Get(0, receiptno, ireadonly);
 		}
-		public PurchaseEditModel(long Id, string type, bool forprint = false)
+		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, bool forprint = false)
 		{
-			Get(Id, null, 0, type, forprint);
+			Get(Id, null, ireadonly, status, forprint);
 		}
 
-		public void Get(long Id = 0, string receiptno = null, int? ireadonly = 0, string type = "", bool forprint = false)
+		public void Get(long Id = 0, string receiptno = null, int? ireadonly = 0, string status = "", bool forprint = false)
 		{
 			MMDbContext context;
 			Device device = null;
 			bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
 			get0(isapprover, out context, ref device);
 			SqlConnection connection = get1(Id, receiptno);
+			int apId = ComInfo.AccountProfileId;
+			DateTime dateTime = DateTime.Now;
 
 			if (Id > 0 || !string.IsNullOrEmpty(receiptno))
 			{
@@ -68,15 +69,39 @@ namespace MMLib.Models.Purchase
 			{
 				Purchase = new PurchaseModel
 				{
-					AccountProfileId = ComInfo.AccountProfileId
+					AccountProfileId = apId
 				};
 				if (device != null)
 				{
 					var purchaseinitcode = device.dvcPurchaseRequestPrefix;
 					var purchaseno = $"{device.dvcNextPurchaseRequestNo:000000}";
 					Purchase.pstCode = string.Concat(purchaseinitcode, purchaseno);
-					Purchase.pstStatus = type;
+					Purchase.pstStatus = status;
+					device.dvcNextPurchaseRequestNo++;
+					device.dvcModifyTime = dateTime;
+					context.SaveChanges();
 				}
+
+				if (ireadonly == 0)
+				{
+					MMDAL.Purchase ps = new()
+					{
+						pstCode = Purchase.pstCode,
+						pstType = PurchaseType,
+						pstPurchaseDate = dateTime.Date,
+						pstPurchaseTime = dateTime,
+						pstPromisedDate = dateTime.AddDays(1),
+						pstStatus = PurchaseStatus.requestingByStaff.ToString(),
+						AccountProfileId = apId,
+						CreateTime = dateTime,
+						CreateBy = user.UserName,
+						pstCheckout = false,
+						pstIsPartial = false,
+					};
+					ps = context.Purchases.Add(ps);
+					context.SaveChanges();
+					Purchase.Id = ps.Id;
+				}				
 			}
 			get2(context, device);
 			Purchase.JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
@@ -350,7 +375,7 @@ namespace MMLib.Models.Purchase
 			{
 				if (isstaff) purchasestatus = PurchaseStatus.requestingByStaff.ToString();
 				if (isdepthead) purchasestatus = PurchaseStatus.requestingByDeptHead.ToString();
-				if(isfinancedept)purchasestatus = PurchaseStatus.requestingByFinanceDept.ToString();
+				if (isfinancedept) purchasestatus = PurchaseStatus.requestingByFinanceDept.ToString();
 				if (ismuseumdirector) purchasestatus = PurchaseStatus.passed.ToString();
 			}
 
@@ -382,7 +407,7 @@ namespace MMLib.Models.Purchase
 
 				if (model.Id == 0)
 				{
-					model.Id = addPurchaseOrder(model, PurchaseItems, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					model.Id = addPurchaseOrder(model, PurchaseItems, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 				}
 				else
 				{
@@ -392,10 +417,10 @@ namespace MMLib.Models.Purchase
 				status = "purchaseordersaved";
 				if (model.pstStatus.ToLower() != "opened" && model.ireviewmode == 0)
 				{
-					HandlingPurchaseOrderReview(model.pstCode, context);					
+					HandlingPurchaseOrderReview(model.pstCode, context);
 
 					if (recurOrder == null || recurOrder.IsRecurring == 0)
-					{						
+					{
 						if (!isdirectorboard && !ismuseumdirector)
 						{
 							#region Send Notification Email   
@@ -445,11 +470,11 @@ namespace MMLib.Models.Purchase
 		{
 			if (model.Id == 0)
 			{
-				model.Id = addPurchaseOrder(model, PurchaseItems, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+				model.Id = addPurchaseOrder(model, PurchaseItems, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 			}
 			else
 			{
-				MMDAL.Purchase ps = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
+				MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 				ps.supCode = model.supCode;
 				ps.pstRemark = model.pstRemark;
 				ps.pstSalesLoc = model.pstSalesLoc;
@@ -496,7 +521,7 @@ namespace MMLib.Models.Purchase
 						pstCode = code,
 						pstRefCode = ps.pstCode,
 						AccountProfileId = apId,
-						CreateTime = dateTime,						
+						CreateTime = dateTime,
 					};
 					context.Purchases.Add(purchase);
 					device.dvcNextPurchaseOrderNo++;
@@ -555,40 +580,40 @@ namespace MMLib.Models.Purchase
 			context.SaveChanges();
 		}
 
-		private static long addPurchaseOrder(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
+		private static long addPurchaseOrder(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
 		{
 			var pstTime = purchasedate.Add(dateTime.TimeOfDay);
-			MMDAL.Purchase ps = new()
+			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
+			if (ps != null)
 			{
-				pstAllLoc = model.pstAllLoc,
-				pstSalesLoc = model.pstSalesLoc,
-				pstCode = model.pstCode,
-				pstType = "PS",
-				supCode = model.supCode,
-				pstPurchaseDate = purchasedate,
-				pstPurchaseTime = pstTime,
-				pstPromisedDate = promiseddate,
-				pstStatus = purchasestatus,
-				pstCurrency = model.pstCurrency,
-				pstSupplierInvoice = model.pstSupplierInvoice,
-				pstRemark = model.pstRemark,
-				pstExRate = model.pstExRate,
-				AccountProfileId = comInfo.AccountProfileId,
-				CreateTime = dateTime,
-				ModifyTime = dateTime,
-				CreateBy = user.UserName,
-				pstCheckout = false,
-				pstIsPartial = false,
-			};
-
-			ps = context.Purchases.Add(ps);
+				ps.pstAllLoc = model.pstAllLoc;
+				ps.pstSalesLoc = model.pstSalesLoc;
+				ps.pstCode = model.pstCode;
+				ps.pstType = PurchaseType;
+				ps.supCode = model.supCode;
+				ps.pstPurchaseDate = purchasedate;
+				ps.pstPurchaseTime = pstTime;
+				ps.pstPromisedDate = promiseddate;
+				ps.pstStatus = purchasestatus;
+				ps.pstCurrency = model.pstCurrency;
+				ps.pstSupplierInvoice = model.pstSupplierInvoice;
+				ps.pstRemark = model.pstRemark;
+				ps.pstExRate = model.pstExRate;
+				ps.AccountProfileId = comInfo.AccountProfileId;
+				ps.CreateTime = dateTime;
+				ps.CreateBy = user.UserName;
+				ps.pstCheckout = false;
+				ps.pstIsPartial = false;
+			}
+			//done in Get
+			//ps = context.Purchases.Add(ps);
 			context.SaveChanges();
-			Device device = context.Devices.Find(dev.dvcUID);
-			device.dvcNextPurchaseRequestNo++;
-			device.dvcModifyTime = dateTime;
-			context.SaveChanges();
+			//done in Get
+			//Device device = context.Devices.Find(dev.dvcUID);
+			//device.dvcNextPurchaseRequestNo++;
+			//device.dvcModifyTime = dateTime;
+			//context.SaveChanges();
 			AddPurchaseItems(model, PurchaseItems, context, ps, ref dicItemLocQty);
-
 			return ps.Id;
 		}
 
@@ -842,7 +867,7 @@ namespace MMLib.Models.Purchase
 		private static void addPurchaseItem(MMDAL.Purchase ps, DateTime dateTime, ref List<PurchaseItem> psilist, PurchaseItemModel item, out DateTime? validthru, ref GetItemOptionsByItemCodes6_Result itemoption, List<GetItemOptionsByItemCodes6_Result> itemoptions = null)
 		{
 			validthru = string.IsNullOrEmpty(item.JsValidThru) ? null : CommonHelper.GetDateFrmString4SQL(item.JsValidThru, DateTimeFormat.YYYYMMDD);
-			if(enableItemOptions)
+			if (enableItemOptions)
 				itemoption = itemoptions.FirstOrDefault(x => x.itmCode == item.itmCode);
 
 			psilist.Add(new PurchaseItem
@@ -877,8 +902,8 @@ namespace MMLib.Models.Purchase
 		{
 			if (pendinglist.Count > 0)
 			{
-				DateTime purchasedate = ps.pstPurchaseDate??DateTime.Now;
-				DateTime promiseddate = ps.pstPromisedDate??DateTime.Now.AddDays(1);
+				DateTime purchasedate = ps.pstPurchaseDate ?? DateTime.Now;
+				DateTime promiseddate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1);
 				var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 				var _ps = new MMDAL.Purchase
 				{
@@ -899,7 +924,7 @@ namespace MMLib.Models.Purchase
 					AccountProfileId = comInfo.AccountProfileId,
 					CreateTime = dateTime,
 					ModifyTime = dateTime,
-					pstType = "PS",
+					pstType = PurchaseType,
 					pstAllLoc = ps.pstAllLoc,
 				};
 				context.Purchases.Add(_ps);
@@ -1546,10 +1571,10 @@ namespace MMLib.Models.Purchase
 			return sqllist;
 		}
 
-		
+
 	}
 
-	
+
 
 	public class PurchaseReturnMsg
 	{
