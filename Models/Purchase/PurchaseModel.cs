@@ -102,7 +102,10 @@ namespace MMLib.Models.Purchase
                 return statustxt;
             }
         }
-        public PurchaseModel()
+
+		public bool IsEditMode { get; set; }
+
+		public PurchaseModel()
         {
             DicCurrencyExRate = new Dictionary<string, double>();
             DicLocation = new Dictionary<string, string>();

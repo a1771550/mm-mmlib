@@ -101,7 +101,8 @@ namespace MMLib.Models.Purchase
 					ps = context.Purchases.Add(ps);
 					context.SaveChanges();
 					Purchase.Id = ps.Id;
-				}				
+					Purchase.IsEditMode = false;
+				}
 			}
 			get2(context, device);
 			Purchase.JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
@@ -343,7 +344,7 @@ namespace MMLib.Models.Purchase
 			return PSList;
 		}
 
-		public static PurchaseReturnMsg Edit(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, RecurOrder recurOrder = null)
+		public static PurchaseReturnMsg Edit(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, RecurOrder recurOrder = null)
 		{
 			List<string> superiornames = new List<string>();
 			List<string> superioremails = new List<string>();
@@ -386,7 +387,7 @@ namespace MMLib.Models.Purchase
 
 			if (isdirectorboard)
 			{
-				processPurchase(model, PurchaseItems, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+				processPurchase(model, PurchaseItems, SupplierList, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 			}
 			else
 			{
@@ -405,13 +406,13 @@ namespace MMLib.Models.Purchase
 					reviewurls.Add(reviewurl);
 				}
 
-				if (model.Id == 0)
+				if (!model.IsEditMode)
 				{
-					model.Id = addPurchaseOrder(model, PurchaseItems, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					model.Id = addPurchaseOrder(model, PurchaseItems, SupplierList, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 				}
 				else
 				{
-					processPurchase(model, PurchaseItems, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					processPurchase(model, PurchaseItems, SupplierList, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 				}
 
 				status = "purchaseordersaved";
@@ -466,11 +467,11 @@ namespace MMLib.Models.Purchase
 			return returnmsg;
 		}
 
-		private static void processPurchase(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
+		private static void processPurchase(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
 		{
 			if (model.Id == 0)
 			{
-				model.Id = addPurchaseOrder(model, PurchaseItems, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+				model.Id = addPurchaseOrder(model, PurchaseItems, SupplierList, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
 			}
 			else
 			{
@@ -580,7 +581,7 @@ namespace MMLib.Models.Purchase
 			context.SaveChanges();
 		}
 
-		private static long addPurchaseOrder(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
+		private static long addPurchaseOrder(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
 		{
 			var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
@@ -590,7 +591,6 @@ namespace MMLib.Models.Purchase
 				ps.pstSalesLoc = model.pstSalesLoc;
 				ps.pstCode = model.pstCode;
 				ps.pstType = PurchaseType;
-				ps.supCode = model.supCode;
 				ps.pstPurchaseDate = purchasedate;
 				ps.pstPurchaseTime = pstTime;
 				ps.pstPromisedDate = promiseddate;
@@ -605,16 +605,28 @@ namespace MMLib.Models.Purchase
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
 			}
-			//done in Get
-			//ps = context.Purchases.Add(ps);
 			context.SaveChanges();
-			//done in Get
-			//Device device = context.Devices.Find(dev.dvcUID);
-			//device.dvcNextPurchaseRequestNo++;
-			//device.dvcModifyTime = dateTime;
-			//context.SaveChanges();
 			AddPurchaseItems(model, PurchaseItems, context, ps, ref dicItemLocQty);
+			AddSupplierList(model.pstCode, SupplierList, context);
 			return ps.Id;
+		}
+
+		private static void AddSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
+		{
+			List<PurchaseSupplier> purchaseSuppliers = new List<PurchaseSupplier>();
+			foreach (var supplier in SupplierList)
+			{
+				purchaseSuppliers.Add(new PurchaseSupplier
+				{
+					pstCode = pstCode,
+					supCode = supplier.supCode,
+					AccountProfileId = apId,
+					CreateTime = DateTime.Now,
+				});
+			}
+
+			context.PurchaseSuppliers.AddRange(purchaseSuppliers);
+			context.SaveChanges();
 		}
 
 		private static void HandlingPurchaseOrderReview(string purchasecode, MMDbContext context)
