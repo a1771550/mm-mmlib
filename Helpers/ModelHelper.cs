@@ -3701,7 +3701,7 @@ namespace MMLib.Helpers
 					var orderlnk = $"<a href='{item.Value}' target='_blank'>{ordercode}</a>";
 					message.To.Add(new MailAddress(adminemail, adminname));
 					string strorder = forsales ? "invoice" : "purchase order";
-					string mailbody = $"<h3>Hi {adminname}</h3><p>The following ${strorder} is pending for your {approvaltxt}:</p>{orderlnk}";
+					string mailbody = $"<h3>Hi {adminname}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}";
 					message.Body = mailbody;
 					using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
 					{

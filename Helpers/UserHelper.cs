@@ -26,9 +26,15 @@ namespace MMLib.Helpers
 			}
 			return roletypes;
 		}
-		
+
 		public static bool CheckIfApprover(List<RoleType> Roles)
 		{
+			return Roles.Any(x => x != RoleType.Staff);
+		}
+
+		public static bool CheckIfApprover(SysUser user)
+		{
+			var Roles = GetUserRoles(user);
 			return Roles.Any(x => x != RoleType.Staff);
 		}
 		public static bool CheckIfARAdmin(SessUser user)

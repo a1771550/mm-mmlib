@@ -88,15 +88,16 @@ namespace MMLib.Models.Purchase
             {
                 string statustxt = "";
                 if(pstStatus!=null) {
-                    switch(pstStatus)
-                    {
-                        case "requestingByStaff":
-                            statustxt = string.Format(Resource.RequestingByFormat, Resource.Staff); break;
-						case "requestingByDeptHead":
-							statustxt = string.Format(Resource.RequestingByFormat, Resource.DeptHead); break;
-						case "requestingByFinanceDept":
-							statustxt = string.Format(Resource.RequestingByFormat, Resource.FinanceDept); break;
-					}
+     //               switch(pstStatus)
+     //               {
+     //                   case "requestingByStaff":
+     //                       statustxt = string.Format(Resource.RequestingByFormat, Resource.Staff); break;
+					//	case "requestingByDeptHead":
+					//		statustxt = string.Format(Resource.RequestingByFormat, Resource.DeptHead); break;
+					//	case "requestingByFinanceDept":
+					//		statustxt = string.Format(Resource.RequestingByFormat, Resource.FinanceDept); break;
+					//}
+                    statustxt = pstStatus.ToUpper();
                 }
 
                 return statustxt;

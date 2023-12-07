@@ -45,4 +45,14 @@ namespace MMLib.Models.User
         DirectorBoard = 13,
 		Staff = 14,
 	}
+
+    public class IsUserRole
+    {
+        public bool isstaff { get; set; }
+        public bool isdepthead { get; set; }
+        public bool isfinancedept { get; set; }
+        public bool ismuseumdirector { get; set; }
+        public bool isdirectorboard { get; set; }
+		public bool isapprover { get; set; }
+	}
 }

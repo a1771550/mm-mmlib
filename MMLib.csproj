@@ -340,6 +340,7 @@
     <Compile Include="Models\Session\SessUser.cs" />
     <Compile Include="Models\Settings\ExchangeRateEditModel.cs" />
     <Compile Include="Models\ShopDataModel.cs" />
+    <Compile Include="Models\Superior\Superior.cs" />
     <Compile Include="Models\Training\TrainingEditModel.cs" />
     <Compile Include="Models\Training\TrainingModel.cs" />
     <Compile Include="Models\User\UserEditModel.cs" />
