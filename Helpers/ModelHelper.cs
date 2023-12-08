@@ -26,12 +26,13 @@ using Resources = CommonLib.App_GlobalResources;
 using System.Net.Mail;
 using System.Net;
 using MMCommonLib.BaseModels;
-using MMLib.Models.POS.Settings;
 using MMLib.Models.MYOB;
 using System.IO;
 using MMLib.Models.Journal;
 using MMLib.Models.User;
-using System.Web.Mvc;
+using CommonLib.BaseModels;
+using CommonLib.App_GlobalResources;
+using System.Collections;
 
 namespace MMLib.Helpers
 {
@@ -58,6 +59,8 @@ namespace MMLib.Helpers
 		private static bool NonABSS { get { return ComInfo.DefaultCheckoutPortal == "nonabss"; } }
 		private static bool ApprovalMode { get { return (bool)ComInfo.ApprovalMode; } }
 
+		static bool EnableReviewUrl { get { return int.Parse(ConfigurationManager.AppSettings["EnableReviewUrl"]) == 1; } }
+
 		public static List<string> ShopNames;
 
 		public static List<Country> PopulateDefaultCountries()
@@ -66,17 +69,17 @@ namespace MMLib.Helpers
 				new Country
 			{
 				CountryID = 1,
-				CountryName = Resources.Resource.HongKong
+				CountryName = Resource.HongKong
 			},
 				new Country
 			{
 				CountryID = 2,
-				CountryName = Resources.Resource.Macao
+				CountryName = Resource.Macao
 			},
 				new Country
 			{
 				CountryID = 3,
-				CountryName = Resources.Resource.China
+				CountryName = Resource.China
 			},
 			};
 		}
@@ -3660,7 +3663,7 @@ namespace MMLib.Helpers
 		}
 
 		
-		public static bool SendNotificationEmail(Dictionary<string, string> DicInvoice, int ireviewmode, bool forsales)
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, RespondType respondType, List<Superior> SuperiorList=null, List<Inferior> InferiorList=null, string rejectreason=null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -3679,29 +3682,48 @@ namespace MMLib.Helpers
 
 				bool addbc = int.Parse(ConfigurationManager.AppSettings["AddBccToDeveloper"]) == 1;
 				MailAddress addressBCC = new MailAddress(ConfigurationManager.AppSettings["DeveloperEmailAddress"], ConfigurationManager.AppSettings["DeveloperEmailName"]);
-				MailMessage message = new MailMessage();
-				message.From = frm;
+				MailMessage message = new()
+				{
+					From = frm
+				};
 				if (addbc)
 				{
 					message.Bcc.Add(addressBCC);
 				}
 
-				message.Subject = forsales ? string.Format(Resources.Resource.PendingApprovalFormat, Resources.Resource.Invoice) : string.Format(Resources.Resource.PendingApprovalFormat, Resources.Resource.PurchaseOrder);
+				message.Subject = string.Format(Resource.PendingApprovalFormat, Resource.PurchaseOrder);
 				message.BodyEncoding = Encoding.UTF8;
 				message.IsBodyHtml = true;
 
-				string approvaltxt = ireviewmode == 0 ? "approval" : "approval after the revision from the sales person";
+				string approvaltxt = Resource.Approval;
 
-				foreach (var item in DicInvoice)
+				foreach (var item in DicReviewUrl)
 				{
 					var arr = item.Key.Split(':');
-					var adminname = arr[0];
-					var adminemail = arr[1];
+					var superiorname = arr[0];
+					var superioremail = arr[1];
 					var ordercode = arr[2];
 					var orderlnk = $"<a href='{item.Value}' target='_blank'>{ordercode}</a>";
-					message.To.Add(new MailAddress(adminemail, adminname));
-					string strorder = forsales ? "invoice" : "purchase order";
-					string mailbody = $"<h3>Hi {adminname}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}";
+					message.To.Add(new MailAddress(superioremail, superiorname));
+					string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
+
+					string mailbody = string.Empty;
+					if(respondType == RespondType.Approved)
+					{
+						//<h3>Hi {superiorname}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}
+						mailbody = EnableReviewUrl? string.Format(Resource.RequestWLinkHtmlFormat, superiorname, strorder, approvaltxt, orderlnk): string.Format(Resource.RequestHtmlFormat, superiorname, strorder, approvaltxt);
+					}
+					if (respondType == RespondType.Rejected)
+					{
+						var rejectreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject);
+						mailbody = $"<h3>Hi {salesman.UserName}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectreasontxt}</h4><p>{rejectreason}</p>";
+					}
+					if (respondType == RespondType.PassedToBoard)
+					{
+						mailbody = $"<h3>Hi {salesman.UserName}</h3><p>The following invoice is pending for your approval:</p><ul>{lilist}</ul>";
+					}
+
+					
 					message.Body = mailbody;
 					using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
 					{

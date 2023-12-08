@@ -12,12 +12,12 @@ namespace MMLib.Helpers
 	public class UserHelper
 	{
 		public static List<RoleType> GetUserRoles(SessUser user)
-		{			
+		{
 			return user.Roles;
 		}
 		public static List<RoleType> GetUserRoles(SysUser user)
 		{
-			var userrolecodes = user.UserRole.Split(',');
+			var userrolecodes = user.UserRole.Split(',').ToList();
 			List<RoleType> roletypes = [];
 			foreach (var rolecode in userrolecodes)
 			{
@@ -31,7 +31,11 @@ namespace MMLib.Helpers
 		{
 			return Roles.Any(x => x != RoleType.Staff);
 		}
-
+		public static bool CheckIfApprover(SessUser user)
+		{
+			var Roles = GetUserRoles(user);
+			return Roles.Any(x => x != RoleType.Staff);
+		}
 		public static bool CheckIfApprover(SysUser user)
 		{
 			var Roles = GetUserRoles(user);
@@ -42,6 +46,6 @@ namespace MMLib.Helpers
 			var Roles = GetUserRoles(user);
 			return Roles.Any(x => x == RoleType.ARAdmin);
 		}
-		
+
 	}
 }

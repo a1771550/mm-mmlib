@@ -1,6 +1,6 @@
 ﻿using MMDAL;
 
-namespace MMLib.Models.Superior
+namespace MMLib.Models.User
 {
 	public class Superior:SysUser
 	{

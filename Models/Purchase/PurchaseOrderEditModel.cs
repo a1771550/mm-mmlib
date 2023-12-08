@@ -47,8 +47,8 @@ namespace MMLib.Models.Purchase
 				SortOrder = SortOrder == "desc" ? "asc" : "desc";
 			}
 			PurchaseOrderList = new List<PurchaseModel>();
-			SessUser user = HttpContext.Current.Session["User"] as SessUser;
-			string username = UserHelper.CheckIfApprover(user) ? null : user.UserName;
+			
+			string username = UserHelper.CheckIfApprover(User) ? null : user.UserName;
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
@@ -91,17 +91,17 @@ namespace MMLib.Models.Purchase
 					ItemCodes = itemcodes,
 					ItemsNameDesc = itemnamedescs,
 					PurchasePersonName = g.CreateBy,
-					PurchaseOrderReview = new PurchaseOrderReviewModel
-					{
-						IsApproved = g.IsApproved,
-						ApprovedBy = g.ApprovedBy,
-						IsRejected = g.IsRejected,
-						RejectedBy = g.RejectedBy,
-						Reason = g.Reason,
-						PassedToManager = g.PassedToManager,
-						EmailNotified = g.EmailNotified,
-						pqStatus = g.pstStatus
-					}
+					//PurchaseOrderReview = new PurchaseOrderReviewModel
+					//{
+					//	IsApproved = g.IsApproved,
+					//	ApprovedBy = g.ApprovedBy,
+					//	IsRejected = g.IsRejected,
+					//	RejectedBy = g.RejectedBy,
+					//	Reason = g.Reason,
+					//	PassedToManager = g.PassedToManager,
+					//	EmailNotified = g.EmailNotified,
+					//	pqStatus = g.pstStatus
+					//}
 				}
 					);
 				}

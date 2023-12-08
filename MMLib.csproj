@@ -253,7 +253,7 @@
     <Compile Include="Models\DayEndsModel.cs" />
     <Compile Include="Models\EmailEditModel.cs" />
     <Compile Include="Models\EmailModel.cs" />
-    <Compile Include="Models\Employee\EmployeeModel.cs" />
+    <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Item\AbssItemModel.cs" />
     <Compile Include="Models\Item\AddOnItem.cs" />
     <Compile Include="Models\Item\ARItem.cs" />
@@ -340,7 +340,8 @@
     <Compile Include="Models\Session\SessUser.cs" />
     <Compile Include="Models\Settings\ExchangeRateEditModel.cs" />
     <Compile Include="Models\ShopDataModel.cs" />
-    <Compile Include="Models\Superior\Superior.cs" />
+    <Compile Include="Models\User\Inferior.cs" />
+    <Compile Include="Models\User\Superior.cs" />
     <Compile Include="Models\Training\TrainingEditModel.cs" />
     <Compile Include="Models\Training\TrainingModel.cs" />
     <Compile Include="Models\User\UserEditModel.cs" />
@@ -376,6 +377,7 @@
     <Content Include=".gitignore" />
     <Content Include="Content\PagedList.css" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

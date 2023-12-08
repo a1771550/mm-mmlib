@@ -18,11 +18,32 @@ using System.Text;
 using ItemModel = MMLib.Models.Item.ItemModel;
 using MMLib.Models.MYOB;
 using MMLib.Models.User;
+using MMLib.Models.Item;
+using System.Text.Json;
 
 namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		public Dictionary<string, ItemOptions> DicItemOptions { get; set; }
+		public string JsonDicItemOptions { get { return JsonSerializer.Serialize(DicItemOptions); } }
+		public PurchaseOrderReviewModel PurchaseOrderReview { get; set; }
+		public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
+		public Dictionary<string, string> DicLocation { get; set; }
+		public Dictionary<string, double> DicCurrencyExRate { get; set; }
+		public string JsonDicCurrencyExRate { get { return JsonSerializer.Serialize(DicCurrencyExRate); } }
+		public string JsonDicLocation { get { return DicLocation == null ? "" : JsonSerializer.Serialize(DicLocation); } }
+		public List<SelectListItem> SupplierList { get; set; }
+		public List<SelectListItem> LocationList { get; set; }
+		public List<MyobJobModel> JobList { get; set; }
+		public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
+
+		public Dictionary<string, List<ItemAttribute>> DicItemAttrList;
+		public Dictionary<string, List<ItemVariModel>> DicItemVariations;
+		public Dictionary<string, List<IGrouping<string, ItemVariModel>>> DicItemGroupedVariations;
+		public string JsonDicItemGroupedVariations { get { return DicItemGroupedVariations == null ? "" : JsonSerializer.Serialize(DicItemGroupedVariations); } }
+		public List<string> ImgList;
+		public List<string> FileList;
 
 		static string PurchaseType = "PS";
 		public PurchaseStatus ListMode { get; set; }
@@ -31,11 +52,11 @@ namespace MMLib.Models.Purchase
 		public ReceiptViewModel Receipt;
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
-		public PurchaseEditModel(string receiptno, int? ireadonly)
+		public PurchaseEditModel(string receiptno, int? ireadonly) : this()
 		{
 			Get(0, receiptno, ireadonly);
 		}
-		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, bool forprint = false)
+		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, bool forprint = false) : this()
 		{
 			Get(Id, null, ireadonly, status, forprint);
 		}
@@ -61,19 +82,18 @@ namespace MMLib.Models.Purchase
 				}
 
 				#region Handle View File
-				Helpers.ModelHelper.HandleViewFile(Purchase.UploadFileName, Purchase.AccountProfileId, Purchase.pstCode, ref Purchase.ImgList, ref Purchase.FileList);
+				Helpers.ModelHelper.HandleViewFile(Purchase.UploadFileName, AccountProfileId, Purchase.pstCode, ref ImgList, ref FileList);
 				#endregion
 			}
 			else
 			{
+				status = PurchaseStatus.requesting.ToString();
 				var latestpurchase = context.Purchases.OrderByDescending(x => x.Id).FirstOrDefault();
-				long _Id;
-				status = PurchaseStatus.requesting.ToString();				
 				if (latestpurchase != null)
 				{
 					if (string.IsNullOrEmpty(latestpurchase.pstType))
 					{
-						_Id = latestpurchase.Id;
+						var _Id = latestpurchase.Id;
 						Purchase = new PurchaseModel
 						{
 							Id = _Id,
@@ -85,10 +105,10 @@ namespace MMLib.Models.Purchase
 					}
 					else addNewPurchase(context, apId, dateTime, device, status);
 				}
-				else _Id = addNewPurchase(context, apId, dateTime, device, status);
+				else addNewPurchase(context, apId, dateTime, device, status);
 			}
 			get2(context, device);
-			Purchase.JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
+			JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
 			Purchase.Mode = ireadonly == 1 ? "readonly" : "";
 
 		}
@@ -122,6 +142,7 @@ namespace MMLib.Models.Purchase
 
 			Purchase = new PurchaseModel
 			{
+				Id = ps.Id,
 				IsEditMode = false,
 				pstCode = pstcode,
 				pstStatus = status,
@@ -137,23 +158,25 @@ namespace MMLib.Models.Purchase
 			SupplierEditModel model = new(Purchase.supCode);
 			Purchase.Supplier = model.Supplier;
 			var supplierlist = context.Suppliers.Where(x => x.AccountProfileId == ComInfo.AccountProfileId && (bool)x.supCheckout).OrderBy(x => x.supName).ToList();
-			Purchase.SupplierList = new List<SelectListItem>();
+			SupplierList = new List<SelectListItem>();
+			DicSupCodeName = new Dictionary<string, string>();
 			foreach (var supplier in supplierlist)
 			{
-				Purchase.SupplierList.Add(
+				SupplierList.Add(
 					new SelectListItem
 					{
 						Value = supplier.supCode,
 						Text = supplier.supName,
 					}
 				);
+				if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
 			}
 
 			var stocklocationlist = NonABSS ? ComInfo.Shops.Split(',').ToList() : context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
-			Purchase.LocationList = new List<SelectListItem>();
+			LocationList = new List<SelectListItem>();
 			foreach (var item in stocklocationlist)
 			{
-				Purchase.LocationList.Add(new SelectListItem
+				LocationList.Add(new SelectListItem
 				{
 					Value = item,
 					Text = item
@@ -163,19 +186,19 @@ namespace MMLib.Models.Purchase
 			var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
 			if (myobcurrencylist != null && myobcurrencylist.Count > 0)
 			{
-				Purchase.DicCurrencyExRate = new Dictionary<string, double>();
+				DicCurrencyExRate = new Dictionary<string, double>();
 				foreach (var currency in myobcurrencylist)
 				{
-					Purchase.DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
+					DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
 				}
 			}
 
 			Purchase.TaxModel = Helpers.ModelHelper.GetTaxInfo(context);
 			Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
-			Purchase.DicLocation = new Dictionary<string, string>();
+			DicLocation = new Dictionary<string, string>();
 			foreach (var shop in stocklocationlist)
 			{
-				Purchase.DicLocation[shop] = shop;
+				DicLocation[shop] = shop;
 			}
 		}
 
@@ -201,6 +224,16 @@ namespace MMLib.Models.Purchase
 
 		public PurchaseEditModel()
 		{
+			DicItemOptions = new Dictionary<string, ItemOptions>();
+			DicCurrencyExRate = new Dictionary<string, double>();
+			DicLocation = new Dictionary<string, string>();
+			JobList = new List<MyobJobModel>();
+			ImgList = new List<string>();
+			FileList = new List<string>();
+
+			DicItemAttrList = new Dictionary<string, List<ItemAttribute>>();
+			DicItemVariations = new Dictionary<string, List<ItemVariModel>>();
+			DicItemGroupedVariations = new Dictionary<string, List<IGrouping<string, ItemVariModel>>>();
 		}
 
 		private void GetPurchaseItemList(MMDbContext context, PurchaseModel ps)
@@ -217,7 +250,7 @@ namespace MMLib.Models.Purchase
 			Helpers.ModelHelper.GetShops(connection, ref Shops, ref ShopNames, apId);
 
 			if (EnableItemVari)
-				Helpers.ModelHelper.GetDicItemGroupedVariations(context, connection, itemcodes, ref Purchase.DicItemAttrList, ref Purchase.DicItemVariations, ref Purchase.DicItemGroupedVariations, Shops);
+				Helpers.ModelHelper.GetDicItemGroupedVariations(context, connection, itemcodes, ref DicItemAttrList, ref DicItemVariations, ref DicItemGroupedVariations, Shops);
 
 			if (EnableItemOptions)
 			{
@@ -228,7 +261,7 @@ namespace MMLib.Models.Purchase
 				var vtInfo = context.GetValidThruInfo12(apId, ps.pstSalesLoc, itemcodelist).ToList();
 				var ivInfo = context.GetItemVariInfo4(apId, ps.pstSalesLoc, itemcodelist).ToList();
 
-				Purchase.DicItemOptions = new Dictionary<string, ItemOptions>();
+				DicItemOptions = new Dictionary<string, ItemOptions>();
 
 				foreach (var item in Purchase.PurchaseItems)
 				{
@@ -332,7 +365,7 @@ namespace MMLib.Models.Purchase
 							}
 						}
 
-						Purchase.DicItemOptions[item.itmCode] = new ItemOptions
+						DicItemOptions[item.itmCode] = new ItemOptions
 						{
 							ChkBatch = itemoptions.chkBat,
 							ChkSN = itemoptions.chkSN,
@@ -341,7 +374,7 @@ namespace MMLib.Models.Purchase
 					}
 				}
 			}
-		}		
+		}
 		public List<PurchaseModel> PSList { get; set; }
 		public PagedList.IPagedList<PurchaseModel> PagingPSList { get; set; }
 		public string PrintMode { get; set; }
@@ -368,12 +401,12 @@ namespace MMLib.Models.Purchase
 		public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, RecurOrder recurOrder = null)
 		{
 			List<PurchaseReturnMsg> msglist = new List<PurchaseReturnMsg>();
-			List<Superior.Superior> SuperiorList = new List<Superior.Superior>();
+			List<Superior> SuperiorList = new List<Superior>();
 			string supnames = string.Join(",", SupplierList.Select(x => x.supName).Distinct().ToList());
 
 			string status = "";
 			string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
-			string purchasestatus = string.Empty;			
+			string purchasestatus = string.Empty;
 			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
 
 			DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
@@ -412,7 +445,7 @@ namespace MMLib.Models.Purchase
 			else
 			{
 				sqlConnection.Open();
-				SuperiorList = sqlConnection.Query<Superior.Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId,@shopcode=@shopcode", new { apId, userId = user.surUID, shopcode = comInfo.Shop }).ToList();
+				SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId,@shopcode=@shopcode", new { apId, userId = user.surUID, shopcode = comInfo.Shop }).ToList();
 
 				foreach (var superior in SuperiorList)
 				{
@@ -433,34 +466,26 @@ namespace MMLib.Models.Purchase
 				}
 
 				status = "purchaseordersaved";
-				if (model.pstStatus.ToLower() != "opened" && model.ireviewmode == 0)
+				if (model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
 				{
-					HandlingPurchaseOrderReview(model.pstCode,model.pqStatus, context);
+					HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
 
-					if (recurOrder == null || recurOrder.IsRecurring == 0)
+					if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
 					{
-						if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
+						#region Send Notification Email   
+						if ((bool)comInfo.enableEmailNotification)
 						{
-							#region Send Notification Email   
-							if ((bool)comInfo.enableEmailNotification)
+							if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl))
 							{
-								if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl, model.ireviewmode, false))
-								{
-									var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
-									purchase.pstSendNotification = true;
-									context.SaveChanges();
-								}
+								var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
+								purchase.pstSendNotification = true;
+								context.SaveChanges();
 							}
-							#endregion
 						}
-						GenReturnMsgList(model, PurchaseItems, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+						#endregion
 					}
-					else
-					{
-						status = "recurordersaved";
-						msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.RecurringOrder);
-						GenReturnMsgList(model, PurchaseItems, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector, msg);
-					}
+					GenReturnMsgList(model, PurchaseItems, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+
 				}
 			}
 
@@ -472,9 +497,9 @@ namespace MMLib.Models.Purchase
 			return msglist;
 		}
 
-		
 
-		private static void GenReturnMsgList(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior.Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
+
+		private static void GenReturnMsgList(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
 		{
 			foreach (var superior in SuperiorList)
 			{
@@ -615,7 +640,7 @@ namespace MMLib.Models.Purchase
 			{
 				ps.pstAllLoc = model.pstAllLoc;
 				ps.pstSalesLoc = model.pstSalesLoc;
-				ps.pstCode = model.pstCode;
+				//ps.pstCode = model.pstCode;
 				ps.supCode = supcodes;
 				ps.pstType = PurchaseType;
 				ps.pstPurchaseDate = purchasedate;
@@ -1612,8 +1637,6 @@ namespace MMLib.Models.Purchase
 		}
 
 	}
-
-
 
 	public class PurchaseReturnMsg
 	{
