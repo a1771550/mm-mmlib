@@ -20,6 +20,7 @@ using MMLib.Models.MYOB;
 using MMLib.Models.User;
 using MMLib.Models.Item;
 using System.Text.Json;
+using CommonLib.BaseModels;
 
 namespace MMLib.Models.Purchase
 {
@@ -475,7 +476,10 @@ namespace MMLib.Models.Purchase
 						#region Send Notification Email   
 						if ((bool)comInfo.enableEmailNotification)
 						{
-							if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl))
+							ReactType reactType = ReactType.RequestingByStaff;						
+							if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
+							if (IsUserRole.ismuseumdirector|| IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+							if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl, reactType))
 							{
 								var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
 								purchase.pstSendNotification = true;

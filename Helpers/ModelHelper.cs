@@ -120,7 +120,7 @@ namespace MMLib.Helpers
 			return OutOfStockSalesLns;
 		}
 
-		
+
 		public static void SaveAttributeVals(MMDbContext context, string attributeId, string av, long contactId, int apId, bool attrmode = false)
 		{
 			if (attrmode)
@@ -199,7 +199,7 @@ namespace MMLib.Helpers
 		{
 			if (!string.IsNullOrEmpty(uploadfilename))
 			{
-				var fileList = uploadfilename.Split(',');				
+				var fileList = uploadfilename.Split(',');
 				foreach (var file in fileList)
 				{
 					var _file = Path.Combine(apId.ToString(), filecode, file);
@@ -442,7 +442,7 @@ namespace MMLib.Helpers
 
 		}
 
-	
+
 		public static void getReceiptData2(MMDbContext context, int lang, string shop, string device, string devicecode, CentralDataModel model, string receiptno)
 		{
 			model.snlist = (from s in context.SerialNoes
@@ -770,7 +770,7 @@ namespace MMLib.Helpers
 			}
 		}
 
-	
+
 		public static void SaveItemsFrmCentral(int apId, MMDbContext context, string ConnectionString)
 		{
 			DateTime dateTime = DateTime.Now;
@@ -1598,7 +1598,7 @@ namespace MMLib.Helpers
 
 		}
 
-		
+
 		public static string GetAccountProfileName(MMDbContext context)
 		{
 			var accname = "";
@@ -1846,7 +1846,7 @@ namespace MMLib.Helpers
 						foreach (var item in psilist)
 						{
 							model.ItemCodes.Add(item.itmCode);
-						
+
 							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
 							item.JobNumber = job != null ? job.JobNumber : "";
 
@@ -1867,7 +1867,7 @@ namespace MMLib.Helpers
 								pstCode = ps.pstCode,
 								itmCode = item.itmCode,
 								itmName = item.itmName,
-								itmDesc = item.itmDesc,								
+								itmDesc = item.itmDesc,
 								itmUseDesc = item.itmUseDesc,
 								piBaseUnit = item.piBaseUnit,
 								piQty = item.piQty,
@@ -1886,11 +1886,11 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate??DateTime.Now,
-								pstPromisedDate = ps.pstPromisedDate??DateTime.Now.AddDays(1),
+								pstPurchaseDate = ps.pstPurchaseDate ?? DateTime.Now,
+								pstPromisedDate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1),
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,							
+								Myob_DiscountDays = item.Myob_DiscountDays,
 								IsPartial = ps.pstIsPartial,
 								supCode = ps.supCode,
 								pstCurrency = ps.pstCurrency,
@@ -2015,7 +2015,7 @@ namespace MMLib.Helpers
 
 						foreach (var item in psilist)
 						{
-							model.ItemCodes.Add(item.itmCode);						
+							model.ItemCodes.Add(item.itmCode);
 							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
 							item.JobNumber = job != null ? job.JobNumber : "";
 
@@ -2036,7 +2036,7 @@ namespace MMLib.Helpers
 								pstCode = ps.pstCode,
 								itmCode = item.itmCode,
 								itmName = item.itmName,
-								itmDesc = item.itmDesc,							
+								itmDesc = item.itmDesc,
 								itmUseDesc = item.itmUseDesc,
 								piBaseUnit = item.piBaseUnit,
 								piQty = item.piQty,
@@ -2055,11 +2055,11 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate??DateTime.Now,
-								pstPromisedDate = ps.pstPromisedDate??DateTime.Now.AddDays(1),
+								pstPurchaseDate = ps.pstPurchaseDate ?? DateTime.Now,
+								pstPromisedDate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1),
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,								
+								Myob_DiscountDays = item.Myob_DiscountDays,
 								IsPartial = ps.pstIsPartial,
 								supCode = ps.supCode,
 								pstCurrency = ps.pstCurrency,
@@ -2075,7 +2075,7 @@ namespace MMLib.Helpers
 				#endregion
 			}
 
-			
+
 
 			if (checkOutType == CheckOutType.Items)
 			{
@@ -2102,7 +2102,7 @@ namespace MMLib.Helpers
 			}
 		}
 
-	
+
 		private static List<DeviceModel> GetDeviceList4Export(MMDbContext context, int accountProfileId)
 		{
 			List<DeviceModel> DeviceList = new List<DeviceModel>();
@@ -2139,7 +2139,7 @@ namespace MMLib.Helpers
 			return pgId > mcId ? pgId : mcId;
 		}
 
-		
+
 		public static string GetAccountNumber(MMDbContext context, int accountId, int accountProfileId)
 		{
 			string accountNumber = string.Empty;
@@ -2154,7 +2154,7 @@ namespace MMLib.Helpers
 		}
 
 
-		
+
 		public static bool IsItemTaxable(MMDbContext context, string itemcode)
 		{
 			return context.MyobItems.Any(x => x.itmCode.ToLower() == itemcode.ToLower() && x.itmIsTaxedWhenSold == true);
@@ -2524,9 +2524,9 @@ namespace MMLib.Helpers
 						QuantityAvailable = sbqty,
 						AbssQty = abssqty,
 						lstStockLoc = "",
-						chkBat = i.chkBat??false,
-						chkSN = i.chkSN??false,
-						chkVT = i.chkVT??false,
+						chkBat = i.chkBat ?? false,
+						chkSN = i.chkSN ?? false,
+						chkVT = i.chkVT ?? false,
 						itmBuyStdCost = i.itmBuyStdCost,
 						hasItemVari = i.ivId > 0,
 					};
@@ -2575,7 +2575,7 @@ namespace MMLib.Helpers
 						Qty = qty,
 						QuantityAvailable = qty,
 						lstStockLoc = location,
-						chkBat = i.chkBat??false,
+						chkBat = i.chkBat ?? false,
 						chkSN = i.chkSN ?? false,
 						chkVT = i.chkVT ?? false,
 						itmBuyStdCost = i.itmBuyStdCost,
@@ -2984,7 +2984,7 @@ namespace MMLib.Helpers
 			}
 		}
 
-	
+
 		public static DeviceModel GetDeviceInfo(LoginUserModel model)
 		{
 			DeviceModel device = new DeviceModel();
@@ -3230,7 +3230,7 @@ namespace MMLib.Helpers
 
 		private static void UpdateCategory(MMDbContext context, int apId, ItemModel myobItem)
 		{
-			
+
 			if (myobItem != null)
 			{
 				ItemCategory category = context.ItemCategories.FirstOrDefault(x => x.itmCode == myobItem.itmCode && x.AccountProfileId == apId);
@@ -3442,7 +3442,7 @@ namespace MMLib.Helpers
 						}
 					};
 			}
-	
+
 			context.ItemPrice4ItemVariation.AddRange(itemPrices);
 			context.SaveChanges();
 			#endregion
@@ -3567,9 +3567,9 @@ namespace MMLib.Helpers
 
 
 
-		
 
-		
+
+
 		public static void GetMyobItemCategory(MMDbContext context, string itmCode, ref ItemModel item)
 		{
 			ItemCategory category = context.ItemCategories.FirstOrDefault(x => x.itmCode == itmCode && x.AccountProfileId == apId);
@@ -3647,7 +3647,7 @@ namespace MMLib.Helpers
 		{
 			Device device = ApprovalMode ? context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID) : HttpContext.Current.Session["Device"] as Device;
 			//int nextsalesno = string.IsNullOrEmpty(type) ? device.dvcNextRtlSalesNo : device.dvcNextPreorderNo;
-			int nextsalesno = device.dvcNextRtlSalesNo??100001;
+			int nextsalesno = device.dvcNextRtlSalesNo ?? 100001;
 			//if (device.dvcUsedInvoiceNo.Split(',').Contains(nextsalesno.ToString())) nextsalesno++;
 			nextsalesno++;
 			return string.IsNullOrEmpty(type) ? string.Concat(device.dvcInvoicePrefix, nextsalesno) : string.Concat(device.dvcPreorderPrefix, nextsalesno);
@@ -3662,8 +3662,8 @@ namespace MMLib.Helpers
 			return device != null ? device.dvcInvoicePrefix : string.Empty;
 		}
 
-		
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, RespondType respondType, List<Superior> SuperiorList=null, List<Inferior> InferiorList=null, string rejectreason=null)
+
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectreason = null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -3695,35 +3695,42 @@ namespace MMLib.Helpers
 				message.BodyEncoding = Encoding.UTF8;
 				message.IsBodyHtml = true;
 
-				string approvaltxt = Resource.Approval;
+				string approvaltxt = reactType == ReactType.Rejected ? Resource.Rejected : Resource.Approval;
 
 				foreach (var item in DicReviewUrl)
 				{
 					var arr = item.Key.Split(':');
-					var superiorname = arr[0];
-					var superioremail = arr[1];
+					var name = arr[0];
+					var email = arr[1];
 					var ordercode = arr[2];
 					var orderlnk = $"<a href='{item.Value}' target='_blank'>{ordercode}</a>";
-					message.To.Add(new MailAddress(superioremail, superiorname));
+					message.To.Add(new MailAddress(email, name));
 					string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
 
 					string mailbody = string.Empty;
-					if(respondType == RespondType.Approved)
+
+					if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
 					{
-						//<h3>Hi {superiorname}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}
-						mailbody = EnableReviewUrl? string.Format(Resource.RequestWLinkHtmlFormat, superiorname, strorder, approvaltxt, orderlnk): string.Format(Resource.RequestHtmlFormat, superiorname, strorder, approvaltxt);
-					}
-					if (respondType == RespondType.Rejected)
-					{
-						var rejectreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject);
-						mailbody = $"<h3>Hi {salesman.UserName}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectreasontxt}</h4><p>{rejectreason}</p>";
-					}
-					if (respondType == RespondType.PassedToBoard)
-					{
-						mailbody = $"<h3>Hi {salesman.UserName}</h3><p>The following invoice is pending for your approval:</p><ul>{lilist}</ul>";
+						//<h3>Hi {name}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}
+						mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
 					}
 
-					
+					if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToBoard)
+					{
+						mailbody = EnableReviewUrl ? string.Format(Resource.RespondWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
+					}
+					if (reactType == ReactType.Approved)
+					{
+						//todo approved text:
+					}
+					if (reactType == ReactType.Rejected)
+					{
+						//<h3>Hi {0}</h3><p>The following {1} is pending for your review:</p><ul>{2}</ul><h4>{3}</h4><p>{4}</p>
+						var rejectreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject);
+						//mailbody = $"<h3>Hi {name}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectreasontxt}</h4><p>{rejectreason}</p>";
+						mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectreasontxt, rejectreason);
+					}
+
 					message.Body = mailbody;
 					using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
 					{
@@ -3745,7 +3752,7 @@ namespace MMLib.Helpers
 			return okcount > 0;
 		}
 
-		
+
 
 		public static void UpdateSerialStatus4Refund(MMDbContext context, List<string> snocodes)
 		{
