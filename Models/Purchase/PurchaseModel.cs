@@ -8,7 +8,7 @@ using CommonLib.Helpers;
 using CommonLib.Models;
 using System.Text.Json;
 using MMDAL;
-using MMLib.Models.Purchase.Supplier;
+using MMLib.Models.Supplier;
 using MMLib.Models.MYOB;
 using MMLib.Models.Item;
 using CommonLib.App_GlobalResources;
@@ -24,9 +24,10 @@ namespace MMLib.Models.Purchase
         public string JsPurchaseDate { get; set; }
         public string JsPromisedDate { get; set; }
         public string SupplierName { get; set; }
-      
-        public string PromisedDateDisplay { get { return CommonHelper.FormatDate(pstPromisedDate??DateTime.Now, true); } }
-        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate??DateTime.Now.AddDays(1), true); } }
+        public DateTime? ResponseTime { get; set; }
+		public string ResponseTimeDisplay { get { return ResponseTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ResponseTime, true); } }
+		public string PromisedDateDisplay { get { return CommonHelper.FormatDate(pstPromisedDate, true); } }
+        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate, true); } }
         public string PurchaseTimeDisplay { get { return pstPurchaseTime==null?"N/A": CommonHelper.FormatDateTime((DateTime)pstPurchaseTime, true); } }
         public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
         public string ModifyTimeDisplay { get { return ModifyTime==null?"N/A": CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }

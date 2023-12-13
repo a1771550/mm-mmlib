@@ -4,7 +4,7 @@ using PagedList;
 using MMCommonLib.BaseModels;
 using MMDAL;
 using MMLib.Models.Item;
-using MMLib.Models.Purchase.Supplier;
+using MMLib.Models.Supplier;
 using MMLib.Models.User;
 using System;
 using System.Collections.Generic;
@@ -91,6 +91,8 @@ namespace MMLib.Models.Purchase
 					ItemCodes = itemcodes,
 					ItemsNameDesc = itemnamedescs,
 					PurchasePersonName = g.CreateBy,
+					pqStatus = g.pqStatus,
+					ResponseTime = g.ResponseTime,
 					//PurchaseOrderReview = new PurchaseOrderReviewModel
 					//{
 					//	IsApproved = g.IsApproved,

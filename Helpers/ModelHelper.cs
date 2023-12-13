@@ -15,7 +15,7 @@ using System.Data.Entity.Validation;
 using System.Text;
 using MMLib.Models.POS.MYOB;
 using MMLib.Models.Purchase;
-using MMLib.Models.Purchase.Supplier;
+using MMLib.Models.Supplier;
 using MMCommonLib.Models;
 using MMCommonLib.CommonModels;
 using System.Data.Entity;
@@ -1856,7 +1856,7 @@ namespace MMLib.Helpers
 								item.Myob_BalanceDueDays = supplier.BalanceDueDays != null ? (int)supplier.BalanceDueDays : 0;
 								item.Myob_DiscountDays = supplier.DiscountDays != null ? (int)supplier.DiscountDays : 0;
 							}
-
+							
 							model.DicPoPurchaseItemList[ps.pstCode].Add(new PurchaseItemModel
 							{
 								pstId = ps.Id,
@@ -1886,8 +1886,8 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate ?? DateTime.Now,
-								pstPromisedDate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1),
+								pstPurchaseDate = ps.pstPurchaseDate == null ? DateTime.Now : ps.pstPurchaseDate,
+								pstPromisedDate = ps.pstPromisedDate ==null? DateTime.Now.AddDays(1):ps.pstPromisedDate,
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
 								Myob_DiscountDays = item.Myob_DiscountDays,
@@ -2055,8 +2055,8 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate ?? DateTime.Now,
-								pstPromisedDate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1),
+								pstPurchaseDate = ps.pstPurchaseDate==null? DateTime.Now:ps.pstPurchaseDate,
+								pstPromisedDate = ps.pstPromisedDate==null? DateTime.Now.AddDays(1):ps.pstPromisedDate,
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
 								Myob_DiscountDays = item.Myob_DiscountDays,
@@ -3663,7 +3663,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectreason = null)
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectreason = null, string suppernames=null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -3721,7 +3721,8 @@ namespace MMLib.Helpers
 					}
 					if (reactType == ReactType.Approved)
 					{
-						//todo approved text:
+						//ApprovedPoMsgWLnkFormat	The PO {0} with the supplier(s) {1} is approved and here is the link {2}.	
+						mailbody = EnableReviewUrl ? string.Format(Resource.ApprovedPoMsgWLnkFormat, strorder, suppernames, orderlnk) : string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
 					}
 					if (reactType == ReactType.Rejected)
 					{

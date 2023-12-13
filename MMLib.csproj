@@ -323,8 +323,8 @@
     <Compile Include="Models\Purchase\PurchaseOrderReviewModel.cs" />
     <Compile Include="Models\Purchase\PurchaseReturnItemModel.cs" />
     <Compile Include="Models\Purchase\PurchaseReturnModel.cs" />
-    <Compile Include="Models\Purchase\Supplier\SupplierEditModel.cs" />
-    <Compile Include="Models\Purchase\Supplier\SupplierModel.cs" />
+    <Compile Include="Models\Supplier\SupplierEditModel.cs" />
+    <Compile Include="Models\Supplier\SupplierModel.cs" />
     <Compile Include="Models\Purchase\ValidThruModel.cs" />
     <Compile Include="Models\Quotation\QuotationEditModel.cs" />
     <Compile Include="Models\Receipt\ReceiptViewModel.cs" />

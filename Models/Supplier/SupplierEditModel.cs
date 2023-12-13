@@ -8,17 +8,25 @@ using Dapper;
 using System.Runtime.Remoting.Contexts;
 using System.Web;
 
-namespace MMLib.Models.Purchase.Supplier
+namespace MMLib.Models.Supplier
 {
     public class SupplierEditModel : PagingBaseModel
-    {      
-        public SupplierModel Supplier { get; set; }
-        public SupplierEditModel() { }
-        public SupplierEditModel(string supCode)
+    {
+		public string IpCountry { get; set; }
+		public List<Country> MyobCountries { get; set; }
+		public List<string> Countries { get; set; }
+		public SupplierModel Supplier { get; set; }
+        public SupplierEditModel() {
+			var helper = new CountryData.Standard.CountryHelper();
+			Countries = helper.GetCountries().ToList();
+			var region = CultureHelper.GetCountryByIP();
+			IpCountry = region.EnglishName;
+		}
+        public SupplierEditModel(string supCode):this()
         {
             Get(0,supCode);
         }
-        public SupplierEditModel(int Id)
+        public SupplierEditModel(int Id):this()
         {
             Get(Id);
         }
@@ -52,7 +60,7 @@ namespace MMLib.Models.Purchase.Supplier
                 Supplier = new SupplierModel();
             }
 
-            Supplier.MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
+            MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
             #region Handle View File
             Helpers.ModelHelper.HandleViewFileList(Supplier.UploadFileList, AccountProfileId, Supplier.supId, ref Supplier.ImgList, ref Supplier.FileList);
             #endregion
@@ -154,7 +162,11 @@ namespace MMLib.Models.Purchase.Supplier
             context.Suppliers.Remove(ps);
             context.SaveChanges();
         }
+    }
 
-       
+    public class SupCodeName
+    {
+        public string supCode { get; set; }
+        public string supName { get; set; } 
     }
 }

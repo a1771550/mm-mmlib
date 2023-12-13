@@ -10,7 +10,6 @@ using Resources = CommonLib.App_GlobalResources;
 using Device = MMDAL.Device;
 using Purchase = MMDAL.Purchase;
 using System.Configuration;
-using MMLib.Models.Purchase.Supplier;
 using MMLib.Models.POS.Settings;
 using Microsoft.Data.SqlClient;
 using Dapper;
@@ -21,11 +20,15 @@ using MMLib.Models.User;
 using MMLib.Models.Item;
 using System.Text.Json;
 using CommonLib.BaseModels;
+using MMLib.Models.Supplier;
+using System.IO;
+using System.Drawing.Drawing2D;
 
 namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
 		public Dictionary<string, ItemOptions> DicItemOptions { get; set; }
 		public string JsonDicItemOptions { get { return JsonSerializer.Serialize(DicItemOptions); } }
 		public PurchaseOrderReviewModel PurchaseOrderReview { get; set; }
@@ -45,7 +48,8 @@ namespace MMLib.Models.Purchase
 		public string JsonDicItemGroupedVariations { get { return DicItemGroupedVariations == null ? "" : JsonSerializer.Serialize(DicItemGroupedVariations); } }
 		public List<string> ImgList;
 		public List<string> FileList;
-
+		public bool Readonly { get; set; }
+		public bool DoApproval { get; set; }
 		static string PurchaseType = "PS";
 		public PurchaseStatus ListMode { get; set; }
 		public PurchaseModel Purchase { get; set; }
@@ -53,16 +57,31 @@ namespace MMLib.Models.Purchase
 		public ReceiptViewModel Receipt;
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
-		public PurchaseEditModel(string receiptno, int? ireadonly) : this()
+
+		public PurchaseEditModel()
 		{
-			Get(0, receiptno, ireadonly);
+			DicItemOptions = new Dictionary<string, ItemOptions>();
+			DicCurrencyExRate = new Dictionary<string, double>();
+			DicLocation = new Dictionary<string, string>();
+			JobList = new List<MyobJobModel>();
+			ImgList = new List<string>();
+			FileList = new List<string>();
+
+			DicItemAttrList = new Dictionary<string, List<ItemAttribute>>();
+			DicItemVariations = new Dictionary<string, List<ItemVariModel>>();
+			DicItemGroupedVariations = new Dictionary<string, List<IGrouping<string, ItemVariModel>>>();
+			DicSupInfoes = new Dictionary<string, List<SupplierModel>>();
 		}
-		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, bool forprint = false) : this()
+		public PurchaseEditModel(string receiptno, int? ireadonly, int? idoapproval) : this()
 		{
-			Get(Id, null, ireadonly, status, forprint);
+			Get(0, receiptno, ireadonly, idoapproval);
+		}
+		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, int? idoapproval = 1, bool forprint = false) : this()
+		{
+			Get(Id, null, ireadonly, idoapproval, status, forprint);
 		}
 
-		public void Get(long Id = 0, string receiptno = null, int? ireadonly = 0, string status = "", bool forprint = false)
+		public void Get(long Id = 0, string receiptno = null, int? ireadonly = 0, int? idoapproval = 1, string status = "", bool forprint = false)
 		{
 			bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
 			get0(isapprover, out MMDbContext context, out Device device);
@@ -72,6 +91,9 @@ namespace MMLib.Models.Purchase
 
 			if (Id > 0 || !string.IsNullOrEmpty(receiptno))
 			{
+				Readonly = ireadonly == 1;
+				DoApproval = idoapproval == 1;
+
 				GetPurchaseItemList(context, Purchase);
 
 				if (forprint)
@@ -81,6 +103,36 @@ namespace MMLib.Models.Purchase
 					PaymentTermsList = new List<string>();
 					Helpers.ModelHelper.GetReady4Print(context, ref Receipt, ref DisclaimerList, ref PaymentTermsList);
 				}
+
+				var suppurchaseInfoes = connection.Query<SupplierModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+				if (suppurchaseInfoes != null && suppurchaseInfoes.Count > 0)
+				{
+					var groupedsupPurchaseInfoes = suppurchaseInfoes.GroupBy(x => x.supCode).ToList();
+					foreach (var group in groupedsupPurchaseInfoes)
+					{
+						var g = group.FirstOrDefault();
+						if (!DicSupInfoes.ContainsKey(g.supCode))
+						{
+							DicSupInfoes[g.supCode] = new List<SupplierModel>();
+						}
+					}
+					foreach (var group in groupedsupPurchaseInfoes)
+					{
+						var g = group.FirstOrDefault();
+						if (DicSupInfoes.ContainsKey(g.supCode))
+						{
+							foreach (var spi in group)
+							{
+								var _file = Path.Combine("Purchase", apId.ToString(), Purchase.pstCode, g.supCode, spi.fileName);
+								spi.fileName = $"<a class='' href='/{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{spi.fileName}</a>";
+								DicSupInfoes[g.supCode].Add(spi);
+							}
+
+						}
+					}
+				}
+
+
 
 				#region Handle View File
 				Helpers.ModelHelper.HandleViewFile(Purchase.UploadFileName, AccountProfileId, Purchase.pstCode, ref ImgList, ref FileList);
@@ -221,20 +273,6 @@ namespace MMLib.Models.Purchase
 				DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
 				device = context.Devices.FirstOrDefault(x => x.dvcUID == dev.dvcUID);
 			}
-		}
-
-		public PurchaseEditModel()
-		{
-			DicItemOptions = new Dictionary<string, ItemOptions>();
-			DicCurrencyExRate = new Dictionary<string, double>();
-			DicLocation = new Dictionary<string, string>();
-			JobList = new List<MyobJobModel>();
-			ImgList = new List<string>();
-			FileList = new List<string>();
-
-			DicItemAttrList = new Dictionary<string, List<ItemAttribute>>();
-			DicItemVariations = new Dictionary<string, List<ItemVariModel>>();
-			DicItemGroupedVariations = new Dictionary<string, List<IGrouping<string, ItemVariModel>>>();
 		}
 
 		private void GetPurchaseItemList(MMDbContext context, PurchaseModel ps)
@@ -476,9 +514,9 @@ namespace MMLib.Models.Purchase
 						#region Send Notification Email   
 						if ((bool)comInfo.enableEmailNotification)
 						{
-							ReactType reactType = ReactType.RequestingByStaff;						
+							ReactType reactType = ReactType.RequestingByStaff;
 							if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
-							if (IsUserRole.ismuseumdirector|| IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+							if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
 							if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl, reactType))
 							{
 								var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
@@ -656,8 +694,9 @@ namespace MMLib.Models.Purchase
 				ps.pstRemark = model.pstRemark;
 				ps.pstExRate = model.pstExRate;
 				ps.AccountProfileId = comInfo.AccountProfileId;
-				ps.CreateTime = dateTime;
-				ps.CreateBy = user.UserName;
+				ps.ModifyTime = dateTime;
+				//ps.CreateTime = dateTime;
+				//ps.CreateBy = user.UserName;
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
 			}
@@ -971,8 +1010,8 @@ namespace MMLib.Models.Purchase
 		{
 			if (pendinglist.Count > 0)
 			{
-				DateTime purchasedate = ps.pstPurchaseDate ?? DateTime.Now;
-				DateTime promiseddate = ps.pstPromisedDate ?? DateTime.Now.AddDays(1);
+				DateTime purchasedate = ps.pstPurchaseDate ==null? DateTime.Now:ps.pstPurchaseDate;
+				DateTime promiseddate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate;
 				var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 				var _ps = new MMDAL.Purchase
 				{

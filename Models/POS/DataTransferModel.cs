@@ -1,6 +1,6 @@
 ﻿using MMLib.Models.Item;
 using MMLib.Models.Purchase;
-using MMLib.Models.Purchase.Supplier;
+using MMLib.Models.Supplier;
 using System;
 using System.Collections.Generic;
 
