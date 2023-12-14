@@ -1545,7 +1545,7 @@ namespace MMLib.Helpers
 			context.SaveChanges();
 
 			//rights = context.AccessRights.Where(x => x.UserCode.ToLower() == usercode.ToLower()).ToList();
-			var _rights = context.GetDefaultAccessRights(usercode).ToList();
+			var _rights = context.GetDefaultAccessRights(apId, usercode).ToList();
 			foreach (var right in _rights)
 			{
 				right.UserCode = salesman.UserCode;
@@ -2869,7 +2869,7 @@ namespace MMLib.Helpers
 		{
 			//List<SysFunc> funcs = new List<SysFunc>();
 			//funcs = context.SysFuncs.Where(x => x.sfnSettings == true && x.Assignable == true).ToList();
-			var funcs = context.GetDefaultAccessRights("staff01").ToList();
+			var funcs = context.GetDefaultAccessRights(apId, "staff01").ToList();
 			Dictionary<string, string> dicAR = new Dictionary<string, string>();
 
 			switch (lang)
@@ -3663,7 +3663,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectreason = null, string suppernames=null)
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectonholdreason = null, string suppernames=null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -3727,9 +3727,16 @@ namespace MMLib.Helpers
 					if (reactType == ReactType.Rejected)
 					{
 						//<h3>Hi {0}</h3><p>The following {1} is pending for your review:</p><ul>{2}</ul><h4>{3}</h4><p>{4}</p>
-						var rejectreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject);
-						//mailbody = $"<h3>Hi {name}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectreasontxt}</h4><p>{rejectreason}</p>";
-						mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectreasontxt, rejectreason);
+						var rejectonholdreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject);
+						//mailbody = $"<h3>Hi {name}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectonholdreasontxt}</h4><p>{rejectonholdreason}</p>";
+						mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectonholdreasontxt, rejectonholdreason);
+					}
+					if (reactType == ReactType.OnHold || reactType == ReactType.OnHoldByFinanceDept)
+					{
+						//<h3>Hi {0}</h3><p>The following {1} is pending for your review:</p><ul>{2}</ul><h4>{3}</h4><p>{4}</p>
+						var rejectonholdreasontxt = string.Format(Resource.ReasonForFormat, Resource.OnHold);
+						//mailbody = $"<h3>Hi {name}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectonholdreasontxt}</h4><p>{rejectonholdreason}</p>";
+						mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasontxt, rejectonholdreason);
 					}
 
 					message.Body = mailbody;

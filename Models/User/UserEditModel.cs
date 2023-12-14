@@ -79,6 +79,13 @@ namespace MMLib.Models.User
 			AccessRights = new List<AccessRight>();
 			if (foradd)
 			{
+				//List<SysUser> users = context.SysUsers.Where(x => !x.surIsActive).ToList();
+				//if (users != null && users.Count > 0)
+				//{
+				//	MaxSalesCode = users.OrderBy(x => x.surUID).First().UserCode;
+				//}
+				//else
+				//{
 				MaxSalesCode = context.GetMaxUserCode("staff").FirstOrDefault();
 				if (string.IsNullOrEmpty(MaxSalesCode))
 				{
@@ -91,8 +98,11 @@ namespace MMLib.Models.User
 				resultString = icode < 10 ? icode.ToString().PadLeft(2, '0') : icode.ToString(); //RIGHT HERE!!!
 
 				MaxSalesCode = string.Concat("staff", resultString);
+				//}
+
+
 				//GetDefaultAccessRights
-				var _accessrights = context.GetDefaultAccessRights("staff01").ToList();
+				var _accessrights = context.GetDefaultAccessRights(apId, "staff01").ToList();
 
 				foreach (var a in _accessrights)
 				{
@@ -122,7 +132,7 @@ namespace MMLib.Models.User
 		private static List<UserModel> getUserList(MMDbContext context)
 		{
 			List<UserModel> users = new List<UserModel>();
-			var _users = context.GetUserList6(comInfo.AccountProfileId, true).ToList();
+			var _users = context.GetUserList6(comInfo.AccountProfileId).ToList();
 			if (_users != null && _users.Count > 0)
 			{
 				foreach (var u in _users)
@@ -220,41 +230,11 @@ namespace MMLib.Models.User
 
 
 
-		public static void Delete(int staffId)
-		{
-			using (var context = new MMDbContext())
-			{
-				using (var transaction = context.Database.BeginTransaction())
-				{
-					try
-					{
-						var u = context.SysUsers.FirstOrDefault(x => x.surUID == staffId);
-						if (u != null)
-						{
-							//u.surIsActive = false;
-							context.SysUsers.Remove(u);
-							context.SaveChanges();
-							List<UserRole> userroles = context.UserRoles.Where(x => x.AccountProfileId == comInfo.AccountProfileId && x.UserId == u.surUID).ToList();
-							if (userroles.Count > 0)
-							{
-								context.UserRoles.RemoveRange(userroles);
-							}
-							transaction.Commit();
-						}
-					}
-					catch (Exception ex)
-					{
-						transaction.Rollback();
-						throw new Exception(ex.Message);
-					}
-				}
 
-			}
-		}
 
 		public void GetSuperiorList(MMDbContext context)
 		{
-			var userlist = context.GetUserList6(apId, true);
+			var userlist = context.GetUserList6(apId);
 			var _superiorlist = userlist.Where(x => !x.Roles.Contains(RoleType.Staff.ToString()));
 			SuperiorList = new List<UserModel>();
 			foreach (var a in _superiorlist)
@@ -284,6 +264,38 @@ namespace MMLib.Models.User
 				isdirectorboard = user.Roles.Contains(RoleType.DirectorBoard),
 				isapprover = user.Roles.Any(x => x != RoleType.Staff)
 			};
+		}
+
+		public static void Delete(int staffId)
+		{
+			using (var context = new MMDbContext())
+			{
+				using (var transaction = context.Database.BeginTransaction())
+				{
+					try
+					{
+						var u = context.SysUsers.FirstOrDefault(x => x.surUID == staffId);
+						if (u != null)
+						{
+							u.surIsActive = false;
+							//context.SysUsers.Remove(u);							
+							List<UserRole> userroles = context.UserRoles.Where(x => x.AccountProfileId == comInfo.AccountProfileId && x.UserId == u.surUID).ToList();
+							if (userroles.Count > 0)
+							{
+								context.UserRoles.RemoveRange(userroles);
+							}
+							context.SaveChanges();
+							transaction.Commit();
+						}
+					}
+					catch (Exception ex)
+					{
+						transaction.Rollback();
+						throw new Exception(ex.Message);
+					}
+				}
+
+			}
 		}
 	}
 }

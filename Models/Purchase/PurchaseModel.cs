@@ -26,8 +26,8 @@ namespace MMLib.Models.Purchase
         public string SupplierName { get; set; }
         public DateTime? ResponseTime { get; set; }
 		public string ResponseTimeDisplay { get { return ResponseTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ResponseTime, true); } }
-		public string PromisedDateDisplay { get { return CommonHelper.FormatDate(pstPromisedDate, true); } }
-        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate, true); } }
+		public string PromisedDateDisplay { get { return pstPromisedDate==null?"N/A": CommonHelper.FormatDate((DateTime)pstPromisedDate, true); } }
+        public string PurchaseDateDisplay { get { return pstPurchaseDate==null?"N/A": CommonHelper.FormatDate((DateTime)pstPurchaseDate, true); } }
         public string PurchaseTimeDisplay { get { return pstPurchaseTime==null?"N/A": CommonHelper.FormatDateTime((DateTime)pstPurchaseTime, true); } }
         public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
         public string ModifyTimeDisplay { get { return ModifyTime==null?"N/A": CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }

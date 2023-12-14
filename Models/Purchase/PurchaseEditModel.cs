@@ -94,8 +94,6 @@ namespace MMLib.Models.Purchase
 				Readonly = ireadonly == 1;
 				DoApproval = idoapproval == 1;
 
-				GetPurchaseItemList(context, Purchase);
-
 				if (forprint)
 				{
 					Receipt = new ReceiptViewModel();
@@ -131,8 +129,6 @@ namespace MMLib.Models.Purchase
 						}
 					}
 				}
-
-
 
 				#region Handle View File
 				Helpers.ModelHelper.HandleViewFile(Purchase.UploadFileName, AccountProfileId, Purchase.pstCode, ref ImgList, ref FileList);
@@ -275,145 +271,7 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		private void GetPurchaseItemList(MMDbContext context, PurchaseModel ps)
-		{
-			int apId = AccountProfileId;
-			using var connection = new SqlConnection(DefaultConnection);
-			connection.Open();
 
-			Purchase.PurchaseItems = connection.Query<PurchaseItemModel>(@"EXEC dbo.GetPurchaseItemListByCode8 @apId=@apId,@pstCode=@pstCode,@piStatus=@piStatus", new { apId = ps.AccountProfileId, ps.pstCode, piStatus = ps.pstStatus }).ToList();
-
-			var itemcodes = Purchase.PurchaseItems.Select(x => x.itmCode).Distinct().ToHashSet();
-			var itemcodelist = string.Join(",", itemcodes);
-
-			Helpers.ModelHelper.GetShops(connection, ref Shops, ref ShopNames, apId);
-
-			if (EnableItemVari)
-				Helpers.ModelHelper.GetDicItemGroupedVariations(context, connection, itemcodes, ref DicItemAttrList, ref DicItemVariations, ref DicItemGroupedVariations, Shops);
-
-			if (EnableItemOptions)
-			{
-				List<ItemModel> itemoptionlist = connection.Query<ItemModel>(@"EXEC dbo.GetItemOptionsByItemCodes6 @apId=@apId,@itemcodes=@itemcodes", new { apId = ps.AccountProfileId, itemcodes = itemcodelist }).ToList();
-
-				var batvtInfo = context.GetBatchVtInfoByItemCodes12(apId, ps.pstSalesLoc, itemcodelist).ToList();
-				var snInfo = context.GetSerialInfo5(apId, ps.pstSalesLoc, itemcodelist, ps.pstCode).ToList();
-				var vtInfo = context.GetValidThruInfo12(apId, ps.pstSalesLoc, itemcodelist).ToList();
-				var ivInfo = context.GetItemVariInfo4(apId, ps.pstSalesLoc, itemcodelist).ToList();
-
-				DicItemOptions = new Dictionary<string, ItemOptions>();
-
-				foreach (var item in Purchase.PurchaseItems)
-				{
-					var itemoptions = itemoptionlist.FirstOrDefault(x => x.itmCode == item.itmCode);
-
-					if (item.piStatus.ToLower() != "order" && item.piStatus.ToLower() != "created")
-					{
-						if (itemoptions != null)
-						{
-							if (itemoptions.chkBat)
-							{
-								var batchList = batvtInfo.Where(x => x.itmCode == item.itmCode && x.seq == item.piSeq).ToList();
-								foreach (var batch in batchList)
-								{
-									item.batchList.Add(new BatchModel
-									{
-										batCode = batch.batCode,
-										batSeq = batch.batSeq,
-										batValidThru = batch.batValidThru,
-										batItemCode = batch.itmCode,
-										batStockInCode = batch.batStockInCode,
-										batStockInDate = batch.batStockInDate,
-										batQty = batch.batQty,
-										batStatus = batch.batStatus,
-										seq = batch.seq,
-									});
-								}
-							}
-
-							if (itemoptions.chkSN)
-							{
-								item.SerialNoList = (from sn in context.SerialNoes
-													 where sn.snoStockInCode == item.pstCode && sn.snoStockInSeq == item.piSeq && sn.snoStockInLoc == item.piStockLoc && sn.AccountProfileId == ComInfo.AccountProfileId
-													 orderby sn.snoStockInSeq
-													 select new SerialNoView
-													 {
-														 snoUID = sn.snoUID,
-														 snoIsActive = sn.snoIsActive,
-														 snoCode = sn.snoCode,
-														 snSeq = (int)sn.snoSeq,
-														 snoStatus = sn.snoStatus,
-														 snoItemCode = sn.snoItemCode,
-														 snoBatchCode = sn.snoBatchCode,
-														 snoStockInCode = sn.snoStockInCode,
-														 snoStockInSeq = sn.snoStockInSeq,
-														 snoStockInLoc = sn.snoStockInLoc,
-														 snoValidThru = sn.snoValidThru,
-														 AccountProfileId = sn.AccountProfileId,
-														 //seq = sn.seq
-													 }
-															).ToList();
-
-								item.snbatseqvtlist = new List<SnBatSeqVt>();
-								foreach (var sn in item.SerialNoList)
-								{
-									item.snbatseqvtlist.Add(new SnBatSeqVt
-									{
-										sn = sn.snoCode,
-										batcode = sn.snoBatchCode,
-										snseq = sn.snSeq,
-										vt = sn.ValidThruDisplay,
-										seq = sn.snoStockInSeq ?? 1
-									});
-								}
-							}
-
-							if (itemoptions.chkVT)
-							{
-								var vtlist = vtInfo.Where(x => x.itmCode == item.itmCode && x.vtSeq == item.piSeq).ToList();
-								foreach (var vt in vtlist)
-								{
-									item.vtList.Add(new ValidThruModel
-									{
-										vtSeq = vt.vtSeq,
-										vtValidThru = vt.vtValidThru,
-										vtItemCode = vt.vtItemCode,
-										vtStockInCode = vt.vtStockInCode,
-										vtQty = vt.vtQty,
-										vtStatus = vt.vtStatus,
-									});
-								}
-							}
-						}
-
-						if (ivInfo != null && ivInfo.Count > 0)
-						{
-							var ivlist = ivInfo.Where(x => x.itmCode == item.itmCode && x.seq == item.piSeq).ToList();
-							foreach (var iv in ivlist)
-							{
-								item.poItemVariList.Add(new PoItemVariModel
-								{
-									Id = iv.Id,
-									ivComboId = iv.ivComboId,
-									ivStockInCode = iv.ivStockInCode,
-									ivQty = iv.ivQty,
-									ivStatus = iv.ivStatus,
-									seq = (int)iv.seq!,
-									ivIdList = iv.ivIdList,
-									batCode = iv.batCode
-								});
-							}
-						}
-
-						DicItemOptions[item.itmCode] = new ItemOptions
-						{
-							ChkBatch = itemoptions.chkBat,
-							ChkSN = itemoptions.chkSN,
-							WillExpire = itemoptions.chkVT
-						};
-					}
-				}
-			}
-		}
 		public List<PurchaseModel> PSList { get; set; }
 		public PagedList.IPagedList<PurchaseModel> PagingPSList { get; set; }
 		public string PrintMode { get; set; }
@@ -437,7 +295,7 @@ namespace MMLib.Models.Purchase
 			return PSList;
 		}
 
-		public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, RecurOrder recurOrder = null)
+		public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList)
 		{
 			List<PurchaseReturnMsg> msglist = new List<PurchaseReturnMsg>();
 			List<Superior> SuperiorList = new List<Superior>();
@@ -456,14 +314,7 @@ namespace MMLib.Models.Purchase
 			DateTime purchasedate = CommonHelper.GetDateFrmString4SQL(model.JsPurchaseDate, DateTimeFormat.YYYYMMDD);
 			DateTime promiseddate = CommonHelper.GetDateFrmString4SQL(model.JsPromisedDate, DateTimeFormat.YYYYMMDD);
 
-			if (recurOrder != null && recurOrder.IsRecurring == 1)
-			{
-				purchasestatus = PurchaseStatus.recurring.ToString();
-			}
-			else
-			{
-				purchasestatus = IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
-			}
+			purchasestatus = IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
 
 			List<string> reviewurls = new();
 			List<GetSuperior4Notification2_Result> superiors = new();
@@ -474,11 +325,11 @@ namespace MMLib.Models.Purchase
 			{
 				if (!model.IsEditMode)
 				{
-					addPurchaseOrder(model, PurchaseItems, SupplierList, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					addPurchaseOrder(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus, ref dicItemLocQty);
 				}
 				else
 				{
-					processPurchase(model, PurchaseItems, SupplierList, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus);
 				}
 			}
 			else
@@ -497,11 +348,11 @@ namespace MMLib.Models.Purchase
 
 				if (!model.IsEditMode)
 				{
-					addPurchaseOrder(model, PurchaseItems, SupplierList, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					addPurchaseOrder(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus, ref dicItemLocQty);
 				}
 				else
 				{
-					processPurchase(model, PurchaseItems, SupplierList, dev, context, dateTime, purchasedate, promiseddate, user, purchasestatus, ref dicItemLocQty);
+					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus);
 				}
 
 				status = "purchaseordersaved";
@@ -526,22 +377,21 @@ namespace MMLib.Models.Purchase
 						}
 						#endregion
 					}
-					GenReturnMsgList(model, PurchaseItems, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+					GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
 
 				}
 			}
-
-			#region Update Stock
-			if (purchasestatus == "opened")
-				UpdateStockQty(model, PurchaseItems, context, user, dateTime, dicItemLocQty);
-			#endregion
+			//#region Update Stock
+			//if (purchasestatus == "opened")
+			//	UpdateStockQty(model, PurchaseItems, context, user, dateTime, dicItemLocQty);
+			//#endregion
 
 			return msglist;
 		}
 
 
 
-		private static void GenReturnMsgList(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
+		private static void GenReturnMsgList(PurchaseModel model, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
 		{
 			foreach (var superior in SuperiorList)
 			{
@@ -556,8 +406,7 @@ namespace MMLib.Models.Purchase
 					superiorphone = superior.Phone,
 					purchasecode = model.pstCode,
 					reviewurl = DicReviewUrl[key],
-					supnames = supnames,
-					purchaselnlength = PurchaseItems.Count,
+					supnames = supnames,					
 					superioremail = superior.Email,
 					isdirectorboard = isdirectorboard,
 					remark = model.pstRemark
@@ -565,7 +414,7 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		private static void processPurchase(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
+		private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
 		{
 			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 			ps.pstType = PurchaseType;
@@ -583,23 +432,9 @@ namespace MMLib.Models.Purchase
 
 			if (purchasestatus == "opened")
 			{
-				#region add pi records:
-				bool ispartial = AddPurchaseItems(model, PurchaseItems, context, ps, ref dicItemLocQty);
-				#endregion
-
-				#region remove original pi(status==order) records:
-				var oripilns = context.PurchaseItems.Where(x => x.pstCode == model.pstCode && x.AccountProfileId == comInfo.AccountProfileId && (x.piStatus.ToLower() == "order" || x.piStatus.ToLower() == "created") && !(bool)x.IsPartial);
-				if (oripilns.Any())
-				{
-					context.PurchaseItems.RemoveRange(oripilns);
-					context.SaveChanges();
-				}
-				#endregion
-
 				#region Update Purchase Status
 				// update wholesales status:                
-				ps.pstStatus = ispartial ? PurchaseStatus.partialreceival.ToString() : PurchaseStatus.opened.ToString();
-				ps.pstIsPartial = ispartial;
+				ps.pstStatus = PurchaseStatus.opened.ToString();				
 				ps.ModifyTime = dateTime;
 				context.SaveChanges();
 				#endregion
@@ -620,60 +455,13 @@ namespace MMLib.Models.Purchase
 				device.dvcNextPurchaseOrderNo++;
 				context.SaveChanges();
 				#endregion
-			}
-			else
-			{
-				UpdatePurchaseItems(model, PurchaseItems, context);
-			}
+			}			
 		}
 
 
-		private static void UpdatePurchaseItems(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, MMDbContext context)
-		{
-			DateTime dateTime = DateTime.Now;
+		
 
-			var psitems = context.PurchaseItems.Where(x => x.pstCode == model.pstCode && (x.piStatus.ToLower() == "order" || x.piStatus.ToLower() == "created"));
-
-			var itemcodes = PurchaseItems.Select(x => x.itmCode).Distinct().ToList();
-			var itemoptions = context.GetItemOptionsByItemCodes6(comInfo.AccountProfileId, string.Join(",", itemcodes)).ToList();
-
-			List<PurchaseItem> psiList = new List<PurchaseItem>();
-
-			foreach (var item in PurchaseItems)
-			{
-				var psitem = psitems.FirstOrDefault(x => x.piSeq == item.piSeq);
-				if (psitem != null)
-				{
-					psitem.itmCode = item.itmCode;
-					psitem.piBaseUnit = item.piBaseUnit;
-					psitem.piQty = item.piQty;
-					psitem.piUnitPrice = item.piUnitPrice;
-					psitem.piDiscPc = item.piDiscPc;
-					psitem.piTaxPc = item.piTaxPc;
-					psitem.piTaxAmt = item.piTaxAmt;
-					psitem.piAmt = item.piAmt;
-					psitem.piAmtPlusTax = item.piAmtPlusTax;
-					psitem.piStockLoc = item.piStockLoc;
-					psitem.JobID = item.JobID;
-					psitem.ModifyTime = dateTime;
-				}
-				else
-				{
-					DateTime? validthru;
-					GetItemOptionsByItemCodes6_Result itemoption = null;
-					if (enableItemOptions)
-						addPurchaseItem(model, dateTime, ref psiList, item, out validthru, ref itemoption, itemoptions);
-					else addPurchaseItem(model, dateTime, ref psiList, item, out validthru, ref itemoption);
-				}
-			}
-
-			if (psiList.Count > 0)
-				context.PurchaseItems.AddRange(psiList);
-
-			context.SaveChanges();
-		}
-
-		private static long addPurchaseOrder(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, SessUser user, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
+		private static long addPurchaseOrder(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
 		{
 			var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 			var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
@@ -685,6 +473,7 @@ namespace MMLib.Models.Purchase
 				//ps.pstCode = model.pstCode;
 				ps.supCode = supcodes;
 				ps.pstType = PurchaseType;
+				ps.pstDesc = model.pstDesc;
 				ps.pstPurchaseDate = purchasedate;
 				ps.pstPurchaseTime = pstTime;
 				ps.pstPromisedDate = promiseddate;
@@ -700,8 +489,7 @@ namespace MMLib.Models.Purchase
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
 			}
-			context.SaveChanges();
-			AddPurchaseItems(model, PurchaseItems, context, ps, ref dicItemLocQty);
+			context.SaveChanges();		
 			AddSupplierList(model.pstCode, SupplierList, context);
 			return ps.Id;
 		}
@@ -743,351 +531,7 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		private static void UpdateStockQty(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, MMDbContext context, SessUser sessUser, DateTime dateTime, Dictionary<string, Dictionary<string, int>> dicItemLocQty)
-		{
-			if (model.pstStatus == PurchaseStatus.opened.ToString())
-			{
-				List<MyobLocStock> newstocks = new List<MyobLocStock>();
-				var itemCodesIds = context.GetItemIdsByCodes1(comInfo.AccountProfileId, !NonAbss, string.Join(",", PurchaseItems.Select(x => x.itmCode).ToList())).ToList();
-
-				foreach (var itemcode in dicItemLocQty.Keys)
-				{
-					foreach (var location in dicItemLocQty[itemcode].Keys)
-					{
-						MyobLocStock stock = context.MyobLocStocks.FirstOrDefault(x => x.lstItemCode == itemcode && x.lstStockLoc == location && x.AccountProfileId == comInfo.AccountProfileId);
-						if (stock != null)
-						{
-							stock.lstQuantityAvailable += dicItemLocQty[itemcode][location];
-							stock.lstModifyBy = sessUser.UserName;
-							stock.lstModifyTime = dateTime;
-						}
-						else
-						{
-							var itemcodeid = itemCodesIds.FirstOrDefault(x => x.itmCode == itemcode);
-							var itemId = itemcodeid == null ? 0 : itemcodeid.itmItemID;
-							var Id = CommonHelper.GenerateNonce(50);
-							stock = new MyobLocStock
-							{
-								Id = Id,
-								lstItemLocationID = stock.lstItemLocationID,
-								lstItemCode = itemcode,
-								lstItemID = itemId,
-								lstStockLoc = model.pstSalesLoc,
-								lstQuantityAvailable = dicItemLocQty[itemcode][location],
-								AccountProfileId = comInfo.AccountProfileId,
-								lstCreateBy = sessUser.UserName,
-								lstCreateTime = dateTime,
-								lstModifyTime = dateTime
-							};
-							newstocks.Add(stock);
-						}
-					}
-				}
-
-				if (newstocks.Count > 0)
-				{
-					context.MyobLocStocks.AddRange(newstocks);
-					context.SaveChanges();
-				}
-				context.SaveChanges();
-			}
-		}
-
-		private static bool AddPurchaseItems(PurchaseModel model, List<PurchaseItemModel> PurchaseItems, MMDbContext context, MMDAL.Purchase ps, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
-		{
-			StringBuilder sb = new StringBuilder();
-			DateTime dateTime = DateTime.Now;
-			List<PurchaseItem> psilist = new();
-			List<PurchaseItem> pendinglist = new();
-
-			List<Batch> batchlist = new List<Batch>();
-			List<SerialNo> serialNoList = new List<SerialNo>();
-			List<MMDAL.ValidThru> vtlist = new List<MMDAL.ValidThru>();
-			List<PoItemVariation> ivlist = new List<PoItemVariation>();
-			List<GetItemOptionsByItemCodes6_Result> itemoptions = null;
-
-			if (enableItemOptions)
-			{
-				var itemcodes = PurchaseItems.Select(x => x.itmCode).Distinct().ToList();
-				itemoptions = context.GetItemOptionsByItemCodes6(comInfo.AccountProfileId, string.Join(",", itemcodes)).ToList();
-				foreach (var itemcode in itemcodes)
-				{
-					dicItemLocQty[itemcode] = new Dictionary<string, int>();
-				}
-			}
-
-			foreach (var item in PurchaseItems)
-			{
-				DateTime? validthru;
-				GetItemOptionsByItemCodes6_Result itemoption = null;
-
-				if (enableItemOptions)
-					addPurchaseItem(ps, dateTime, ref psilist, item, out validthru, ref itemoption, itemoptions);
-				else
-					addPurchaseItem(ps, dateTime, ref psilist, item, out validthru, ref itemoption);
-
-				if (ps.pstStatus == PurchaseStatus.opened.ToString())
-				{
-					if (item.batchList != null && item.batchList.Count > 0)
-					{
-						foreach (var bi in item.batchList)
-						{
-							DateTime? bivalidthru = string.IsNullOrEmpty(bi.validthru) ? null : CommonHelper.GetDateFrmString4SQL(bi.validthru, DateTimeFormat.YYYYMMDD);
-							int batqty = (itemoption != null && itemoption.chkSN && itemoption.chkSN) ? item.snbatseqvtlist.Count : (int)bi.batQty;
-							batchlist.Add(
-								new Batch
-								{
-									batCode = bi.batCode,
-									batSeq = bi.batSeq,
-									seq = bi.seq,
-									batQty = batqty,
-									batValidThru = bivalidthru,
-									batItemCode = bi.batItemCode,
-									batStockInCode = ps.pstCode,
-									batStockInDate = ps.pstPurchaseDate,
-									batStatus = "READY",
-									AccountProfileId = ps.AccountProfileId,
-									CreateTime = dateTime,
-									ModifyTime = dateTime
-								}
-							);
-						}
-					}
-
-					if (item.snbatseqvtlist != null && item.snbatseqvtlist.Count > 0)
-					{
-						foreach (var snv in item.snbatseqvtlist)
-						{
-							DateTime? snvalidthru = string.IsNullOrEmpty(snv.vt) ? null : CommonHelper.GetDateFrmString4SQL(snv.vt, DateTimeFormat.YYYYMMDD);
-							serialNoList.Add(new SerialNo
-							{
-								snoIsActive = true,
-								snoCode = snv.sn,
-								snoSeq = snv.seq,
-								snoValidThru = snvalidthru,
-								snoStatus = "REDEEM READY",
-								snoItemCode = item.itmCode,
-								snoStockInCode = ps.pstCode,
-								snoStockInSeq = (byte?)item.piSeq,
-								snoStockInLoc = model.pstSalesLoc,
-								snoStockInDate = ps.pstPurchaseDate,
-								snoBatchCode = snv.batcode,
-								seq = snv.seq,
-								AccountProfileId = comInfo.AccountProfileId,
-								CreateTime = DateTime.Now,
-								ModifyTime = DateTime.Now
-							});
-						}
-					}
-
-					if (itemoption != null && !itemoption.chkBat && !itemoption.chkSN && itemoption.chkVT)
-					{
-						vtlist.Add(new MMDAL.ValidThru
-						{
-							vtSeq = item.piSeq,
-							seq = item.piSeq,
-							vtValidThru = validthru,
-							vtItemCode = item.itmCode,
-							vtStockInCode = ps.pstCode,
-							vtQty = item.piReceivedQty,
-							vtStatus = "READY",
-							AccountProfileId = ps.AccountProfileId,
-							CreateTime = dateTime,
-							ModifyTime = dateTime
-						});
-					}
-
-					if (dicItemLocQty.ContainsKey(item.itmCode) && dicItemLocQty[item.itmCode].ContainsKey(item.piStockLoc))
-					{
-						dicItemLocQty[item.itmCode][item.piStockLoc] += (int)item.piReceivedQty;
-					}
-					else
-					{
-						dicItemLocQty[item.itmCode][item.piStockLoc] = (int)item.piReceivedQty;
-					}
-
-					SetPendingList(ps, dateTime, ref pendinglist, item, itemoptions);
-
-					if (enableItemVari)
-					{
-						#region ItemVariations
-						if (item.poItemVariList != null && item.poItemVariList.Count > 0)
-						{
-							int ivIdLength = int.Parse(ConfigurationManager.AppSettings["IvIdLength"]);
-							foreach (var iv in item.poItemVariList)
-							{
-								var Id = CommonHelper.GenerateNonce(ivIdLength, false);
-								var ivIdList = string.Join(",", iv.JsIvIdList);
-								ivlist.Add(new PoItemVariation
-								{
-									Id = Id,
-									ivComboId = iv.ivComboId,
-									ivStockInCode = ps.pstCode,
-									ivQty = iv.ivQty,
-									seq = iv.seq,
-									itmCode = iv.itmCode,
-									batCode = iv.batCode,
-									ivIdList = ivIdList,
-									AccountProfileId = ps.AccountProfileId,
-									CreateTime = dateTime
-								});
-							}
-						}
-						#endregion
-					}
-
-				}
-			}
-
-			if (batchlist.Count > 0)
-			{
-				context.Batches.AddRange(batchlist);
-				context.SaveChanges();
-			}
-			if (serialNoList.Count > 0)
-			{
-				context.SerialNoes.AddRange(serialNoList);
-				context.SaveChanges();
-			}
-			if (vtlist.Count > 0)
-			{
-				context.ValidThrus.AddRange(vtlist);
-				context.SaveChanges();
-			}
-			if (psilist.Count > 0)
-			{
-				context.PurchaseItems.AddRange(psilist);
-				context.SaveChanges();
-			}
-			if (ivlist.Count > 0)
-			{
-				context.PoItemVariations.AddRange(ivlist);
-				context.SaveChanges();
-			}
-
-			HandlePendingList(model, context, ps, dateTime, pendinglist, psilist);
-
-			context.SaveChanges();
-
-			return pendinglist.Count > 0;
-		}
-
-		private static void addPurchaseItem(MMDAL.Purchase ps, DateTime dateTime, ref List<PurchaseItem> psilist, PurchaseItemModel item, out DateTime? validthru, ref GetItemOptionsByItemCodes6_Result itemoption, List<GetItemOptionsByItemCodes6_Result> itemoptions = null)
-		{
-			validthru = string.IsNullOrEmpty(item.JsValidThru) ? null : CommonHelper.GetDateFrmString4SQL(item.JsValidThru, DateTimeFormat.YYYYMMDD);
-			if (enableItemOptions)
-				itemoption = itemoptions.FirstOrDefault(x => x.itmCode == item.itmCode);
-
-			psilist.Add(new PurchaseItem
-			{
-				pstCode = ps.pstCode,
-				pstId = ps.Id,
-				itmCode = item.itmCode,
-				piSeq = item.piSeq,
-				piBaseUnit = item.piBaseUnit,
-				piQty = item.piQty,
-				piHasSN = itemoption == null ? false : itemoption.chkSN,
-				piValidThru = validthru,
-				piUnitPrice = item.piUnitPrice,
-				piDiscPc = item.piDiscPc,
-				piTaxPc = item.piTaxPc,
-				piTaxAmt = item.piTaxAmt,
-				piAmt = item.piAmt,
-				piAmtPlusTax = item.piAmtPlusTax,
-				piReceivedQty = item.piReceivedQty,
-				piStatus = ps.pstStatus.ToLower(),
-				ivBatCode = item.ivBatCode,
-				AccountProfileId = comInfo.AccountProfileId,
-				CreateTime = dateTime,
-				ModifyTime = dateTime,
-				IsPartial = false,
-				piStockLoc = item.piStockLoc,
-				JobID = item.JobID,
-			});
-		}
-
-		private static void HandlePendingList(PurchaseModel model, MMDbContext context, MMDAL.Purchase ps, DateTime dateTime, List<PurchaseItem> pendinglist, List<PurchaseItem> psilist)
-		{
-			if (pendinglist.Count > 0)
-			{
-				DateTime purchasedate = ps.pstPurchaseDate ==null? DateTime.Now:ps.pstPurchaseDate;
-				DateTime promiseddate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate;
-				var pstTime = purchasedate.Add(dateTime.TimeOfDay);
-				var _ps = new MMDAL.Purchase
-				{
-					pstCode = model.pstCode,
-					supCode = model.supCode,
-					pstRemark = model.pstRemark,
-					pstSalesLoc = model.pstSalesLoc,
-					pstPurchaseDate = purchasedate,
-					pstPromisedDate = promiseddate,
-					pstPurchaseTime = pstTime,
-					pstStatus = PurchaseStatus.order.ToString(),
-					pstCurrency = model.pstCurrency,
-					pstExRate = model.pstExRate,
-					pstSupplierInvoice = ps.pstSupplierInvoice,
-					pstIsPartial = true,
-					pstCheckout = false,
-					CreateBy = ps.CreateBy,
-					AccountProfileId = comInfo.AccountProfileId,
-					CreateTime = dateTime,
-					ModifyTime = dateTime,
-					pstType = PurchaseType,
-					pstAllLoc = ps.pstAllLoc,
-				};
-				context.Purchases.Add(_ps);
-				context.PurchaseItems.AddRange(pendinglist);
-				ps.pstIsPartial = true;
-
-				foreach (var item in psilist)
-				{
-					item.piStatus = PurchaseStatus.partialreceival.ToString();
-					item.IsPartial = true;
-					item.ModifyTime = DateTime.Now;
-				}
-
-				context.SaveChanges();
-			}
-		}
-
-		private static void SetPendingList(MMDAL.Purchase ps, DateTime dateTime, ref List<PurchaseItem> pendinglist, PurchaseItemModel item, List<GetItemOptionsByItemCodes6_Result> itemoptions)
-		{
-			int pendingqty = item.piReceivedQty != -1 ? item.piQty - (int)item.piReceivedQty : 0;
-			decimal? amt = item.piUnitPrice * pendingqty * (1 - (item.piDiscPc / 100));
-			decimal? taxamt = amt * (item.piTaxPc / 100);
-			decimal? amtplustax = amt + taxamt;
-			if (pendingqty > 0)
-			{
-				var itemoption = itemoptions.FirstOrDefault(x => x.itmCode == item.itmCode);
-
-				pendinglist.Add(new PurchaseItem
-				{
-					AccountProfileId = ps.AccountProfileId,
-					pstCode = ps.pstCode,
-					pstId = ps.Id,
-					piSeq = item.piSeq,
-					piStatus = PurchaseStatus.order.ToString(),
-					itmCode = item.itmCode,
-					piBaseUnit = item.piBaseUnit,
-					piQty = pendingqty,
-					ivBatCode = null,
-					piHasSN = itemoption == null ? false : itemoption.chkSN,
-					piValidThru = null,
-					piUnitPrice = item.piUnitPrice,
-					piDiscPc = item.piDiscPc,
-					piTaxPc = item.piTaxPc,
-					piTaxAmt = taxamt,
-					piAmt = (decimal)amt,
-					piAmtPlusTax = amtplustax,
-					piReceivedQty = -1,
-					CreateTime = dateTime,
-					ModifyTime = dateTime,
-					IsPartial = true,
-					piStockLoc = item.piStockLoc,
-					JobID = item.JobID,
-				});
-			}
-		}
+		
 
 		public static void Delete(int id)
 		{

@@ -44,6 +44,7 @@ namespace MMLib.Models.User
 		MuseumDirector = 12,
         DirectorBoard = 13,
 		Staff = 14,
+        SystemAdmin = 15,
 	}
 
     public class IsUserRole

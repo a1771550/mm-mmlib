@@ -12,8 +12,8 @@ namespace MMLib.Models.Purchase
     {
         #region For Exporting to ABSS
         public string dateformat { get; set; }
-        public string PurchaseDate4ABSS { get { return pstPurchaseDate != null ? CommonHelper.FormatDate4ABSS(pstPurchaseDate, dateformat) : string.Empty; } }
-        public string PromisedDate4ABSS { get { return pstPromisedDate != null ? CommonHelper.FormatDate4ABSS(pstPromisedDate, dateformat) : string.Empty; } }
+        public string PurchaseDate4ABSS { get { return pstPurchaseDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPurchaseDate, dateformat) : string.Empty; } }
+        public string PromisedDate4ABSS { get { return pstPromisedDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPromisedDate, dateformat) : string.Empty; } }
         public string SupplierName { get; set; }
         public string pstSupplierInvoice { get; set; }
         public string pstCurrency { get; set; }
@@ -27,7 +27,7 @@ namespace MMLib.Models.Purchase
         public string JsonBatchList { get { return batchList == null ? "" : JsonSerializer.Serialize(batchList); } }
         public string ValidThruDisplay { get { return piValidThru == null ? "" : CommonHelper.FormatDate((DateTime)piValidThru); } }
         public string CreateTimeDisplay { get { return CommonHelper.FormatDate(CreateTime, true); } }
-        public string PurchaseDateDisplay { get { return CommonHelper.FormatDate(pstPurchaseDate, true); } }
+        public string PurchaseDateDisplay { get { return pstPurchaseDate==null?"N/A": CommonHelper.FormatDate((DateTime)pstPurchaseDate, true); } }
         public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDate((DateTime)ModifyTime, true); } }
 
         public string itmName { get; set; }
@@ -40,9 +40,9 @@ namespace MMLib.Models.Purchase
         public List<SnBatSeqVt> snbatseqvtlist { get; set; }
         //public string pstLocStock { get; set; }
         public string JsValidThru { get; set; }
-        public DateTime pstPurchaseDate { get; set; }
+        public DateTime? pstPurchaseDate { get; set; }
         //public long pstId { get; set; }
-        public DateTime pstPromisedDate { get; set; }
+        public DateTime? pstPromisedDate { get; set; }
         public string pstRemark { get; set; }
         public string JobNumber { get; set; }
         public string TaxCode { get; set; }
