@@ -13,8 +13,6 @@ using System.Configuration;
 using MMLib.Models.POS.Settings;
 using Microsoft.Data.SqlClient;
 using Dapper;
-using System.Text;
-using ItemModel = MMLib.Models.Item.ItemModel;
 using MMLib.Models.MYOB;
 using MMLib.Models.User;
 using MMLib.Models.Item;
@@ -22,12 +20,13 @@ using System.Text.Json;
 using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
 using System.IO;
-using System.Drawing.Drawing2D;
 
 namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
+		public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
 		public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
 		public Dictionary<string, ItemOptions> DicItemOptions { get; set; }
 		public string JsonDicItemOptions { get { return JsonSerializer.Serialize(DicItemOptions); } }
@@ -57,7 +56,6 @@ namespace MMLib.Models.Purchase
 		public ReceiptViewModel Receipt;
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
-
 		public PurchaseEditModel()
 		{
 			DicItemOptions = new Dictionary<string, ItemOptions>();
@@ -94,6 +92,7 @@ namespace MMLib.Models.Purchase
 				Readonly = ireadonly == 1;
 				DoApproval = idoapproval == 1;
 
+
 				if (forprint)
 				{
 					Receipt = new ReceiptViewModel();
@@ -109,10 +108,7 @@ namespace MMLib.Models.Purchase
 					foreach (var group in groupedsupPurchaseInfoes)
 					{
 						var g = group.FirstOrDefault();
-						if (!DicSupInfoes.ContainsKey(g.supCode))
-						{
-							DicSupInfoes[g.supCode] = new List<SupplierModel>();
-						}
+						if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<SupplierModel>();
 					}
 					foreach (var group in groupedsupPurchaseInfoes)
 					{
@@ -122,7 +118,7 @@ namespace MMLib.Models.Purchase
 							foreach (var spi in group)
 							{
 								var _file = Path.Combine("Purchase", apId.ToString(), Purchase.pstCode, g.supCode, spi.fileName);
-								spi.fileName = $"<a class='' href='/{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{spi.fileName}</a>";
+								spi.filePath = $"<a class='' href='/{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{spi.fileName}</a>";
 								DicSupInfoes[g.supCode].Add(spi);
 							}
 
@@ -130,9 +126,7 @@ namespace MMLib.Models.Purchase
 					}
 				}
 
-				#region Handle View File
-				Helpers.ModelHelper.HandleViewFile(Purchase.UploadFileName, AccountProfileId, Purchase.pstCode, ref ImgList, ref FileList);
-				#endregion
+
 			}
 			else
 			{
@@ -406,7 +400,7 @@ namespace MMLib.Models.Purchase
 					superiorphone = superior.Phone,
 					purchasecode = model.pstCode,
 					reviewurl = DicReviewUrl[key],
-					supnames = supnames,					
+					supnames = supnames,
 					superioremail = superior.Email,
 					isdirectorboard = isdirectorboard,
 					remark = model.pstRemark
@@ -418,13 +412,14 @@ namespace MMLib.Models.Purchase
 		{
 			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 			ps.pstType = PurchaseType;
+			ps.pstDesc = model.pstDesc;
 			ps.pstRemark = model.pstRemark;
 			ps.pstSalesLoc = model.pstSalesLoc;
 			ps.pstPurchaseDate = purchasedate;
 			ps.pstPromisedDate = promiseddate;
 			ps.pstStatus = purchasestatus;
-			ps.pstCurrency = model.pstCurrency;
-			ps.pstExRate = model.pstExRate;
+			//ps.pstCurrency = model.pstCurrency;
+			//ps.pstExRate = model.pstExRate;
 			ps.ModifyTime = dateTime;
 			ps.pstSupplierInvoice = model.pstSupplierInvoice;
 			ps.pstAllLoc = model.pstAllLoc;
@@ -434,7 +429,7 @@ namespace MMLib.Models.Purchase
 			{
 				#region Update Purchase Status
 				// update wholesales status:                
-				ps.pstStatus = PurchaseStatus.opened.ToString();				
+				ps.pstStatus = PurchaseStatus.opened.ToString();
 				ps.ModifyTime = dateTime;
 				context.SaveChanges();
 				#endregion
@@ -455,11 +450,9 @@ namespace MMLib.Models.Purchase
 				device.dvcNextPurchaseOrderNo++;
 				context.SaveChanges();
 				#endregion
-			}			
+			}
 		}
 
-
-		
 
 		private static long addPurchaseOrder(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, ref Dictionary<string, Dictionary<string, int>> dicItemLocQty)
 		{
@@ -478,37 +471,34 @@ namespace MMLib.Models.Purchase
 				ps.pstPurchaseTime = pstTime;
 				ps.pstPromisedDate = promiseddate;
 				ps.pstStatus = purchasestatus;
-				ps.pstCurrency = model.pstCurrency;
 				ps.pstSupplierInvoice = model.pstSupplierInvoice;
 				ps.pstRemark = model.pstRemark;
-				ps.pstExRate = model.pstExRate;
-				ps.AccountProfileId = comInfo.AccountProfileId;
+				//ps.pstExRate = model.pstExRate;
+				//ps.pstCurrency = model.pstCurrency;
+				//ps.AccountProfileId = comInfo.AccountProfileId;
 				ps.ModifyTime = dateTime;
 				//ps.CreateTime = dateTime;
 				//ps.CreateBy = user.UserName;
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
 			}
-			context.SaveChanges();		
-			AddSupplierList(model.pstCode, SupplierList, context);
+			context.SaveChanges();
+			UpdateSupplierList(model.pstCode, SupplierList, context);
 			return ps.Id;
 		}
 
-		private static void AddSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
+		private static void UpdateSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
 		{
-			List<PurchaseSupplier> purchaseSuppliers = new List<PurchaseSupplier>();
+			var purchaseInfoes = context.PurchaseInfoes.Where(x => x.pstCode == pstCode);
 			foreach (var supplier in SupplierList)
 			{
-				purchaseSuppliers.Add(new PurchaseSupplier
+				var purchaseInfo = purchaseInfoes.FirstOrDefault(x => x.supCode == supplier.supCode);
+				if (purchaseInfo != null)
 				{
-					pstCode = pstCode,
-					supCode = supplier.supCode,
-					AccountProfileId = apId,
-					CreateTime = DateTime.Now,
-				});
+					purchaseInfo.Amount = supplier.Amount;
+					purchaseInfo.ModifyTime = DateTime.Now;
+				}
 			}
-
-			context.PurchaseSuppliers.AddRange(purchaseSuppliers);
 			context.SaveChanges();
 		}
 
@@ -531,7 +521,7 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		
+
 
 		public static void Delete(int id)
 		{

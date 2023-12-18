@@ -195,24 +195,20 @@ namespace MMLib.Helpers
 				}
 			}
 		}
-		public static void HandleViewFile(string uploadfilename, int apId, string filecode, ref List<string> ImgList, ref List<string> FileList)
+		public static void HandleViewFile(string file, int apId, string filecode, ref List<string> ImgList, ref FileData filedata)
 		{
-			if (!string.IsNullOrEmpty(uploadfilename))
+			if (!string.IsNullOrEmpty(file))
 			{
-				var fileList = uploadfilename.Split(',');
-				foreach (var file in fileList)
+				var _file = Path.Combine(apId.ToString(), filecode, file);
+				if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(file).ToUpperInvariant()))
 				{
-					var _file = Path.Combine(apId.ToString(), filecode, file);
-					if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(file).ToUpperInvariant()))
-					{
-						_file = $"<a href='{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/{_file}'/></a>";
-						ImgList.Add(_file);
-					}
-					else
-					{
-						_file = $"<a class='' href='{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{Path.GetFileName(file)}</a>";
-						FileList.Add(_file);
-					}
+					_file = $"<a class='imglnk' href='#' data-lnk='{_file}'><img src='{UriHelper.GetBaseUrl()}/{_file}'/></a>";
+					ImgList.Add(_file);
+				}
+				else
+				{
+					string filename = Path.GetFileName(file);
+					filedata.ImgPath = $"<a class='filelnk' href='#' data-lnk='{_file}' data-file='{filename}' data-id='{filedata.Id}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.Id}' data-name='{filename}'></i>";
 				}
 			}
 		}
@@ -1856,7 +1852,7 @@ namespace MMLib.Helpers
 								item.Myob_BalanceDueDays = supplier.BalanceDueDays != null ? (int)supplier.BalanceDueDays : 0;
 								item.Myob_DiscountDays = supplier.DiscountDays != null ? (int)supplier.DiscountDays : 0;
 							}
-							
+
 							model.DicPoPurchaseItemList[ps.pstCode].Add(new PurchaseItemModel
 							{
 								pstId = ps.Id,
@@ -1887,7 +1883,7 @@ namespace MMLib.Helpers
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
 								pstPurchaseDate = ps.pstPurchaseDate == null ? DateTime.Now : ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate ==null? DateTime.Now.AddDays(1):ps.pstPromisedDate,
+								pstPromisedDate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate,
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
 								Myob_DiscountDays = item.Myob_DiscountDays,
@@ -2055,8 +2051,8 @@ namespace MMLib.Helpers
 								piStockLoc = item.piStockLoc,
 								CreateTime = item.CreateTime,
 								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate==null? DateTime.Now:ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate==null? DateTime.Now.AddDays(1):ps.pstPromisedDate,
+								pstPurchaseDate = ps.pstPurchaseDate == null ? DateTime.Now : ps.pstPurchaseDate,
+								pstPromisedDate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate,
 								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
 								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
 								Myob_DiscountDays = item.Myob_DiscountDays,
@@ -3663,7 +3659,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectonholdreason = null, string suppernames=null)
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectonholdreason = null, string suppernames = null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -4329,16 +4325,13 @@ namespace MMLib.Helpers
 		public List<string> vtlist { get; set; }
 	}
 
-	//public class BatSnVt
-	//{
-	//	public string pocode { get; set; }
-	//	//public int? seq { get; set; }
-	//	public string batcode { get; set; }
-	//	//public List<string> snlist { get; set; }
-	//	public string sn { get; set; }
-	//	public string vt { get; set; }
-	//	public string status { get; set; }
-	//}
+	public class FileData()
+	{
+		public long Id { get; set; }
+		public string Name { get; set; }
+		public string FilePath { get; set; }
+		public string ImgPath { get; set; }
+	}
 	public enum CusFollowUpStatus
 	{
 		need = 1,

@@ -12,6 +12,7 @@ namespace MMLib.Models.Supplier
     {
         public string pstCode { get; set; }
         public string fileName { get; set; }
+        public string filePath { get; set; }    
         public long piId { get; set; }
         public DateTime piCreateTime { get; set; }
         public string piCreateTimeDisplay { get { return CommonHelper.FormatDateTime(piCreateTime); } }
@@ -20,7 +21,7 @@ namespace MMLib.Models.Supplier
         public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
         public string[] StreetLines { get; set; }
         
-       
+        public decimal Amount { get; set; }
         public bool supIsOrganization { get; set; }
         public string AccountProfileName { get; set; }
         public string purchasecode { get; set; }
