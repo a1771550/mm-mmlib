@@ -33,6 +33,7 @@ using MMLib.Models.User;
 using CommonLib.BaseModels;
 using CommonLib.App_GlobalResources;
 using System.Collections;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Helpers
 {
@@ -175,6 +176,11 @@ namespace MMLib.Helpers
 			}
 		}
 
+		public static string GetPDFLnk(string pstCode, string supCode, string fileName)
+		{
+			var _file = Path.Combine("Purchase", apId.ToString(), pstCode, supCode, fileName);
+			return $"<a class='' href='/{_file}' target='_blank'><img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>{fileName}</a>";
+		}
 		public static void HandleViewFileList(HashSet<string> uploadfilelist, int apId, int Id, ref List<string> ImgList, ref List<string> FileList)
 		{
 			if (uploadfilelist != null && uploadfilelist.Count > 0)
@@ -195,20 +201,20 @@ namespace MMLib.Helpers
 				}
 			}
 		}
-		public static void HandleViewFile(string file, int apId, string filecode, ref List<string> ImgList, ref FileData filedata)
+		public static void HandleViewFile(string filepath, int apId, string filecode, ref List<string> ImgList, ref FileData filedata)
 		{
-			if (!string.IsNullOrEmpty(file))
+			if (!string.IsNullOrEmpty(filepath))
 			{
-				var _file = Path.Combine(apId.ToString(), filecode, file);
-				if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(file).ToUpperInvariant()))
+				var filelnk = Path.Combine(apId.ToString(), filecode, filepath);
+				if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
 				{
-					_file = $"<a class='imglnk' href='#' data-lnk='{_file}'><img src='{UriHelper.GetBaseUrl()}/{_file}'/></a>";
-					ImgList.Add(_file);
+					filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
+					ImgList.Add(filelnk);
 				}
 				else
 				{
-					string filename = Path.GetFileName(file);
-					filedata.ImgPath = $"<a class='filelnk' href='#' data-lnk='{_file}' data-file='{filename}' data-id='{filedata.Id}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.Id}' data-name='{filename}'></i>";
+					string filename = Path.GetFileName(filepath);
+					filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-id='{filedata.Id}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.Id}' data-name='{filename}'></i>";
 				}
 			}
 		}
@@ -3659,7 +3665,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType, string rejectonholdreason = null, string suppernames = null)
+		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType,string desc=null, string rejectonholdreason = null, string suppernames = null)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -3669,29 +3675,33 @@ namespace MMLib.Helpers
 
 			MailAddress frm = new MailAddress(mailsettings.emEmail, mailsettings.emDisplayName);
 
+			bool addbc = int.Parse(ConfigurationManager.AppSettings["AddBccToDeveloper"]) == 1;
+			MailAddress addressBCC = new MailAddress(ConfigurationManager.AppSettings["DeveloperEmailAddress"], ConfigurationManager.AppSettings["DeveloperEmailName"]);
+			MailMessage message = new()
+			{
+				From = frm
+			};
+			if (addbc)
+			{
+				message.Bcc.Add(addressBCC);
+			}
+
+			var ccname = ConfigurationManager.AppSettings["CCEmailAddress"].ToString().Split(',')[0];
+			var ccmail = ConfigurationManager.AppSettings["CCEmailAddress"].ToString().Split(',')[1];		
+			message.CC.Add(new MailAddress(ccmail, ccname));
+
+			message.Subject = string.Format(Resource.PendingApprovalFormat, Resource.PurchaseOrder);
+			message.BodyEncoding = Encoding.UTF8;
+			message.IsBodyHtml = true;
+
+			string approvaltxt = reactType == ReactType.Rejected ? Resource.Rejected : Resource.Approval;
+
 			while (okcount == 0)
 			{
 				if (ngcount >= mailsettings.emMaxEmailsFailed || okcount > 0)
 				{
 					break;
-				}
-
-				bool addbc = int.Parse(ConfigurationManager.AppSettings["AddBccToDeveloper"]) == 1;
-				MailAddress addressBCC = new MailAddress(ConfigurationManager.AppSettings["DeveloperEmailAddress"], ConfigurationManager.AppSettings["DeveloperEmailName"]);
-				MailMessage message = new()
-				{
-					From = frm
-				};
-				if (addbc)
-				{
-					message.Bcc.Add(addressBCC);
-				}
-
-				message.Subject = string.Format(Resource.PendingApprovalFormat, Resource.PurchaseOrder);
-				message.BodyEncoding = Encoding.UTF8;
-				message.IsBodyHtml = true;
-
-				string approvaltxt = reactType == ReactType.Rejected ? Resource.Rejected : Resource.Approval;
+				}		
 
 				foreach (var item in DicReviewUrl)
 				{
@@ -3700,6 +3710,7 @@ namespace MMLib.Helpers
 					var email = arr[1];
 					var ordercode = arr[2];
 					var orderlnk = $"<a href='{item.Value}' target='_blank'>{ordercode}</a>";
+					var orderdesc = $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
 					message.To.Add(new MailAddress(email, name));
 					string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
 
@@ -3708,7 +3719,7 @@ namespace MMLib.Helpers
 					if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
 					{
 						//<h3>Hi {name}</h3><p>The following {strorder} is pending for your {approvaltxt}:</p>{orderlnk}
-						mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
+						mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);						
 					}
 
 					if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToBoard)
@@ -3734,6 +3745,8 @@ namespace MMLib.Helpers
 						//mailbody = $"<h3>Hi {name}</h3><p>The following invoice is pending for your review:</p><ul>{lilist}</ul><h4>{rejectonholdreasontxt}</h4><p>{rejectonholdreason}</p>";
 						mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasontxt, rejectonholdreason);
 					}
+
+					mailbody = string.Concat(mailbody, orderdesc);
 
 					message.Body = mailbody;
 					using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))

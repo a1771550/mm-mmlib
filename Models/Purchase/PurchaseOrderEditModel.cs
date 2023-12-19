@@ -47,12 +47,12 @@ namespace MMLib.Models.Purchase
 				SortOrder = SortOrder == "desc" ? "asc" : "desc";
 			}
 			PurchaseOrderList = new List<PurchaseModel>();
-			
+
 			string username = UserHelper.CheckIfApprover(User) ? null : user.UserName;
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
-			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseOrderList4Approval2 @shop=@shop,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { shop = ShopCode, frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseOrderList4Approval2 @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
 			orderlist = filterOrderList(Keyword, searchmode, orderlist);
 
 			if (orderlist.Count > 0)
@@ -68,11 +68,12 @@ namespace MMLib.Models.Purchase
 				new PurchaseModel
 				{
 					Id = g.Id,
-					pstLocStock = g.pstLocStock,
+					//pstLocStock = g.pstLocStock,
 					pstCode = g.pstCode,
 					pstRefCode = g.pstRefCode,
 					pstType = g.pstType,
 					pstStatus = g.pstStatus,
+					pstDesc = g.pstDesc,
 					pstPurchaseDate = g.pstPurchaseDate,
 					pstPurchaseTime = g.pstPurchaseTime,
 					supCode = g.supCode,
@@ -81,29 +82,15 @@ namespace MMLib.Models.Purchase
 					pstSendNotification = g.pstSendNotification,
 					pstSupplierInvoice = g.pstSupplierInvoice,
 					pstPromisedDate = g.pstPromisedDate,
-					pstRecurName = g.pstRecurName,
+					//pstRecurName = g.pstRecurName,
 					pstCheckout = g.pstCheckout,
 					CreateBy = g.CreateBy,
 					CreateTime = g.CreateTime,
 					ModifyTime = g.ModifyTime,
-					SupplierName = g.supName,
-					
-					ItemCodes = itemcodes,
-					ItemsNameDesc = itemnamedescs,
+					SupplierNames = g.supNames,
 					PurchasePersonName = g.CreateBy,
 					pqStatus = g.pqStatus,
 					ResponseTime = g.ResponseTime,
-					//PurchaseOrderReview = new PurchaseOrderReviewModel
-					//{
-					//	IsApproved = g.IsApproved,
-					//	ApprovedBy = g.ApprovedBy,
-					//	IsRejected = g.IsRejected,
-					//	RejectedBy = g.RejectedBy,
-					//	Reason = g.Reason,
-					//	PassedToManager = g.PassedToManager,
-					//	EmailNotified = g.EmailNotified,
-					//	pqStatus = g.pstStatus
-					//}
 				}
 					);
 				}
@@ -122,74 +109,41 @@ namespace MMLib.Models.Purchase
 
 				if (SearchMode.Length == 1)
 				{
-					if (SearchMode[0] == "0")//default: salesperson
+					if (SearchMode[0] == "0")
 					{
 						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword)).ToList();
 					}
 					if (SearchMode[0] == "1")
 					{
-						orderlist = orderlist.Where(x => x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword)).ToList();
+						orderlist = orderlist.Where(x => x.pstCode != null && x.pstCode.ToLower().Contains(keyword)).ToList();
 					}
 					if (SearchMode[0] == "2")
 					{
-						orderlist = orderlist.Where(x => x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "3")
-					{
-						orderlist = orderlist.Where(x => x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
+						orderlist = orderlist.Where(x => x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supNames != null && x.supNames.ToLower().Contains(keyword)).ToList();
 					}
 				}
 				if (SearchMode.Length == 2)
 				{
 					if (SearchMode[0] == "0" && SearchMode[1] == "1")
 					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword)).ToList();
+						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstCode != null && x.pstCode.ToLower().Contains(keyword)).ToList();
 					}
+
 					if (SearchMode[0] == "0" && SearchMode[1] == "2")
 					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "0" && SearchMode[1] == "3")
-					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
+						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supNames != null && x.supNames.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword)).ToList();
 					}
 					if (SearchMode[0] == "1" && SearchMode[1] == "2")
 					{
-						orderlist = orderlist.Where(x => x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "1" && SearchMode[1] == "3")
-					{
-						orderlist = orderlist.Where(x => x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "2" && SearchMode[1] == "3")
-					{
-						orderlist = orderlist.Where(x => x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
+						orderlist = orderlist.Where(x => x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supNames != null && x.supNames.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.pstCode != null && x.pstCode.ToLower().Contains(keyword)).ToList();
 					}
 				}
 
 				if (SearchMode.Length == 3)
 				{
-					if (SearchMode[0] == "0" && SearchMode[1] == "1" && SearchMode[2] == "2")
-					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "0" && SearchMode[1] == "1" && SearchMode[2] == "3")
-					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "0" && SearchMode[1] == "2" && SearchMode[2] == "3")
-					{
-						orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
-					}
-					if (SearchMode[0] == "1" && SearchMode[1] == "2" && SearchMode[2] == "3")
-					{
-						orderlist = orderlist.Where(x => x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
-					}
+					orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supNames != null && x.supNames.ToLower().Contains(keyword)).ToList();
 				}
-				if (SearchMode.Length == 4)
-				{
-					orderlist = orderlist.Where(x => x.CreateBy != null && x.CreateBy.ToLower().Contains(keyword) || x.pstSupplierInvoice != null && x.pstSupplierInvoice.ToLower().Contains(keyword) || x.supCode != null && x.pstCode.ToLower().Contains(keyword) || x.pstLocStock != null && x.pstLocStock.ToLower().Contains(keyword) || x.itmCode != null && x.itmCode.ToLower().Contains(keyword) || x.itmName != null && x.itmName.ToLower().Contains(keyword) || x.itmDesc != null && x.itmDesc.ToLower().Contains(keyword) || x.supCode != null && x.supCode.ToLower().Contains(keyword) || x.supName != null && x.supName.ToLower().Contains(keyword)).ToList();
-				}
+
 			}
 
 			return orderlist;

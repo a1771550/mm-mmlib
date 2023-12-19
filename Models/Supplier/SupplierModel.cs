@@ -5,14 +5,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Models.Supplier
 {
     public class SupplierModel : MMDAL.Supplier
     {
         public string pstCode { get; set; }
-        public string fileName { get; set; }
-        public string filePath { get; set; }    
+		public string fileName { get; set; }
+        public string filePath { get; set; }
+        public string Files { get; set; }
         public long piId { get; set; }
         public DateTime piCreateTime { get; set; }
         public string piCreateTimeDisplay { get { return CommonHelper.FormatDateTime(piCreateTime); } }
@@ -22,6 +24,7 @@ namespace MMLib.Models.Supplier
         public string[] StreetLines { get; set; }
         
         public decimal Amount { get; set; }
+        public string AmountDisplay { get { return CommonHelper.FormatNumber(Amount); } }
         public bool supIsOrganization { get; set; }
         public string AccountProfileName { get; set; }
         public string purchasecode { get; set; }

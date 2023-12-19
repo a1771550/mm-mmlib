@@ -23,7 +23,7 @@ namespace MMLib.Models.Purchase
         public string Mode { get; set; }
         public string JsPurchaseDate { get; set; }
         public string JsPromisedDate { get; set; }
-        public string SupplierName { get; set; }
+        public string SupplierNames { get; set; }
         public DateTime? ResponseTime { get; set; }
 		public string ResponseTimeDisplay { get { return ResponseTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ResponseTime, true); } }
 		public string PromisedDateDisplay { get { return pstPromisedDate==null?"N/A": CommonHelper.FormatDate((DateTime)pstPromisedDate, true); } }

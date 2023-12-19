@@ -11,7 +11,7 @@ namespace MMLib.Models.Purchase
         public string itmCode { get; set; }
         public string itmDesc { get; set; }
         public string itmName { get; set; }
-        public string supName { get; set; }
+        public string supNames { get; set; }
         public string ItemNameDesc { get; set; }
         public string supContact { get; set; }
         public string supFirstName { get; set; }    
