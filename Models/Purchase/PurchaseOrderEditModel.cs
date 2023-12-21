@@ -28,7 +28,7 @@ namespace MMLib.Models.Purchase
 		public string KPurchasemanCode { get; set; }
 		public string SearchModeList { get; set; }
 		public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
-		public void GetPurchaseOrderList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
+		public void GetPurchaseRequestList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
 		{
 			CommonHelper.DateRangeHandling(strfrmdate, strtodate, out DateTime frmdate, out DateTime todate, DateFormat.YYYYMMDD, '-');
 			using var context = new MMDbContext();
@@ -52,7 +52,7 @@ namespace MMLib.Models.Purchase
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
-			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseOrderList4Approval2 @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseRequestList4Approval @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
 			orderlist = filterOrderList(Keyword, searchmode, orderlist);
 
 			if (orderlist.Count > 0)
@@ -147,6 +147,77 @@ namespace MMLib.Models.Purchase
 			}
 
 			return orderlist;
+		}
+
+		public void GetPurchaseOrderList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
+		{
+			CommonHelper.DateRangeHandling(strfrmdate, strtodate, out DateTime frmdate, out DateTime todate, DateFormat.YYYYMMDD, '-');
+			using var context = new MMDbContext();
+			if (Keyword == "") Keyword = null;
+			DateFromTxt = strfrmdate;
+			DateToTxt = strtodate;
+			this.SortName = SortName;
+			this.Keyword = Keyword;
+			this.PageNo = PageNo;
+			CurrentSortOrder = SortOrder;
+			//if(filter==0)
+			this.SortOrder = SortOrder == "desc" ? "asc" : "desc";
+
+			if (filter == 1)
+			{
+				SortOrder = SortOrder == "desc" ? "asc" : "desc";
+			}
+			PurchaseOrderList = new List<PurchaseModel>();
+
+			string username = UserHelper.CheckIfApprover(User) ? null : user.UserName;
+
+			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
+			connection.Open();
+			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseOrderList2 @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			orderlist = filterOrderList(Keyword, searchmode, orderlist);
+
+			if (orderlist.Count > 0)
+			{
+				var groupedorderlist = orderlist.GroupBy(x => x.pstCode).ToList();
+				foreach (var group in groupedorderlist)
+				{
+					var g = group.FirstOrDefault();
+					var itemnamedescs = string.Join(",", group.Select(x => x.ItemNameDesc).ToList());
+					var itemcodes = string.Join(",", group.Select(x => x.itmCode).ToList());
+
+					PurchaseOrderList.Add(
+				new PurchaseModel
+				{
+					Id = g.Id,
+					//pstLocStock = g.pstLocStock,
+					pstCode = g.pstCode,
+					pstRefCode = g.pstRefCode,
+					pstType = g.pstType,
+					pstStatus = g.pstStatus,
+					pstDesc = g.pstDesc,
+					pstPurchaseDate = g.pstPurchaseDate,
+					pstPurchaseTime = g.pstPurchaseTime,
+					supCode = g.supCode,
+					pstRemark = g.pstRemark,
+					pstReviewUrl = g.pstReviewUrl,
+					pstSendNotification = g.pstSendNotification,
+					pstSupplierInvoice = g.pstSupplierInvoice,
+					pstPromisedDate = g.pstPromisedDate,
+					//pstRecurName = g.pstRecurName,
+					pstCheckout = g.pstCheckout,
+					CreateBy = g.CreateBy,
+					CreateTime = g.CreateTime,
+					ModifyTime = g.ModifyTime,
+					SupplierNames = g.supNames,
+					PurchasePersonName = g.CreateBy,
+					pqStatus = g.pqStatus,
+					ResponseTime = g.ResponseTime,
+				}
+					);
+				}
+				PagingPurchaseOrderList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
+			}
+
 		}
 	}
 }

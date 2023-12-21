@@ -25,27 +25,25 @@ namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
 		public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
 		public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
 		public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
 		public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
-		public Dictionary<string, ItemOptions> DicItemOptions { get; set; }
-		public string JsonDicItemOptions { get { return JsonSerializer.Serialize(DicItemOptions); } }
+	
 		public PurchaseOrderReviewModel PurchaseOrderReview { get; set; }
 		public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
 		public Dictionary<string, string> DicLocation { get; set; }
 		public Dictionary<string, double> DicCurrencyExRate { get; set; }
 		public string JsonDicCurrencyExRate { get { return JsonSerializer.Serialize(DicCurrencyExRate); } }
 		public string JsonDicLocation { get { return DicLocation == null ? "" : JsonSerializer.Serialize(DicLocation); } }
+
 		public List<SelectListItem> SupplierList { get; set; }
 		public List<SelectListItem> LocationList { get; set; }
 		public List<MyobJobModel> JobList { get; set; }
 		public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
 
-		public Dictionary<string, List<ItemAttribute>> DicItemAttrList;
-		public Dictionary<string, List<ItemVariModel>> DicItemVariations;
-		public Dictionary<string, List<IGrouping<string, ItemVariModel>>> DicItemGroupedVariations;
-		public string JsonDicItemGroupedVariations { get { return DicItemGroupedVariations == null ? "" : JsonSerializer.Serialize(DicItemGroupedVariations); } }
+		
 		public List<string> ImgList;
 		public List<string> FileList;
 		public bool Readonly { get; set; }
@@ -59,17 +57,13 @@ namespace MMLib.Models.Purchase
 		public List<string> PaymentTermsList;
 		public PurchaseEditModel()
 		{
-			DicItemOptions = new Dictionary<string, ItemOptions>();
 			DicCurrencyExRate = new Dictionary<string, double>();
 			DicLocation = new Dictionary<string, string>();
 			JobList = new List<MyobJobModel>();
 			ImgList = new List<string>();
 			FileList = new List<string>();
-
-			DicItemAttrList = new Dictionary<string, List<ItemAttribute>>();
-			DicItemVariations = new Dictionary<string, List<ItemVariModel>>();
-			DicItemGroupedVariations = new Dictionary<string, List<IGrouping<string, ItemVariModel>>>();
 			DicSupInfoes = new Dictionary<string, List<SupplierModel>>();
+			PoQtyAmtList = [];
 		}
 		public PurchaseEditModel(string receiptno, int? ireadonly, int? idoapproval) : this()
 		{
@@ -156,6 +150,7 @@ namespace MMLib.Models.Purchase
 			JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
 			Purchase.Mode = ireadonly == 1 ? "readonly" : "";
 
+			PoQtyAmtList = PoSettingsEditModel.GetPoQtyAmtList();
 		}
 
 		private long addNewPurchase(MMDbContext context, int apId, DateTime dateTime, Device device, string status)
@@ -300,6 +295,8 @@ namespace MMLib.Models.Purchase
 			string status = "";
 			string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
 			string purchasestatus = string.Empty;
+			
+
 			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
 
 			DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
@@ -313,26 +310,21 @@ namespace MMLib.Models.Purchase
 			purchasestatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
 				? PurchaseStatus.draft.ToString()
 				: IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
-			
+			//pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
+			//	? RequestStatus.draftingByStaff.ToString() : model.IsEditMode ? RequestStatus.requestingByStaff.ToString():;
+			//getPurchaseRequestStatus(out reactType, IsUserRole, ref purchase, ref pstStatus, out string pqStatus);
 
 			List<string> reviewurls = new();
 			List<GetSuperior4Notification2_Result> superiors = new();
 			Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
 			Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
 
-			var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
-			
-
 			if (IsUserRole.isdirectorboard)
 			{
-				if (!model.IsEditMode)
-				{
-					updatePurchaseOrder(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
-				}
-				else
-				{
-					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, supcodes);
-				}
+				if (!model.IsEditMode)				
+					updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);				
+				else				
+					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);				
 			}
 			else
 			{
@@ -348,19 +340,17 @@ namespace MMLib.Models.Purchase
 					reviewurls.Add(reviewurl);
 				}
 
-				
-
 				if (!model.IsEditMode)
 				{
-					updatePurchaseOrder(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
+					updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
 				}
 				else
 				{
-					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, supcodes);
+					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
 				}
 
 				status = "purchaseordersaved";
-				if (model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
+				if (model.pstStatus.ToLower()!= PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
 				{
 					HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
 
@@ -382,14 +372,11 @@ namespace MMLib.Models.Purchase
 						#endregion
 					}
 					GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
-
 				}
 			}			
 
 			return msglist;
 		}
-
-
 
 		private static void GenReturnMsgList(PurchaseModel model, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
 		{
@@ -414,22 +401,9 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, string supcodes)
-		{
-			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
-			ps.pstType = PurchaseType;
-			ps.supCode = supcodes;
-			ps.pstDesc = model.pstDesc;
-			ps.pstRemark = model.pstRemark;			
-			ps.pstPurchaseDate = purchasedate;
-			ps.pstPromisedDate = promiseddate;
-			ps.pstStatus = purchasestatus;
-			//ps.pstCurrency = model.pstCurrency;
-			//ps.pstExRate = model.pstExRate;
-			ps.ModifyTime = dateTime;
-			ps.pstSupplierInvoice = model.pstSupplierInvoice;
-		
-			context.SaveChanges();
+		private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, List<SupplierModel> SupplierList)
+		{			
+			MMDAL.Purchase ps = updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
 
 			if (purchasestatus == "opened")
 			{
@@ -460,19 +434,24 @@ namespace MMLib.Models.Purchase
 		}
 
 
-		private static long updatePurchaseOrder(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
+		private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
 		{
-			var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 			var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
+			MMDAL.Purchase ps = _updatePurchaseRequest(model, supcodes, context, dateTime, purchasedate, promiseddate, purchasestatus);
+
+			AddSupplierList(model.pstCode, SupplierList, context);
+			return ps;
+		}
+
+		private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, string supcodes, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
+		{
+			var pstTime = purchasedate.Add(dateTime.TimeOfDay);			
 			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 
-			var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()?RequestStatus.draftingByStaff.ToString():ps.pqStatus;
+			var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString() ? RequestStatus.draftingByStaff.ToString() : model.pqStatus;
 
 			if (ps != null)
 			{
-				ps.pstAllLoc = model.pstAllLoc;
-				ps.pstSalesLoc = model.pstSalesLoc;
-				//ps.pstCode = model.pstCode;
 				ps.supCode = supcodes;
 				ps.pstType = PurchaseType;
 				ps.pstDesc = model.pstDesc;
@@ -480,22 +459,16 @@ namespace MMLib.Models.Purchase
 				ps.pstPurchaseTime = pstTime;
 				ps.pstPromisedDate = promiseddate;
 				ps.pstStatus = purchasestatus;
-				ps.pqStatus = pqstatus;
+				ps.pqStatus = pqstatus;				
 				ps.pstSupplierInvoice = model.pstSupplierInvoice;
 				ps.pstRemark = model.pstRemark;
-				//ps.pstExRate = model.pstExRate;
-				//ps.pstCurrency = model.pstCurrency;
-				//ps.AccountProfileId = comInfo.AccountProfileId;
 				ps.ModifyTime = dateTime;
-				//ps.CreateTime = dateTime;
-				//ps.CreateBy = user.UserName;
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
+				context.SaveChanges();
 			}
-			context.SaveChanges();
-			//	UpdateSupplierList(model.pstCode, SupplierList, context);
-			AddSupplierList(model.pstCode, SupplierList, context);
-			return ps.Id;
+
+			return ps;
 		}
 
 		private static void AddSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
@@ -515,20 +488,7 @@ namespace MMLib.Models.Purchase
 			context.PurchaseSuppliers.AddRange(pslist);
 			context.SaveChanges();
 		}
-		private static void UpdateSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
-		{
-			var purchaseInfoes = context.PurchaseInfoes.Where(x => x.pstCode == pstCode);
-			foreach (var supplier in SupplierList)
-			{
-				var purchaseInfo = purchaseInfoes.FirstOrDefault(x => x.supCode == supplier.supCode);
-				if (purchaseInfo != null)
-				{
-					purchaseInfo.Amount = supplier.Amount;
-					purchaseInfo.ModifyTime = DateTime.Now;
-				}
-			}
-			context.SaveChanges();
-		}
+	
 
 		private static void HandlingPurchaseOrderReview(string purchasecode, string pqstatus, MMDbContext context)
 		{
@@ -1141,6 +1101,76 @@ namespace MMLib.Models.Purchase
 			return sqllist;
 		}
 
+		public static void getPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus)
+		{			
+			pqStatus = "";
+			if (purchase.pstStatus == RequestStatus.approved.ToString())
+			{
+				reactType = ReactType.PassedByDeptHead;
+				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+				{
+					purchase.pstStatus = PurchaseStatus.order.ToString();
+					pqStatus = RequestStatus.approved.ToString();
+					reactType = ReactType.Approved;
+				}
+
+				if (IsUserRole.isdepthead)
+				{
+					pqStatus = RequestStatus.requestingByDeptHead.ToString();
+					reactType = ReactType.PassedByDeptHead;
+				}
+
+				if (IsUserRole.isfinancedept)
+				{
+					pqStatus = RequestStatus.requestingByFinanceDept.ToString();
+					reactType = ReactType.PassedByFinanceDept;
+				}
+
+				if (IsUserRole.isstaff)
+				{
+					pqStatus = RequestStatus.requestingByStaff.ToString();
+					reactType = ReactType.RequestingByStaff;
+				}
+			}
+
+			if (purchase.pstStatus == RequestStatus.rejected.ToString())
+			{
+				reactType = ReactType.RejectedByDeptHead;
+				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+				{
+					pqStatus = RequestStatus.rejectedByMuseumDirector.ToString();
+					reactType = ReactType.Rejected;
+				}
+
+				if (IsUserRole.isdepthead)
+				{
+					pqStatus = RequestStatus.rejectedByDeptHead.ToString();
+					reactType = ReactType.PassedByDeptHead;
+				}
+
+				if (IsUserRole.isfinancedept)
+				{
+					pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
+					reactType = ReactType.PassedByFinanceDept;
+				}
+			}
+
+			if (purchase.pstStatus == RequestStatus.onhold.ToString())
+			{
+				reactType = ReactType.OnHoldByFinanceDept;
+				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+				{					
+					pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
+					reactType = ReactType.OnHold;
+				}				
+
+				if (IsUserRole.isfinancedept)
+				{
+					pqStatus = RequestStatus.onholdByFinanceDept.ToString();
+					reactType = ReactType.OnHoldByFinanceDept;
+				}
+			}
+		}
 	}
 
 	public class PurchaseReturnMsg

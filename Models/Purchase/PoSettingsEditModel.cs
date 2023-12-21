@@ -32,13 +32,15 @@ namespace MMLib.Models.Purchase
 		}
 
 		public void GetList()
-		{
-			//GetPoQtyAmtList
-			using var connection = new SqlConnection(DefaultConnection);
-			connection.Open();
-			PoQtyAmtList = connection.Query<PoQtyAmtModel>(@"EXEC dbo.GetPoQtyAmtList @apId=@apId", new { apId }).ToList();
+		{           //GetPoQtyAmtList
+			PoQtyAmtList = GetPoQtyAmtList();
 		}
 
-
+		public static List<PoQtyAmtModel> GetPoQtyAmtList()
+		{
+			using var connection = new SqlConnection(defaultConnection);
+			connection.Open();
+			return connection.Query<PoQtyAmtModel>(@"EXEC dbo.GetPoQtyAmtList @apId=@apId", new { apId }).ToList();
+		}
 	}
 }
