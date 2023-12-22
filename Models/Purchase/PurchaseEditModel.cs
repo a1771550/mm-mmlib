@@ -15,7 +15,6 @@ using Microsoft.Data.SqlClient;
 using Dapper;
 using MMLib.Models.MYOB;
 using MMLib.Models.User;
-using MMLib.Models.Item;
 using System.Text.Json;
 using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
@@ -24,13 +23,14 @@ using ModelHelper = MMLib.Helpers.ModelHelper;
 namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
-	{
+	{		
+		public IsUserRole UserRole { get; set; }
 		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
 		public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
 		public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
 		public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
 		public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
-	
+
 		public PurchaseOrderReviewModel PurchaseOrderReview { get; set; }
 		public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
 		public Dictionary<string, string> DicLocation { get; set; }
@@ -43,7 +43,7 @@ namespace MMLib.Models.Purchase
 		public List<MyobJobModel> JobList { get; set; }
 		public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
 
-		
+
 		public List<string> ImgList;
 		public List<string> FileList;
 		public bool Readonly { get; set; }
@@ -55,6 +55,8 @@ namespace MMLib.Models.Purchase
 		public ReceiptViewModel Receipt;
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
+
+
 		public PurchaseEditModel()
 		{
 			DicCurrencyExRate = new Dictionary<string, double>();
@@ -69,7 +71,7 @@ namespace MMLib.Models.Purchase
 		{
 			Get(0, receiptno, ireadonly, idoapproval);
 		}
-		public PurchaseEditModel(long Id, string status, int? ireadonly = 0, int? idoapproval = 1, bool forprint = false) : this()
+		public PurchaseEditModel(long Id, string status="", int? ireadonly = 0, int? idoapproval = 1, bool forprint = false) : this()
 		{
 			Get(Id, null, ireadonly, idoapproval, status, forprint);
 		}
@@ -112,7 +114,7 @@ namespace MMLib.Models.Purchase
 						{
 							foreach (var spi in group)
 							{
-								spi.filePath = ModelHelper.GetPDFLnk(Purchase.pstCode,g.supCode,spi.fileName);
+								spi.filePath = ModelHelper.GetPDFLnk(Purchase.pstCode, g.supCode, spi.fileName);
 								DicSupInfoes[g.supCode].Add(spi);
 							}
 
@@ -295,7 +297,7 @@ namespace MMLib.Models.Purchase
 			string status = "";
 			string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
 			string purchasestatus = string.Empty;
-			
+
 
 			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
 
@@ -306,7 +308,7 @@ namespace MMLib.Models.Purchase
 
 			DateTime purchasedate = CommonHelper.GetDateFrmString4SQL(model.JsPurchaseDate, DateTimeFormat.YYYYMMDD);
 			DateTime promiseddate = CommonHelper.GetDateFrmString4SQL(model.JsPromisedDate, DateTimeFormat.YYYYMMDD);
-			
+
 			purchasestatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
 				? PurchaseStatus.draft.ToString()
 				: IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
@@ -321,10 +323,10 @@ namespace MMLib.Models.Purchase
 
 			if (IsUserRole.isdirectorboard)
 			{
-				if (!model.IsEditMode)				
-					updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);				
-				else				
-					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);				
+				if (!model.IsEditMode)
+					updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
+				else
+					processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
 			}
 			else
 			{
@@ -350,7 +352,7 @@ namespace MMLib.Models.Purchase
 				}
 
 				status = "purchaseordersaved";
-				if (model.pstStatus.ToLower()!= PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
+				if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
 				{
 					HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
 
@@ -373,7 +375,7 @@ namespace MMLib.Models.Purchase
 					}
 					GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
 				}
-			}			
+			}
 
 			return msglist;
 		}
@@ -402,7 +404,7 @@ namespace MMLib.Models.Purchase
 		}
 
 		private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, List<SupplierModel> SupplierList)
-		{			
+		{
 			MMDAL.Purchase ps = updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
 
 			if (purchasestatus == "opened")
@@ -445,7 +447,7 @@ namespace MMLib.Models.Purchase
 
 		private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, string supcodes, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
 		{
-			var pstTime = purchasedate.Add(dateTime.TimeOfDay);			
+			var pstTime = purchasedate.Add(dateTime.TimeOfDay);
 			MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 
 			var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString() ? RequestStatus.draftingByStaff.ToString() : model.pqStatus;
@@ -455,11 +457,12 @@ namespace MMLib.Models.Purchase
 				ps.supCode = supcodes;
 				ps.pstType = PurchaseType;
 				ps.pstDesc = model.pstDesc;
+				ps.pstAmount = model.pstAmount;
 				ps.pstPurchaseDate = purchasedate;
 				ps.pstPurchaseTime = pstTime;
 				ps.pstPromisedDate = promiseddate;
 				ps.pstStatus = purchasestatus;
-				ps.pqStatus = pqstatus;				
+				ps.pqStatus = pqstatus;
 				ps.pstSupplierInvoice = model.pstSupplierInvoice;
 				ps.pstRemark = model.pstRemark;
 				ps.ModifyTime = dateTime;
@@ -474,7 +477,7 @@ namespace MMLib.Models.Purchase
 		private static void AddSupplierList(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
 		{
 			List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();
-			foreach(SupplierModel supplier in SupplierList)
+			foreach (SupplierModel supplier in SupplierList)
 			{
 				pslist.Add(new PurchaseSupplier
 				{
@@ -488,7 +491,7 @@ namespace MMLib.Models.Purchase
 			context.PurchaseSuppliers.AddRange(pslist);
 			context.SaveChanges();
 		}
-	
+
 
 		private static void HandlingPurchaseOrderReview(string purchasecode, string pqstatus, MMDbContext context)
 		{
@@ -1102,7 +1105,7 @@ namespace MMLib.Models.Purchase
 		}
 
 		public static void getPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus)
-		{			
+		{
 			pqStatus = "";
 			if (purchase.pstStatus == RequestStatus.approved.ToString())
 			{
@@ -1110,6 +1113,7 @@ namespace MMLib.Models.Purchase
 				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
 				{
 					purchase.pstStatus = PurchaseStatus.order.ToString();
+					purchase.pstCode = string.Concat(ConfigurationManager.AppSettings["ApprovedRequestPrefix"],purchase.pstCode.Substring(2));
 					pqStatus = RequestStatus.approved.ToString();
 					reactType = ReactType.Approved;
 				}
@@ -1159,10 +1163,10 @@ namespace MMLib.Models.Purchase
 			{
 				reactType = ReactType.OnHoldByFinanceDept;
 				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
-				{					
+				{
 					pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
 					reactType = ReactType.OnHold;
-				}				
+				}
 
 				if (IsUserRole.isfinancedept)
 				{
@@ -1170,6 +1174,42 @@ namespace MMLib.Models.Purchase
 					reactType = ReactType.OnHoldByFinanceDept;
 				}
 			}
+		}
+
+
+		public static List<string> GetUploadServiceSqlList(PurchaseModel purchase, ref DataTransferModel dmodel, MMDbContext context)
+		{
+			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat").appVal;
+			purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
+
+			List<string> sqllist = [];
+
+			ModelHelper.GetDataTransferData(context, apId, CheckOutType.PayBills, ref dmodel, defaultConnection);
+
+			var location = comInfo.Shop;
+
+			string sql = MyobHelper.InsertImportServicePurchasesSql;
+			sql = sql.Replace("0", "{0}");
+			List<string> values = null;
+
+			List<string> columns = [];
+			for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++)
+			{
+				columns.Add("'{" + j + "}'");
+			}
+			string strcolumn = string.Join(",", columns);
+
+			string status = "B";
+			values = [];
+
+			//INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
+			string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, status);
+			values.Add(value);
+
+			sql = string.Format(sql, string.Join(",", values));
+			sqllist.Add(sql);
+
+			return sqllist;
 		}
 	}
 
