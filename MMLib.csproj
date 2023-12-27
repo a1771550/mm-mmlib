@@ -253,6 +253,7 @@
     <Compile Include="Models\DayEndsModel.cs" />
     <Compile Include="Models\EmailEditModel.cs" />
     <Compile Include="Models\EmailModel.cs" />
+    <Compile Include="Models\Supplier\SupplierPaymentModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Item\AbssItemModel.cs" />
     <Compile Include="Models\Item\AddOnItem.cs" />

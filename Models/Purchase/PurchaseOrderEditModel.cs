@@ -28,7 +28,7 @@ namespace MMLib.Models.Purchase
 		public string KPurchasemanCode { get; set; }
 		public string SearchModeList { get; set; }
 		public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
-		public void GetPurchaseRequestList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
+		public void GetProcurementList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
 		{
 			CommonHelper.DateRangeHandling(strfrmdate, strtodate, out DateTime frmdate, out DateTime todate, DateFormat.YYYYMMDD, '-');
 			using var context = new MMDbContext();
@@ -52,7 +52,7 @@ namespace MMLib.Models.Purchase
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
-			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetPurchaseRequestList4Approval @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetProcurement4Approval @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
 			orderlist = filterOrderList(Keyword, searchmode, orderlist);
 
 			if (orderlist.Count > 0)

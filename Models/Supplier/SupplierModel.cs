@@ -11,6 +11,8 @@ namespace MMLib.Models.Supplier
 {
     public class SupplierModel : MMDAL.Supplier
     {
+        public decimal? Payment { get; set; } = null;
+        public bool Selected { get; set; }
         public string pstCode { get; set; }
 		public string fileName { get; set; }
         public string filePath { get; set; }
