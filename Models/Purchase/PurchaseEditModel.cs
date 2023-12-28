@@ -24,6 +24,7 @@ namespace MMLib.Models.Purchase
 {
 	public class PurchaseEditModel : PagingBaseModel
 	{
+		public string ProcurementPersonName { get; set; }
 		public long LastSupplierPaymentId { get; set; }
 		public List<SupplierPaymentModel> SupplierPaymentList { get; set; } = new List<SupplierPaymentModel>();
 		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
@@ -58,8 +59,6 @@ namespace MMLib.Models.Purchase
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
 
-
-
 		public PurchaseEditModel()
 		{
 			DicCurrencyExRate = new Dictionary<string, double>();
@@ -79,33 +78,17 @@ namespace MMLib.Models.Purchase
 
 			foreach (var payment in SupplierPayments)
 			{
-				var Id = payment.Id;
-
-				var _payment = context.SupplierPayments.Find(Id);
-				DateTime modifyTime = CommonHelper.GetDateFrmString4SQL(payment.ModifyTimeDisplay);
-
-				if (_payment != null)
+				DateTime createTime = CommonHelper.GetDateTimeFrmString(payment.JsCreateTime);
+				payments.Add(new SupplierPayment
 				{
-					_payment.Amount = payment.Amount;
-					_payment.ModifyBy = user.UserCode;
-					_payment.ModifyTime = modifyTime;
-				}
-				else
-				{
-					DateTime createTime = CommonHelper.GetDateFrmString4SQL(payment.CreateTimeDisplay);
-					payments.Add(new SupplierPayment
-					{
-						Id = payment.Id,
-						Amount = payment.Amount,
-						pstCode = payment.pstCode,
-						supCode = payment.supCode,
-						AccountProfileId = apId,
-						CreateBy = user.UserCode,
-						CreateTime = createTime,
-						ModifyBy = user.UserCode,
-						ModifyTime = modifyTime,
-					});
-				}
+					Id = payment.Id,
+					Amount = payment.Amount,
+					pstCode = payment.pstCode,
+					supCode = payment.supCode,
+					AccountProfileId = apId,
+					CreateBy = user.UserCode,
+					CreateTime = createTime,
+				});
 			}
 
 			if (payments.Count > 0)
@@ -116,24 +99,24 @@ namespace MMLib.Models.Purchase
 			context.SaveChanges();
 		}
 
-		public PurchaseEditModel(string receiptno, int? ireadonly, int? idoapproval) : this()
+		public PurchaseEditModel(string pstCode, int? ireadonly, int? idoapproval) : this()
 		{
-			Get(0, receiptno, ireadonly, idoapproval);
+			Get(0, pstCode, ireadonly, idoapproval);
 		}
 		public PurchaseEditModel(long Id, string status = "", int? ireadonly = 0, int? idoapproval = 1, bool forprint = false) : this()
 		{
 			Get(Id, null, ireadonly, idoapproval, status, forprint);
 		}
 
-		public void Get(long Id = 0, string receiptno = null, int? ireadonly = 0, int? idoapproval = 1, string status = "", bool forprint = false)
+		public void Get(long Id = 0, string pstCode = null, int? ireadonly = 0, int? idoapproval = 1, string status = "", bool forprint = false)
 		{
 			bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
 			get0(isapprover, out MMDbContext context, out Device device);
-			SqlConnection connection = get1(Id, receiptno);
+			SqlConnection connection = get1(Id, pstCode);
 			int apId = ComInfo.AccountProfileId;
 			DateTime dateTime = DateTime.Now;
 
-			if (Id > 0 || !string.IsNullOrEmpty(receiptno))
+			if (Id > 0 || !string.IsNullOrEmpty(pstCode))
 			{
 				Readonly = ireadonly == 1;
 				DoApproval = idoapproval == 1;
@@ -187,18 +170,7 @@ namespace MMLib.Models.Purchase
 				var latestpurchase = context.Purchases.OrderByDescending(x => x.Id).FirstOrDefault();
 				if (latestpurchase != null)
 				{
-					if (string.IsNullOrEmpty(latestpurchase.pstType))
-					{
-						var _Id = latestpurchase.Id;
-						Purchase = new PurchaseModel
-						{
-							Id = _Id,
-							IsEditMode = false,
-							pstCode = latestpurchase.pstCode,
-							pstStatus = latestpurchase.pstStatus,
-							pqStatus = RequestStatus.requestingByStaff.ToString(),
-						};
-					}
+					if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);					
 					else addNewPurchase(context, apId, pstcode, status, pqstatus);
 				}
 				else addNewPurchase(context, apId, pstcode, status, pqstatus);
@@ -253,19 +225,22 @@ namespace MMLib.Models.Purchase
 			ps = context.Purchases.Add(ps);
 			context.SaveChanges();
 
-			if (addNewModel)
-			{
-				Purchase = new PurchaseModel
-				{
-					Id = ps.Id,
-					IsEditMode = false,
-					pstCode = pstcode,
-					pstStatus = status,
-					pqStatus = pqstatus,
-				};
-			}
+			if (addNewModel) PopulatePurchaseModel(pstcode, status, pqstatus, ps.Id);
 
 			return ps.Id;
+		}
+
+		private void PopulatePurchaseModel(string pstcode, string status, string pqstatus, long Id)
+		{
+			Purchase = new PurchaseModel
+			{
+				Id = Id,
+				IsEditMode = false,
+				pstCode = pstcode,
+				pstStatus = status,
+				pqStatus = pqstatus,
+				CreateBy = user.UserName,
+			};
 		}
 
 		private void get2(MMDbContext context, Device device)
@@ -318,12 +293,26 @@ namespace MMLib.Models.Purchase
 			}
 		}
 
-		private SqlConnection get1(long Id = 0, string receiptno = null)
+		private SqlConnection get1(long Id = 0, string pstCode = null)
+		{
+			return this.getPurchaseModelByIdCode(Id, pstCode);
+		}
+
+		public SqlConnection getPurchaseModelByIdCode(long Id, string pstCode)
 		{
 			var connection = new SqlConnection(DefaultConnection);
 			connection.Open();
-			Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@code=@code,@Id=@Id,@openonly=@openonly", new { apId, Id, code = receiptno, openonly = false });
+			Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@code=@code,@Id=@Id", new { apId, Id, code = pstCode });
 			return connection;
+		}
+		public static PurchaseModel getPurchaseModelById(long Id)
+		{
+			var connection = new SqlConnection(defaultConnection);
+			connection.Open();
+			var purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
+			connection.Close();
+			connection.Dispose();
+			return purchase;
 		}
 
 		private void get0(bool isapprover, out MMDbContext context, out Device device)
@@ -1196,9 +1185,9 @@ namespace MMLib.Models.Purchase
 					purchaseSupplier.Selected = true;
 					purchaseSupplier.ModifyTime = DateTime.Now;
 					purchase.supCode = selectedSupCode;
+					purchase.pstAmount = purchaseSupplier.Amount;
+					//purchase.ModifyTime = DateTime.Now;
 					context.SaveChanges();
-					//context.SaveChanges();
-					//addNewPurchase(context, apId, string.Concat(ConfigurationManager.AppSettings["ApprovedRequestPrefix"], purchase.pstCode.Substring(2)), PurchaseStatus.order.ToString(), null, false, purchase.pstCode);
 				}
 
 				if (IsUserRole.isdepthead)

@@ -90,7 +90,7 @@ namespace MMLib.Models.Purchase
 					SupplierNames = g.supNames,
 					PurchasePersonName = g.CreateBy,
 					pqStatus = g.pqStatus,
-					ResponseTime = g.ResponseTime,
+					ResponseTime = g.ResponseTime,					
 				}
 					);
 				}

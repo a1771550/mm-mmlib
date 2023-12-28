@@ -120,5 +120,11 @@ namespace MMLib.Models.Purchase
 		public PurchaseModel()
 		{
 		}
+
+		public PurchaseModel(long Id, MMDbContext context)
+		{
+			//string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, status);
+			
+		}
 	}
 }

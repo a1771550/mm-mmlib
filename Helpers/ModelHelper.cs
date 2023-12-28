@@ -4217,6 +4217,11 @@ namespace MMLib.Helpers
 		{
 			throw new NotImplementedException();
 		}
+
+		public static string GetAbssConnectionString(MMDbContext context, string accesstype, int apId)
+		{
+			return MYOBHelper.GetConnectionString(context, accesstype, apId);
+		}
 	}
 
 	public class VtTotalQty

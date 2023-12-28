@@ -12,6 +12,9 @@ namespace MMLib.Models.Supplier
 	{		
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
 		public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
+
+		public string JsCreateTime { get; set; }
+		public string JsModifyTime { get; set; }
 		public string Creator { get; set; }
 		public string Modifier { get; set; }
 	}
