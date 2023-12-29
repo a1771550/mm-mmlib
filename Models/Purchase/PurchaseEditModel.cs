@@ -1249,14 +1249,15 @@ namespace MMLib.Models.Purchase
 		}
 
 
-		public static List<string> GetUploadServiceSqlList(PurchaseModel purchase, ref DataTransferModel dmodel, MMDbContext context)
+		public static List<string> GetUploadServiceSqlList(ref DataTransferModel dmodel, MMDbContext context)
 		{
-			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat").appVal;
-			purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
+			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId==apId).appVal;
+			
+			dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
 
 			List<string> sqllist = [];
 
-			ModelHelper.GetDataTransferData(context, apId, CheckOutType.PayBills, ref dmodel, defaultConnection);
+			ModelHelper.GetDataTransferData(context, apId, CheckOutType.Purchase, ref dmodel, defaultConnection);
 
 			var location = comInfo.Shop;
 
@@ -1271,11 +1272,12 @@ namespace MMLib.Models.Purchase
 			}
 			string strcolumn = string.Join(",", columns);
 
-			string status = "B";
+			//string status = "B";
 			values = [];
 
+			var purchase = dmodel.Purchase;
 			//INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-			string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, status);
+			string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, StringHandlingForSQL(purchase.pstDesc));
 			values.Add(value);
 
 			sql = string.Format(sql, string.Join(",", values));

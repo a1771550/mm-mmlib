@@ -1775,137 +1775,24 @@ namespace MMLib.Helpers
 
 		public static void GetDataTransferData(MMDbContext context, int apId, CheckOutType checkOutType, ref DataTransferModel model, string connectionString = null)
 		{
-			if (checkOutType == CheckOutType.PayBills)
+			if (checkOutType == CheckOutType.Purchase)
 			{
 				DateTime frmdate = model.FrmToDate;
 				DateTime todate = model.ToDate;
 				string location = model.SelectedLocation;
 
-				#region PurchaseModels
-				model.PurchaseModels = (from ps in context.Purchases
-											//join sup in context.Suppliers
-											//on ps.supCode equals sup.supCode
-										where ps.pstPurchaseDate >= frmdate && ps.pstPurchaseDate <= todate && (ps.pstStatus.ToLower() == PurchaseStatus.opened.ToString() || ps.pstStatus.ToLower() == PurchaseStatus.partialreceival.ToString()) && ps.pstType == "PS"
-										&& ps.pstSalesLoc.ToLower() == location && ps.AccountProfileId == apId
-										select new PurchaseModel
-										{
-											Id = ps.Id,
-											pstCode = ps.pstCode,
-											supCode = ps.supCode,
-											pstSupplierInvoice = ps.pstSupplierInvoice,
-											pstSalesLoc = ps.pstSalesLoc,
-											//pstLocStock = ps.pstLocStock,
-											pstPurchaseDate = ps.pstPurchaseDate,
-											pstPromisedDate = ps.pstPromisedDate,
-											pstStatus = ps.pstStatus,
-											pstCurrency = ps.pstCurrency,
-											pstExRate = ps.pstExRate,
-											pstRemark = ps.pstRemark,
-											//SupplierName = sup.supName,
-											CreateTime = ps.CreateTime,
-											ModifyTime = ps.ModifyTime,
-											AccountProfileId = ps.AccountProfileId,
-											pstRefCode = ps.pstRefCode,
-											pstType = ps.pstType,
-											pstCheckout = ps.pstCheckout,
-											pstIsPartial = ps.pstIsPartial,
-										}
-						   ).ToList();
-
-				if (!model.includeUploaded && model.PurchaseModels.Count > 0)
+				if (!model.includeUploaded && model.Purchase!=null)
 				{
-					model.PurchaseModels = model.PurchaseModels.Where(x => !(bool)x.pstCheckout).ToList();
+					model.Purchase.pstCheckout=false;
 				}
-
-				model.DicPoPurchaseItemList = new Dictionary<string, List<PurchaseItemModel>>();
+			
 				model.CheckOutIds_Purchase = new HashSet<long>();
-				model.ItemCodes = new HashSet<string>();
 
-				if (model.PurchaseModels.Count > 0)
+				if (model.Purchase!=null)
 				{
-					var pstCodes = string.Join(",", model.PurchaseModels.Select(x => x.pstCode).Distinct().ToList());
-					var pstStatuss = string.Join(",", model.PurchaseModels.Select(x => x.pstStatus).Distinct().ToList());
-					var supCodes = string.Join(",", model.PurchaseModels.Select(x => x.supCode).Distinct().ToList());
-
-					using var connection = new SqlConnection(connectionString ?? DefaultConnection);
-					connection.Open();
-					var psilist = connection.Query<PurchaseItemModel>(@"EXEC dbo.GetPurchaseItemListByCodesStatus @apId=@apId,@pstCodes=@pstCodes,@pstStatuss=@pstStatuss", new { apId, pstCodes, pstStatuss }).ToList();
-					var supplierlist = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierInfoByCodes @apId=@apId,@supCodes=@supCodes", new { apId, supCodes }).ToList();
-
-					var myobtaxes = context.MyobTaxCodes.Where(x => x.AccountProfileId == apId).ToList();
-					var JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
-
-					foreach (var ps in model.PurchaseModels)
-					{
-						model.DicPoPurchaseItemList[ps.pstCode] = new List<PurchaseItemModel>();
-						model.CheckOutIds_Purchase.Add(ps.Id);
-
-						var supplier = supplierlist.FirstOrDefault(x => x.supCode == ps.supCode);
-						string suppliername = supplier != null ? supplier.supName : null;
-						var tax = supplier != null ? myobtaxes.FirstOrDefault(x => x.TaxCodeID == supplier.TaxCodeID) : null;
-						string taxcode = tax != null ? tax.TaxCode : "";
-
-						foreach (var item in psilist)
-						{
-							model.ItemCodes.Add(item.itmCode);
-
-							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
-							item.JobNumber = job != null ? job.JobNumber : "";
-
-							if (supplier != null)
-							{
-								item.Myob_PaymentIsDue = supplier.PaymentIsDue != null ? (int)supplier.PaymentIsDue : 0;
-								item.Myob_BalanceDueDays = supplier.BalanceDueDays != null ? (int)supplier.BalanceDueDays : 0;
-								item.Myob_DiscountDays = supplier.DiscountDays != null ? (int)supplier.DiscountDays : 0;
-							}
-
-							model.DicPoPurchaseItemList[ps.pstCode].Add(new PurchaseItemModel
-							{
-								pstId = ps.Id,
-								SupplierName = suppliername,
-								pstSupplierInvoice = ps.pstSupplierInvoice,
-								AccountProfileId = item.AccountProfileId,
-								piSeq = item.piSeq,
-								pstCode = ps.pstCode,
-								itmCode = item.itmCode,
-								itmName = item.itmName,
-								itmDesc = item.itmDesc,
-								itmUseDesc = item.itmUseDesc,
-								piBaseUnit = item.piBaseUnit,
-								piQty = item.piQty,
-								piReceivedQty = item.piReceivedQty,
-								piStatus = item.piStatus,
-								ivBatCode = item.ivBatCode,
-								piHasSN = item.piHasSN,
-								piValidThru = item.piValidThru,
-								piUnitPrice = item.piUnitPrice,
-								piTaxPc = item.piTaxPc,
-								piTaxAmt = item.piTaxAmt,
-								piDiscPc = item.piDiscPc,
-								piAmt = item.piAmt,
-								piAmtPlusTax = item.piAmtPlusTax,
-								pstLocStock = ps.pstLocStock,
-								piStockLoc = item.piStockLoc,
-								CreateTime = item.CreateTime,
-								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate == null ? DateTime.Now : ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate,
-								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
-								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,
-								IsPartial = ps.pstIsPartial,
-								supCode = ps.supCode,
-								pstCurrency = ps.pstCurrency,
-								pstExRate = Convert.ToDouble(ps.pstExRate),
-								pstRemark = ps.pstRemark,
-								JobID = item.JobID,
-								TaxCode = taxcode,
-								JobNumber = item.JobNumber
-							});
-						}
-					}
+					model.CheckOutIds_Purchase.Add(model.Purchase.Id);
 				}
-				#endregion
+				
 			}
 
 			if (checkOutType == CheckOutType.Suppliers)
@@ -1944,140 +1831,6 @@ namespace MMLib.Helpers
 					model.CheckOutIds_Supplier.Add(supplier.supId);
 				}
 			}
-
-			if (checkOutType == CheckOutType.Purchase)
-			{
-				DateTime frmdate = model.FrmToDate;
-				DateTime todate = model.ToDate;
-				string location = model.SelectedLocation;
-
-				#region PurchaseModels
-				model.PurchaseModels = (from ps in context.Purchases
-											//join sup in context.Suppliers
-											//on ps.supCode equals sup.supCode
-										where ps.pstPurchaseDate >= frmdate && ps.pstPurchaseDate <= todate && (ps.pstStatus.ToLower() == PurchaseStatus.opened.ToString() || ps.pstStatus.ToLower() == PurchaseStatus.partialreceival.ToString()) && ps.pstType == "PS"
-										&& ps.pstSalesLoc.ToLower() == location && ps.AccountProfileId == apId
-										select new PurchaseModel
-										{
-											Id = ps.Id,
-											pstCode = ps.pstCode,
-											supCode = ps.supCode,
-											pstSupplierInvoice = ps.pstSupplierInvoice,
-											pstSalesLoc = ps.pstSalesLoc,
-											//pstLocStock = ps.pstLocStock,
-											pstPurchaseDate = ps.pstPurchaseDate,
-											pstPromisedDate = ps.pstPromisedDate,
-											pstStatus = ps.pstStatus,
-											pstCurrency = ps.pstCurrency,
-											pstExRate = ps.pstExRate,
-											pstRemark = ps.pstRemark,
-											//SupplierName = sup.supName,
-											CreateTime = ps.CreateTime,
-											ModifyTime = ps.ModifyTime,
-											AccountProfileId = ps.AccountProfileId,
-											pstRefCode = ps.pstRefCode,
-											pstType = ps.pstType,
-											pstCheckout = ps.pstCheckout,
-											pstIsPartial = ps.pstIsPartial,
-										}
-						   ).ToList();
-
-				if (!model.includeUploaded && model.PurchaseModels.Count > 0)
-				{
-					model.PurchaseModels = model.PurchaseModels.Where(x => !(bool)x.pstCheckout).ToList();
-				}
-
-				model.DicPoPurchaseItemList = new Dictionary<string, List<PurchaseItemModel>>();
-				model.CheckOutIds_Purchase = new HashSet<long>();
-				model.ItemCodes = new HashSet<string>();
-
-				if (model.PurchaseModels.Count > 0)
-				{
-					var pstCodes = string.Join(",", model.PurchaseModels.Select(x => x.pstCode).Distinct().ToList());
-					var pstStatuss = string.Join(",", model.PurchaseModels.Select(x => x.pstStatus).Distinct().ToList());
-					var supCodes = string.Join(",", model.PurchaseModels.Select(x => x.supCode).Distinct().ToList());
-
-					using var connection = new SqlConnection(connectionString ?? DefaultConnection);
-					connection.Open();
-					var psilist = connection.Query<PurchaseItemModel>(@"EXEC dbo.GetPurchaseItemListByCodesStatus @apId=@apId,@pstCodes=@pstCodes,@pstStatuss=@pstStatuss", new { apId, pstCodes, pstStatuss }).ToList();
-					var supplierlist = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierInfoByCodes @apId=@apId,@supCodes=@supCodes", new { apId, supCodes }).ToList();
-
-					var myobtaxes = context.MyobTaxCodes.Where(x => x.AccountProfileId == apId).ToList();
-					var JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
-
-					foreach (var ps in model.PurchaseModels)
-					{
-						model.DicPoPurchaseItemList[ps.pstCode] = new List<PurchaseItemModel>();
-						model.CheckOutIds_Purchase.Add(ps.Id);
-
-						var supplier = supplierlist.FirstOrDefault(x => x.supCode == ps.supCode);
-						string suppliername = supplier != null ? supplier.supName : null;
-						var tax = supplier != null ? myobtaxes.FirstOrDefault(x => x.TaxCodeID == supplier.TaxCodeID) : null;
-						string taxcode = tax != null ? tax.TaxCode : "";
-
-						foreach (var item in psilist)
-						{
-							model.ItemCodes.Add(item.itmCode);
-							var job = JobList.FirstOrDefault(x => x.JobID == item.JobID);
-							item.JobNumber = job != null ? job.JobNumber : "";
-
-							if (supplier != null)
-							{
-								item.Myob_PaymentIsDue = supplier.PaymentIsDue != null ? (int)supplier.PaymentIsDue : 0;
-								item.Myob_BalanceDueDays = supplier.BalanceDueDays != null ? (int)supplier.BalanceDueDays : 0;
-								item.Myob_DiscountDays = supplier.DiscountDays != null ? (int)supplier.DiscountDays : 0;
-							}
-
-							model.DicPoPurchaseItemList[ps.pstCode].Add(new PurchaseItemModel
-							{
-								pstId = ps.Id,
-								SupplierName = suppliername,
-								pstSupplierInvoice = ps.pstSupplierInvoice,
-								AccountProfileId = item.AccountProfileId,
-								piSeq = item.piSeq,
-								pstCode = ps.pstCode,
-								itmCode = item.itmCode,
-								itmName = item.itmName,
-								itmDesc = item.itmDesc,
-								itmUseDesc = item.itmUseDesc,
-								piBaseUnit = item.piBaseUnit,
-								piQty = item.piQty,
-								piReceivedQty = item.piReceivedQty,
-								piStatus = item.piStatus,
-								ivBatCode = item.ivBatCode,
-								piHasSN = item.piHasSN,
-								piValidThru = item.piValidThru,
-								piUnitPrice = item.piUnitPrice,
-								piTaxPc = item.piTaxPc,
-								piTaxAmt = item.piTaxAmt,
-								piDiscPc = item.piDiscPc,
-								piAmt = item.piAmt,
-								piAmtPlusTax = item.piAmtPlusTax,
-								pstLocStock = ps.pstLocStock,
-								piStockLoc = item.piStockLoc,
-								CreateTime = item.CreateTime,
-								ModifyTime = item.ModifyTime,
-								pstPurchaseDate = ps.pstPurchaseDate == null ? DateTime.Now : ps.pstPurchaseDate,
-								pstPromisedDate = ps.pstPromisedDate == null ? DateTime.Now.AddDays(1) : ps.pstPromisedDate,
-								Myob_PaymentIsDue = item.Myob_PaymentIsDue,
-								Myob_BalanceDueDays = item.Myob_BalanceDueDays,
-								Myob_DiscountDays = item.Myob_DiscountDays,
-								IsPartial = ps.pstIsPartial,
-								supCode = ps.supCode,
-								pstCurrency = ps.pstCurrency,
-								pstExRate = Convert.ToDouble(ps.pstExRate),
-								pstRemark = ps.pstRemark,
-								JobID = item.JobID,
-								TaxCode = taxcode,
-								JobNumber = item.JobNumber
-							});
-						}
-					}
-				}
-				#endregion
-			}
-
-
 
 			if (checkOutType == CheckOutType.Items)
 			{

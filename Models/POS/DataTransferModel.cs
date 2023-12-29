@@ -8,7 +8,8 @@ namespace MMLib.Models
 {
     public class DataTransferModel
     {
-        public List<DeviceModel> DeviceList { get; set; }       
+		public PurchaseModel Purchase { get; set; }
+		public List<DeviceModel> DeviceList { get; set; }       
         public List<ItemModel> ItemList { get; set; }   
         public List<ItemModel> LocStockList { get; set; }
 
