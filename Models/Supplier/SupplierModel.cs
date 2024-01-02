@@ -5,12 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Web.Mvc;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Models.Supplier
-{
-    public class SupplierModel : MMDAL.Supplier
+{	
+	public class SupplierModel : MMDAL.Supplier
     {
+        public long Id { get; set; }
         public decimal? Payment { get; set; } = null;
         public bool Selected { get; set; }
         public string pstCode { get; set; }

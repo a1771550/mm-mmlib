@@ -23,5 +23,6 @@ namespace MMLib.Models.Purchase
         public bool? PassedToManager { get; set; }
         public bool? EmailNotified { get; set; }
         public DateTime? ResponseTime { get; set; }
-    }
+		public string PurchasePersonName { get; set; }
+	}
 }

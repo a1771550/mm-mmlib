@@ -138,7 +138,7 @@ namespace MMLib.Models.Purchase
 				}
 
 				Purchase.IsEditMode = true;
-				//GetPurchaseSuppliersByCode
+			
 				SelectedSuppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
 				if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
@@ -170,7 +170,7 @@ namespace MMLib.Models.Purchase
 				var latestpurchase = context.Purchases.OrderByDescending(x => x.Id).FirstOrDefault();
 				if (latestpurchase != null)
 				{
-					if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);					
+					if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);
 					else addNewPurchase(context, apId, pstcode, status, pqstatus);
 				}
 				else addNewPurchase(context, apId, pstcode, status, pqstatus);
@@ -217,7 +217,7 @@ namespace MMLib.Models.Purchase
 				pstStatus = status,
 				AccountProfileId = apId,
 				CreateTime = dateTime,
-				CreateBy = user.UserName,
+				CreateBy = user.UserCode,
 				pstCheckout = false,
 				pstIsPartial = false,
 				pqStatus = pqstatus,
@@ -416,7 +416,7 @@ namespace MMLib.Models.Purchase
 				}
 
 				status = "purchaseordersaved";
-				if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.opened.ToString())
+				if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
 				{
 					HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
 
@@ -475,7 +475,7 @@ namespace MMLib.Models.Purchase
 			{
 				#region Update Purchase Status
 				// update wholesales status:                
-				ps.pstStatus = PurchaseStatus.opened.ToString();
+				ps.pstStatus = PurchaseStatus.order.ToString();
 				ps.ModifyTime = dateTime;
 				context.SaveChanges();
 				#endregion
@@ -488,8 +488,9 @@ namespace MMLib.Models.Purchase
 				MMDAL.Purchase purchase = new MMDAL.Purchase
 				{
 					pstCode = code,
-					pstRefCode = ps.pstCode,
+					pstRefCode = ps.pstCode,					
 					AccountProfileId = apId,
+					CreateBy = user.UserCode,
 					CreateTime = dateTime,
 				};
 				context.Purchases.Add(purchase);
@@ -529,29 +530,36 @@ namespace MMLib.Models.Purchase
 				ps.pqStatus = pqstatus;
 				ps.pstSupplierInvoice = model.pstSupplierInvoice;
 				ps.pstRemark = model.pstRemark;
-				ps.ModifyTime = dateTime;
+				
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
+
+				ps.CreateBy = ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
+				ps.ModifyTime = dateTime;
 				context.SaveChanges();
 			}
 
 			return ps;
 		}
 
-		private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
+		private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SelectedSuppliers, MMDbContext context)
 		{
+			var currentIds = context.PurchaseSuppliers.Where(x=>x.AccountProfileId==apId && x.pstCode==pstCode).Select(x=>x.Id).ToList();
 			List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();
-			foreach (SupplierModel supplier in SupplierList)
+			foreach (SupplierModel supplier in SelectedSuppliers)
 			{
-				pslist.Add(new PurchaseSupplier
+				if (!currentIds.Contains(supplier.Id))
 				{
-					pstCode = pstCode,
-					supCode = supplier.supCode,
-					Amount = supplier.Amount,
-					Selected = false,
-					AccountProfileId = apId,
-					CreateTime = DateTime.Now,
-				});
+					pslist.Add(new PurchaseSupplier
+					{
+						pstCode = pstCode,
+						supCode = supplier.supCode,
+						Amount = supplier.Amount,
+						Selected = false,
+						AccountProfileId = apId,
+						CreateTime = DateTime.Now,
+					});
+				}				
 			}
 			context.PurchaseSuppliers.AddRange(pslist);
 			context.SaveChanges();
@@ -561,8 +569,14 @@ namespace MMLib.Models.Purchase
 		private static void HandlingPurchaseOrderReview(string purchasecode, string pqstatus, MMDbContext context)
 		{
 			DateTime dateTime = DateTime.Now;
-			var review = context.PurchaseOrderReviews.FirstOrDefault(x => x.PurchaseOrder == purchasecode);
-			if (review == null)
+			
+			var review = context.PurchaseOrderReviews.FirstOrDefault(x => x.PurchaseOrder == purchasecode && x.AccountProfileId == apId);
+			if (review != null)
+			{				
+				review.pqStatus = pqstatus;
+				review.ModifyTime = dateTime;
+			}
+			else
 			{
 				review = new PurchaseOrderReview
 				{
@@ -573,8 +587,9 @@ namespace MMLib.Models.Purchase
 					ModifyTime = dateTime
 				};
 				context.PurchaseOrderReviews.Add(review);
-				context.SaveChanges();
 			}
+			
+			context.SaveChanges();
 		}
 
 
@@ -1221,13 +1236,13 @@ namespace MMLib.Models.Purchase
 				if (IsUserRole.isdepthead)
 				{
 					pqStatus = RequestStatus.rejectedByDeptHead.ToString();
-					reactType = ReactType.PassedByDeptHead;
+					reactType = ReactType.RejectedByDeptHead;
 				}
 
 				if (IsUserRole.isfinancedept)
 				{
 					pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
-					reactType = ReactType.PassedByFinanceDept;
+					reactType = ReactType.RejectedByFinanceDept;
 				}
 			}
 
@@ -1237,7 +1252,7 @@ namespace MMLib.Models.Purchase
 				if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
 				{
 					pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
-					reactType = ReactType.OnHold;
+					reactType = ReactType.OnHoldByDirector;
 				}
 
 				if (IsUserRole.isfinancedept)
@@ -1251,8 +1266,8 @@ namespace MMLib.Models.Purchase
 
 		public static List<string> GetUploadServiceSqlList(ref DataTransferModel dmodel, MMDbContext context)
 		{
-			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId==apId).appVal;
-			
+			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId == apId).appVal;
+
 			dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
 
 			List<string> sqllist = [];

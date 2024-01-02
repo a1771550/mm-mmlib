@@ -24,7 +24,7 @@ namespace MMLib.Models.Purchase
 		public List<ItemModel> Items { get; set; }
 		public SupplierModel Supplier;
 		public PurchaseOrderEditModel() { }
-		public PagedList.IPagedList<PurchaseModel> PagingPurchaseOrderList { get; set; }
+		public PagedList.IPagedList<PurchaseModel> PagingProcurementList { get; set; }
 		public string KPurchasemanCode { get; set; }
 		public string SearchModeList { get; set; }
 		public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
@@ -52,7 +52,7 @@ namespace MMLib.Models.Purchase
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
-			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetProcurement4Approval @frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new { frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			var orderlist = connection.Query<PurchaseOrderModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
 			orderlist = filterOrderList(Keyword, searchmode, orderlist);
 
 			if (orderlist.Count > 0)
@@ -88,13 +88,13 @@ namespace MMLib.Models.Purchase
 					CreateTime = g.CreateTime,
 					ModifyTime = g.ModifyTime,
 					SupplierNames = g.supNames,
-					PurchasePersonName = g.CreateBy,
+					PurchasePersonName = g.PurchasePersonName,
 					pqStatus = g.pqStatus,
 					ResponseTime = g.ResponseTime,					
 				}
 					);
 				}
-				PagingPurchaseOrderList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
+				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}
 
 		}
@@ -215,7 +215,7 @@ namespace MMLib.Models.Purchase
 				}
 					);
 				}
-				PagingPurchaseOrderList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
+				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}
 
 		}
