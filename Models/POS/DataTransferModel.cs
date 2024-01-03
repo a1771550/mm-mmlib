@@ -18,7 +18,7 @@ namespace MMLib.Models
         public List<long> CheckOutIds_Item { get; set; }
         public List<long> CheckOutIds_Stock { get; set; }
 		public HashSet<long> CheckOutIds_Purchase { get; set; }
-		public HashSet<long> CheckOutIds_PayBillLn { get; set; }
+		public HashSet<long> CheckOutIds_SupPayLn { get; set; }
 		public Dictionary<string, List<PurchaseItemModel>> DicPoPurchaseItemList { get; set; }
         public DateTime FrmToDate { get; set; }
         public DateTime ToDate { get; set; }

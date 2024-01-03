@@ -19,6 +19,7 @@ using System.Text.Json;
 using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
+using PagedList;
 
 namespace MMLib.Models.Purchase
 {
@@ -138,14 +139,14 @@ namespace MMLib.Models.Purchase
 				}
 
 				Purchase.IsEditMode = true;
-			
+
 				SelectedSuppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
 				if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
 				{
 					SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
 					//GetSupplierPaymentByCode
-					var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentByCode @apId=@apId", new { apId }).ToList();
+					var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
 					LastSupplierPaymentId = supplierPaymentList.Count == 0 ? 0 : supplierPaymentList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
 					if (supplierPaymentList.Count > 0)
 					{
@@ -488,7 +489,7 @@ namespace MMLib.Models.Purchase
 				MMDAL.Purchase purchase = new MMDAL.Purchase
 				{
 					pstCode = code,
-					pstRefCode = ps.pstCode,					
+					pstRefCode = ps.pstCode,
 					AccountProfileId = apId,
 					CreateBy = user.UserCode,
 					CreateTime = dateTime,
@@ -530,7 +531,7 @@ namespace MMLib.Models.Purchase
 				ps.pqStatus = pqstatus;
 				ps.pstSupplierInvoice = model.pstSupplierInvoice;
 				ps.pstRemark = model.pstRemark;
-				
+
 				ps.pstCheckout = false;
 				ps.pstIsPartial = false;
 
@@ -544,7 +545,7 @@ namespace MMLib.Models.Purchase
 
 		private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SelectedSuppliers, MMDbContext context)
 		{
-			var currentIds = context.PurchaseSuppliers.Where(x=>x.AccountProfileId==apId && x.pstCode==pstCode).Select(x=>x.Id).ToList();
+			var currentIds = context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode).Select(x => x.Id).ToList();
 			List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();
 			foreach (SupplierModel supplier in SelectedSuppliers)
 			{
@@ -559,7 +560,7 @@ namespace MMLib.Models.Purchase
 						AccountProfileId = apId,
 						CreateTime = DateTime.Now,
 					});
-				}				
+				}
 			}
 			context.PurchaseSuppliers.AddRange(pslist);
 			context.SaveChanges();
@@ -569,10 +570,10 @@ namespace MMLib.Models.Purchase
 		private static void HandlingPurchaseOrderReview(string purchasecode, string pqstatus, MMDbContext context)
 		{
 			DateTime dateTime = DateTime.Now;
-			
+
 			var review = context.PurchaseOrderReviews.FirstOrDefault(x => x.PurchaseOrder == purchasecode && x.AccountProfileId == apId);
 			if (review != null)
-			{				
+			{
 				review.pqStatus = pqstatus;
 				review.ModifyTime = dateTime;
 			}
@@ -588,7 +589,7 @@ namespace MMLib.Models.Purchase
 				};
 				context.PurchaseOrderReviews.Add(review);
 			}
-			
+
 			context.SaveChanges();
 		}
 
@@ -1269,34 +1270,75 @@ namespace MMLib.Models.Purchase
 			var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId == apId).appVal;
 
 			dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
+			var purchase = dmodel.Purchase; //for later use
 
+			string sql = "";
+			List<string> values = [];
+			List<string> columns = [];
+			string strcolumn = "", value = "";
 			List<string> sqllist = [];
 
-			ModelHelper.GetDataTransferData(context, apId, CheckOutType.Purchase, ref dmodel, defaultConnection);
-
-			var location = comInfo.Shop;
-
-			string sql = MyobHelper.InsertImportServicePurchasesSql;
-			sql = sql.Replace("0", "{0}");
-			List<string> values = null;
-
-			List<string> columns = [];
-			for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++)
+			if (dmodel.Purchase != null)
 			{
-				columns.Add("'{" + j + "}'");
+				dmodel.CheckOutIds_Purchase = [purchase.Id];
+				var location = comInfo.Shop;
+
+				sql = MyobHelper.InsertImportServicePurchasesSql;
+				sql = sql.Replace("0", "{0}");
+
+				for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++)
+				{
+					columns.Add("'{" + j + "}'");
+				}
+				strcolumn = string.Join(",", columns);
+				//INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
+				value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, StringHandlingForSQL(purchase.pstDesc));
+				values.Add(value);
+
+				sql = string.Format(sql, string.Join(",", values));
+				sqllist.Add(sql);
 			}
-			string strcolumn = string.Join(",", columns);
 
-			//string status = "B";
-			values = [];
+			#region Instalment Payments:
+			sqlConnection.Open();
+			List<SupplierPaymentModel> supplierpayments = sqlConnection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout", new { apId, purchase.pstCode, purchase.supCode, checkout = false }).ToList();
 
-			var purchase = dmodel.Purchase;
-			//INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-			string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, StringHandlingForSQL(purchase.pstDesc));
-			values.Add(value);
+			if (supplierpayments.Count > 0)
+			{
+				sql = MyobHelper.InsertImportPayBillsSql;
+				sql = sql.Replace("0", "{0}");
+				values = [];
+				columns = [];
+				strcolumn = "";
 
-			sql = string.Format(sql, string.Join(",", values));
-			sqllist.Add(sql);
+				for (int j = 0; j < MyobHelper.ImportPayBillsColCount; j++)
+				{
+					columns.Add("'{" + j + "}'");
+				}
+				strcolumn = string.Join(",", columns);
+				value = "";
+				string payac = comInfo.comPayAccountNo.Replace("-", "");
+
+				dmodel.CheckOutIds_SupPayLn = new HashSet<long>();
+
+				foreach (var sp in supplierpayments)
+				{
+					dmodel.CheckOutIds_SupPayLn.Add(sp.Id);
+					sp.dateformat = purchase.dateformat;
+					//INSERT INTO Import_Pay_Bills (CoLastName,PaymentAccount,PurchaseNumber,SuppliersNumber,AmountApplied,PaymentDate,ChequeNumber) VALUES ('{supname}','{payac}','{pono}','{supno}','500','{date}','897852')
+					value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), payac, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.Amount), sp.PayDate4ABSS, StringHandlingForSQL(sp.spChequeNo));
+					values.Add(value);
+				}
+
+				sql = string.Format(sql, string.Join(",", values));
+				sqllist.Add(sql);
+			}
+			sqlConnection.Close();
+			sqlConnection.Dispose();
+			#endregion
+
+
+			
 
 			return sqllist;
 		}

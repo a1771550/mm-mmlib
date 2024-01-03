@@ -1775,25 +1775,25 @@ namespace MMLib.Helpers
 
 		public static void GetDataTransferData(MMDbContext context, int apId, CheckOutType checkOutType, ref DataTransferModel model, string connectionString = null)
 		{
-			if (checkOutType == CheckOutType.Purchase)
-			{
-				DateTime frmdate = model.FrmToDate;
-				DateTime todate = model.ToDate;
-				string location = model.SelectedLocation;
+			//if (checkOutType == CheckOutType.Purchase)
+			//{
+			//	DateTime frmdate = model.FrmToDate;
+			//	DateTime todate = model.ToDate;
+			//	string location = model.SelectedLocation;
 
-				if (!model.includeUploaded && model.Purchase!=null)
-				{
-					model.Purchase.pstCheckout=false;
-				}
+			//	if (!model.includeUploaded && model.Purchase!=null)
+			//	{
+			//		model.Purchase = model.Purchase.pstCheckout==false?model.Purchase:null;
+			//	}
 			
-				model.CheckOutIds_Purchase = new HashSet<long>();
+			//	model.CheckOutIds_Purchase = new HashSet<long>();
 
-				if (model.Purchase!=null)
-				{
-					model.CheckOutIds_Purchase.Add(model.Purchase.Id);
-				}
+			//	if (model.Purchase!=null)
+			//	{
+			//		model.CheckOutIds_Purchase.Add(model.Purchase.Id);
+			//	}
 				
-			}
+			//}
 
 			if (checkOutType == CheckOutType.Suppliers)
 			{
