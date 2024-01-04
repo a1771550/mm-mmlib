@@ -76,20 +76,27 @@ namespace MMLib.Models.Purchase
 		{
 			using var context = new MMDbContext();
 			List<SupplierPayment> payments = [];
+			string pstCode = SupplierPayments.First().pstCode;
+
+			var currentpayIds = context.SupplierPayments.Where(x => x.pstCode == pstCode && x.AccountProfileId==apId).Select(x=>x.Id).ToList();
 
 			foreach (var payment in SupplierPayments)
 			{
-				DateTime createTime = CommonHelper.GetDateTimeFrmString(payment.JsCreateTime);
-				payments.Add(new SupplierPayment
+				if (!currentpayIds.Contains(payment.Id))
 				{
-					Id = payment.Id,
-					Amount = payment.Amount,
-					pstCode = payment.pstCode,
-					supCode = payment.supCode,
-					AccountProfileId = apId,
-					CreateBy = user.UserCode,
-					CreateTime = createTime,
-				});
+					DateTime createTime = CommonHelper.GetDateTimeFrmString(payment.JsCreateTime);
+					payments.Add(new SupplierPayment
+					{
+						Id = payment.Id,
+						Amount = payment.Amount,
+						spChequeNo = payment.spChequeNo,
+						pstCode = payment.pstCode,
+						supCode = payment.supCode,
+						AccountProfileId = apId,
+						CreateBy = user.UserCode,
+						CreateTime = createTime,
+					});
+				}
 			}
 
 			if (payments.Count > 0)
@@ -145,13 +152,11 @@ namespace MMLib.Models.Purchase
 				if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
 				{
 					SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
-					//GetSupplierPaymentByCode
+				
 					var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
 					LastSupplierPaymentId = supplierPaymentList.Count == 0 ? 0 : supplierPaymentList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
-					if (supplierPaymentList.Count > 0)
-					{
-						SupplierPaymentList = supplierPaymentList.Where(x => x.pstCode == Purchase.pstCode).ToList();
-					}
+					if (supplierPaymentList.Count > 0) SupplierPaymentList = supplierPaymentList.Where(x => x.pstCode == Purchase.pstCode).ToList();
+					
 					groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
 
 				}
@@ -1292,7 +1297,7 @@ namespace MMLib.Models.Purchase
 				}
 				strcolumn = string.Join(",", columns);
 				//INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-				value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, StringHandlingForSQL(purchase.pstDesc));
+				value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount4Abss, purchase.Amount4Abss, StringHandlingForSQL(purchase.pstDesc));
 				values.Add(value);
 
 				sql = string.Format(sql, string.Join(",", values));

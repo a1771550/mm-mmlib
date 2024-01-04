@@ -47,7 +47,7 @@ namespace MMLib.Helpers
 		/// for Insert Item Services
 		/// Important: Amount is mandatory!!!!
 		/// </summary>
-		public const string sqlfields4Deposit = "CardID,InvoiceNumber,SaleDate,AccountNumber,Amount,SaleStatus,DeliveryStatus,Memo,SalesPersonLastName,Description,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge";
+		public const string sqlfields4Deposit = "CardID,InvoiceNumber,SaleDate,AccountNumber,Amount4Abss,SaleStatus,DeliveryStatus,Memo,SalesPersonLastName,Description,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge";
 
 
 		private static string DefaultConnection { get { return ConfigurationManager.AppSettings["DefaultConnection"]; } }

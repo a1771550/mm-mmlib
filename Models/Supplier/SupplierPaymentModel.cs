@@ -19,7 +19,7 @@ namespace MMLib.Models.Supplier
 		public string Creator { get; set; }
 		public string Modifier { get; set; }
 		public string SupplierName { get; set; }
-		//public string SuppliersNumber { get; set; }
+		public decimal OwedAmt { get; set; }
 	}
 
 }

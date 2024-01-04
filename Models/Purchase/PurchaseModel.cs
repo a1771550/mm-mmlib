@@ -115,7 +115,9 @@ namespace MMLib.Models.Purchase
 		public string PromisedDate4ABSS { get { return pstPromisedDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPromisedDate, dateformat) : string.Empty; } }
 
 		public string SupplierName { get; set; }
-		public double Amount { get { return pstAmount == null ? 0 : Convert.ToDouble((decimal)pstAmount); } }
+		public double Amount4Abss { get { return pstAmount == null ? 0 : Convert.ToDouble((decimal)pstAmount); } }
+
+		public bool FullPaidCheckedOut { get; set; }
 
 		public PurchaseModel()
 		{
