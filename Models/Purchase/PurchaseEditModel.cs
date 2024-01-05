@@ -27,7 +27,7 @@ namespace MMLib.Models.Purchase
 	{
 		public string ProcurementPersonName { get; set; }
 		public long LastSupplierPaymentId { get; set; }
-		public List<SupplierPaymentModel> SupplierPaymentList { get; set; } = new List<SupplierPaymentModel>();
+		public List<SupplierPaymentModel> SupplierPayments { get; set; } = new List<SupplierPaymentModel>();
 		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
 		public SupplierModel SelectedSupplier { get; set; }
 		public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
@@ -78,11 +78,13 @@ namespace MMLib.Models.Purchase
 			List<SupplierPayment> payments = [];
 			string pstCode = SupplierPayments.First().pstCode;
 
-			var currentpayIds = context.SupplierPayments.Where(x => x.pstCode == pstCode && x.AccountProfileId==apId).Select(x=>x.Id).ToList();
+			var currentSPs = context.SupplierPayments.Where(x => x.pstCode == pstCode && x.AccountProfileId==apId).ToList();
 
 			foreach (var payment in SupplierPayments)
 			{
-				if (!currentpayIds.Contains(payment.Id))
+				var sp = currentSPs.FirstOrDefault(x=>x.Id==payment.Id);
+
+				if (sp==null)
 				{
 					DateTime createTime = CommonHelper.GetDateTimeFrmString(payment.JsCreateTime);
 					payments.Add(new SupplierPayment
@@ -97,12 +99,16 @@ namespace MMLib.Models.Purchase
 						CreateTime = createTime,
 					});
 				}
+				else
+				{
+					sp.Amount = payment.Amount;
+					sp.spChequeNo = payment.spChequeNo;
+					sp.ModifyTime = payment.ModifyTime;
+					sp.ModifyBy = user.UserCode;
+				}
 			}
 
-			if (payments.Count > 0)
-			{
-				context.SupplierPayments.AddRange(payments);
-			}
+			if (payments.Count > 0) context.SupplierPayments.AddRange(payments);
 
 			context.SaveChanges();
 		}
@@ -155,7 +161,7 @@ namespace MMLib.Models.Purchase
 				
 					var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
 					LastSupplierPaymentId = supplierPaymentList.Count == 0 ? 0 : supplierPaymentList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
-					if (supplierPaymentList.Count > 0) SupplierPaymentList = supplierPaymentList.Where(x => x.pstCode == Purchase.pstCode).ToList();
+					if (supplierPaymentList.Count > 0) SupplierPayments = supplierPaymentList.Where(x => x.pstCode == Purchase.pstCode).ToList();
 					
 					groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
 
