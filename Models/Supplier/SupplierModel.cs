@@ -33,10 +33,12 @@ namespace MMLib.Models.Supplier
         public string AccountProfileName { get; set; }
         public string purchasecode { get; set; }
         public decimal TaxPercentageRate { get; set; }
-        
-        public HashSet<string> UploadFileList { get; set; } = new HashSet<string>();
+		
+		public HashSet<string> UploadFileList { get; set; } = new HashSet<string>();
         public List<string> ImgList;
         public List<string> FileList;
+
+        public string Remark;
         
         /// <summary>
         /// for js only

@@ -7,6 +7,7 @@ using MMDAL;
 using Dapper;
 using System.Runtime.Remoting.Contexts;
 using System.Web;
+using System.Configuration;
 
 namespace MMLib.Models.Supplier
 {
@@ -71,7 +72,8 @@ namespace MMLib.Models.Supplier
         public void GetList()
         {
             using var context = new MMDbContext();
-            SupplierList = new List<SupplierModel>();            
+            SupplierList = new List<SupplierModel>();       
+            //var absssplist
             var pslist = context.GetSupplierList5(ComInfo.AccountProfileId, SortName, SortOrder, Keyword).ToList();
             foreach (var ps in pslist)
             {
@@ -101,11 +103,12 @@ namespace MMLib.Models.Supplier
             if (model.supId == 0)
             {
                 model.supId = context.Suppliers.Count() == 0 ? 1 : context.Suppliers.Max(x => x.supId) + 1;
+                int codelength = int.Parse(ConfigurationManager.AppSettings["MaxSupplierCodeLength"]);
                 MMDAL.Supplier ps = new()
                 {
                     supId = model.supId,
                     supName = model.supName,
-                    supCode = CommonHelper.GenerateNonce(20),
+                    supCode = CommonHelper.GenerateNonce(codelength,false),
                     supAbss = false,
                     AccountProfileId = comInfo.AccountProfileId,                    
                     supIsActive = true,

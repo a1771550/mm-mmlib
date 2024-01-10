@@ -1,7 +1,6 @@
 ﻿using CommonLib.Helpers;
 using Dapper;
 using PagedList;
-using MMCommonLib.BaseModels;
 using MMDAL;
 using MMLib.Models.Item;
 using MMLib.Models.Supplier;
@@ -30,6 +29,8 @@ namespace MMLib.Models.Purchase
 		public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
 		public void GetProcurementList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
 		{
+			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
+
 			CommonHelper.DateRangeHandling(strfrmdate, strtodate, out DateTime frmdate, out DateTime todate, DateFormat.YYYYMMDD, '-');
 			using var context = new MMDbContext();
 			if (Keyword == "") Keyword = null;
@@ -48,18 +49,31 @@ namespace MMLib.Models.Purchase
 			}
 			PurchaseOrderList = new List<PurchaseModel>();
 
-			string username = UserHelper.CheckIfApprover(User) ? null : user.UserName;
+			string userCode = UserHelper.CheckIfApprover(User) ? null : user.UserCode;
 
 			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
 			connection.Open();
-			var orderlist = connection.Query<PurchaseModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@username=@username", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, username }).ToList();
+			var orderlist = connection.Query<PurchaseModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
+
+			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
 
 			if (orderlist.Count > 0)
 			{
+				if(IsUserRole.isdepthead || IsUserRole.isfinancedept)
+				{
+					var InferiorList = HttpContext.Current.Session["InferiorList"] as List<Inferior>;
+					if (InferiorList != null)
+					{
+						var inferiorCodes = InferiorList.Select(x => x.UserCode).ToHashSet();
+						foreach (var order in orderlist) if (inferiorCodes.Contains(order.CreateBy)) filteredOrderList.Add(order);					
+					}
+				}
+				else filteredOrderList = orderlist;
+
 				var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
 
-				var groupedorderlist = orderlist.GroupBy(x => x.pstCode).ToList();
+				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)
 				{
 					var g = group.FirstOrDefault();
@@ -67,36 +81,7 @@ namespace MMLib.Models.Purchase
 					decimal totalCheckedOutPayments = supplierPaymentList.Where(x => x.pstCode == g.pstCode && x.spCheckout).Sum(x => x.Amount);
 					if (totalCheckedOutPayments >= g.pstAmount) g.FullPaidCheckedOut = true;
 
-					PurchaseOrderList.Add(g);
-				//	PurchaseOrderList.Add(
-				//new PurchaseModel
-				//{
-				//	Id = g.Id,
-				//	//pstLocStock = g.pstLocStock,
-				//	pstCode = g.pstCode,
-				//	pstRefCode = g.pstRefCode,
-				//	pstType = g.pstType,
-				//	pstStatus = g.pstStatus,
-				//	pstDesc = g.pstDesc,
-				//	pstPurchaseDate = g.pstPurchaseDate,
-				//	pstPurchaseTime = g.pstPurchaseTime,
-				//	supCode = g.supCode,
-				//	pstRemark = g.pstRemark,
-				//	pstReviewUrl = g.pstReviewUrl,
-				//	pstSendNotification = g.pstSendNotification,
-				//	pstSupplierInvoice = g.pstSupplierInvoice,
-				//	pstPromisedDate = g.pstPromisedDate,
-				//	//pstRecurName = g.pstRecurName,
-				//	pstCheckout = g.pstCheckout,
-				//	CreateBy = g.CreateBy,
-				//	CreateTime = g.CreateTime,
-				//	ModifyTime = g.ModifyTime,
-				//	SupplierNames = g.supNames,
-				//	PurchasePersonName = g.PurchasePersonName,
-				//	pqStatus = g.pqStatus,
-				//	ResponseTime = g.ResponseTime,					
-				//}
-				//	);
+					PurchaseOrderList.Add(g);				
 				}
 				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}

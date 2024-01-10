@@ -260,7 +260,7 @@ namespace MMLib.Models.Purchase
 			Purchase.Device = device != null ? device as DeviceModel : null;
 			SupplierEditModel model = new(Purchase.supCode);
 			Purchase.Supplier = model.Supplier;
-			var supplierlist = context.Suppliers.Where(x => x.AccountProfileId == ComInfo.AccountProfileId && (bool)x.supCheckout).OrderBy(x => x.supName).ToList();
+			var supplierlist = context.Suppliers.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).OrderBy(x => x.supName).ToList();
 			SupplierList = new List<SelectListItem>();
 			DicSupCodeName = new Dictionary<string, string>();
 			foreach (var supplier in supplierlist)
@@ -567,6 +567,7 @@ namespace MMLib.Models.Purchase
 						pstCode = pstCode,
 						supCode = supplier.supCode,
 						Amount = supplier.Amount,
+						Remark = supplier.Remark,
 						Selected = false,
 						AccountProfileId = apId,
 						CreateTime = DateTime.Now,

@@ -119,6 +119,7 @@ namespace MMLib.Models.Purchase
 
 		public bool FullPaidCheckedOut { get; set; }
 
+		public bool IsSupplierABSS { get; set; }
 		public PurchaseModel()
 		{
 		}

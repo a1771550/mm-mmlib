@@ -534,12 +534,12 @@ namespace MMLib.Helpers
 				DateTime dateTime = DateTime.Now;
 				List<MyobSupplierModel> suplist = MYOBHelper.GetSupplierList(ConnectionString);
 				/* remove current records first: */
-				List<Supplier> suppliers = context.Suppliers.Where(x => x.AccountProfileId == apId && (bool)x.supCheckout).ToList();
-				context.Suppliers.RemoveRange(suppliers);
+				List<MyobSupplier> suppliers = context.MyobSuppliers.Where(x => x.AccountProfileId == apId).ToList();
+				context.MyobSuppliers.RemoveRange(suppliers);
 				context.SaveChanges();
 				/*********************************/
 
-				List<Supplier> newsuppliers = new List<Supplier>();
+				List<MyobSupplier> newsuppliers = new List<MyobSupplier>();
 				Dictionary<string, int> DicTermsOfPayments = new Dictionary<string, int>();
 				var termsofpayments = context.MyobTermsOfPayments.ToList();
 				foreach (var term in termsofpayments)
@@ -548,7 +548,7 @@ namespace MMLib.Helpers
 				}
 				foreach (var supplier in suplist)
 				{
-					Supplier msupplier = new Supplier();
+					MyobSupplier msupplier = new MyobSupplier();
 					msupplier.supFirstName = supplier.supFirstName;
 					msupplier.supId = supplier.supId;
 					msupplier.supIsIndividual = supplier.supIsIndividual;
@@ -600,13 +600,17 @@ namespace MMLib.Helpers
 
 					newsuppliers.Add(msupplier);
 				}
-				context.Suppliers.AddRange(newsuppliers);
-				WriteLog(context, "Import Supplier data from Central done", "ImportFrmCentral");
+				context.MyobSuppliers.AddRange(newsuppliers);
+				WriteLog(context, "Import MyobSupplier data from Central done", "ImportFrmCentral");
 				context.SaveChanges();
+
+				HashSet<string> AbssSupCodes = suplist.Select(x => x.supCode).Distinct().ToHashSet();
+				#region Update Supplier Checkout
+				UpdateSupplierCheckouts(AbssSupCodes, context);
+				#endregion
 			}
 			catch (DbEntityValidationException e)
 			{
-
 				StringBuilder sb = new StringBuilder();
 				foreach (var eve in e.EntityValidationErrors)
 				{
@@ -620,10 +624,24 @@ namespace MMLib.Helpers
 		ve.ErrorMessage);
 					}
 				}
-				WriteLog(context, string.Format("Import Supplier data from Central failed:{0}", sb.ToString()), "ExportFrmCentral");
+				WriteLog(context, string.Format("Import MyobSupplier data from Central failed:{0}", sb.ToString()), "ExportFrmCentral");
 				context.SaveChanges();
 			}
 		}
+
+		private static void UpdateSupplierCheckouts(HashSet<string> abssSupCodes, MMDbContext context)
+		{
+			var suppliers = context.Suppliers.Where(x => x.AccountProfileId == apId).ToList();
+			if (suppliers!=null && suppliers.Count > 0)
+			{
+				foreach (var supplier in suppliers)
+				{
+					if (abssSupCodes.Contains(supplier.supCode)) { supplier.supCheckout = true; supplier.ModifyTime = DateTime.Now; }
+				}
+				context.SaveChanges();
+			}
+		}
+
 		public static void SaveEmployeesFrmCentral(int apId, MMDbContext context, string ConnectionString, SessUser curruser = null, int managerId = 0)
 		{
 			DateTime dateTime = DateTime.Now;
