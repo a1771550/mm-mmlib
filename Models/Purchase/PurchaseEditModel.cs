@@ -26,10 +26,11 @@ namespace MMLib.Models.Purchase
 	public class PurchaseEditModel : PagingBaseModel
 	{
 		public string ProcurementPersonName { get; set; }
-		public long LastSupplierPaymentId { get; set; }
-		public List<SupplierPaymentModel> SupplierPayments { get; set; } = new List<SupplierPaymentModel>();
+		public long LastSupplierInvoiceId { get; set; }
+		public Dictionary<long, List<SupplierPaymentModel>> DicSupInvoicePayments { get; set; } = new Dictionary<long, List<SupplierPaymentModel>>();
 		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
 		public SupplierModel SelectedSupplier { get; set; }
+		public List<SupplierInvoiceModel> SupplierInvoiceList { get; set; }
 		public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
 		public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
 		public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
@@ -47,7 +48,6 @@ namespace MMLib.Models.Purchase
 		public List<MyobJobModel> JobList { get; set; }
 		public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
 
-
 		public List<string> ImgList;
 		public List<string> FileList;
 		public bool Readonly { get; set; }
@@ -59,6 +59,11 @@ namespace MMLib.Models.Purchase
 		public ReceiptViewModel Receipt;
 		public List<string> DisclaimerList;
 		public List<string> PaymentTermsList;
+
+		public List<PurchaseModel> PSList { get; set; }
+		public IPagedList<PurchaseModel> PagingPSList { get; set; }
+		public string PrintMode { get; set; }
+		
 
 		public PurchaseEditModel()
 		{
@@ -72,28 +77,31 @@ namespace MMLib.Models.Purchase
 		}
 
 
-		public static void EditPayments(List<SupplierPaymentModel> SupplierPayments)
+		public static void EditPayments(List<SupplierInvoiceModel> SupplierInvoices)
 		{
 			using var context = new MMDbContext();
+			List<SupplierInvoice> invoices = [];
 			List<SupplierPayment> payments = [];
-			string pstCode = SupplierPayments.First().pstCode;
+			string pstCode = SupplierInvoices.First().pstCode;
 
-			var currentSPs = context.SupplierPayments.Where(x => x.pstCode == pstCode && x.AccountProfileId==apId).ToList();
+			var currentSIs = context.SupplierInvoices.Where(x => x.pstCode == pstCode && x.AccountProfileId==apId).ToList();
 
-			foreach (var payment in SupplierPayments)
+			foreach (var invoice in SupplierInvoices)
 			{
-				var sp = currentSPs.FirstOrDefault(x=>x.Id==payment.Id);
+				var si = currentSIs.FirstOrDefault(x=>x.Id==invoice.Id);
 
-				if (sp==null)
+				if (si==null)
 				{
-					DateTime createTime = CommonHelper.GetDateTimeFrmString(payment.JsCreateTime);
-					payments.Add(new SupplierPayment
+					DateTime createTime = CommonHelper.GetDateTimeFrmString(invoice.JsCreateTime);
+					invoices.Add(new SupplierInvoice
 					{
-						Id = payment.Id,
-						Amount = payment.Amount,
-						spChequeNo = payment.spChequeNo,
-						pstCode = payment.pstCode,
-						supCode = payment.supCode,
+						Id = invoice.Id,
+						pstCode = pstCode,
+						supInvoice = invoice.supInvoice,
+						Amount = invoice.Amount,
+						supCode = invoice.supCode,
+						siChequeNo = invoice.siChequeNo,
+						Remark = invoice.Remark,
 						AccountProfileId = apId,
 						CreateBy = user.UserCode,
 						CreateTime = createTime,
@@ -101,13 +109,34 @@ namespace MMLib.Models.Purchase
 				}
 				else
 				{
-					sp.Amount = payment.Amount;
-					sp.spChequeNo = payment.spChequeNo;
-					sp.ModifyTime = payment.ModifyTime;
-					sp.ModifyBy = user.UserCode;
+					si.supInvoice = invoice.supInvoice;
+					si.Amount = invoice.Amount;
+					si.siChequeNo = invoice.siChequeNo;
+					si.Remark = invoice.Remark;
+					si.ModifyTime = invoice.ModifyTime;
+					si.ModifyBy = user.UserCode;
+
+					if (invoice.Payments.Count > 0)
+					{
+						foreach(var payment in invoice.Payments)
+						{
+							payments.Add(new SupplierPayment
+							{
+								InvoiceId = payment.InvoiceId,
+								Amount = payment.Amount,
+								spChequeNo = payment.spChequeNo,
+								spCheckout = false,
+								pstCode = pstCode,
+								Remark = payment.Remark,
+								AccountProfileId = apId,
+								CreateBy = user.UserCode,
+								CreateTime = DateTime.Now,
+							});
+						}
+					}
 				}
 			}
-
+			if (invoices.Count > 0) context.SupplierInvoices.AddRange(invoices);
 			if (payments.Count > 0) context.SupplierPayments.AddRange(payments);
 
 			context.SaveChanges();
@@ -158,10 +187,38 @@ namespace MMLib.Models.Purchase
 				if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
 				{
 					SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
-				
-					var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
-					LastSupplierPaymentId = supplierPaymentList.Count == 0 ? 0 : supplierPaymentList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
-					if (supplierPaymentList.Count > 0) SupplierPayments = supplierPaymentList.Where(x => x.pstCode == Purchase.pstCode).ToList();
+
+					SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+					LastSupplierInvoiceId = SupplierInvoiceList.Count == 0 ? 0 : SupplierInvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
+					HashSet<long> SupInvoiceIds = new HashSet<long>();
+
+					if(SupplierInvoiceList.Count>0)
+					{
+						SupInvoiceIds = SupplierInvoiceList.Select(x => x.Id).Distinct().ToHashSet();
+						foreach (var id in SupInvoiceIds) if (!DicSupInvoicePayments.ContainsKey(id)) DicSupInvoicePayments[id] = [];
+
+						foreach(var supInvoice in SupplierInvoiceList)
+						{
+							if (DicSupInvoicePayments.ContainsKey(supInvoice.Id))
+							{
+								var suppayment = SupplierInvoiceList.FirstOrDefault(x=>x.InvoiceId==supInvoice.Id);
+								if(suppayment != null)
+								{
+									DicSupInvoicePayments[supInvoice.Id].Add(new SupplierPaymentModel
+									{
+										Id=suppayment.Id,
+										InvoiceId=suppayment.InvoiceId,
+										InvoiceCode = suppayment.supInvoice,
+										Amount = suppayment.PayAmt,
+										spChequeNo = suppayment.spChequeNo,
+										Remark = suppayment.PayRemark,
+										CreateTime = suppayment.PayCreateTime,
+										CreateBy = suppayment.PayCreateBy,
+									});
+								}
+							}
+						}
+					}
 					
 					groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
 
@@ -342,9 +399,7 @@ namespace MMLib.Models.Purchase
 		}
 
 
-		public List<PurchaseModel> PSList { get; set; }
-		public PagedList.IPagedList<PurchaseModel> PagingPSList { get; set; }
-		public string PrintMode { get; set; }
+		
 
 		public List<PurchaseModel> GetList(SessUser user, string strfrmdate, string strtodate, string keyword, PurchaseStatus type = PurchaseStatus.all)
 		{
