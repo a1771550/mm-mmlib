@@ -42,7 +42,7 @@ namespace MMLib.Models.Purchase
 		public string JsonDicCurrencyExRate { get { return JsonSerializer.Serialize(DicCurrencyExRate); } }
 		public string JsonDicLocation { get { return DicLocation == null ? "" : JsonSerializer.Serialize(DicLocation); } }
 
-		public List<SelectListItem> SupplierList { get; set; }
+		public List<SupplierModel> SupplierList { get; set; }
 		public List<SelectListItem> LocationList { get; set; }
 		public List<MyobJobModel> JobList { get; set; }
 		public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
@@ -261,15 +261,16 @@ namespace MMLib.Models.Purchase
 			SupplierEditModel model = new(Purchase.supCode);
 			Purchase.Supplier = model.Supplier;
 			var supplierlist = context.Suppliers.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).OrderBy(x => x.supName).ToList();
-			SupplierList = new List<SelectListItem>();
+			SupplierList = new List<SupplierModel>();
 			DicSupCodeName = new Dictionary<string, string>();
 			foreach (var supplier in supplierlist)
 			{
 				SupplierList.Add(
-					new SelectListItem
+					new SupplierModel
 					{
-						Value = supplier.supCode,
-						Text = supplier.supName,
+						supId = supplier.supId,
+						supCode = supplier.supCode,
+						supName = supplier.supName,
 					}
 				);
 				if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
