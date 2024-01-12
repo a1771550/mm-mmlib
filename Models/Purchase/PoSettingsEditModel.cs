@@ -39,7 +39,7 @@ namespace MMLib.Models.Purchase
 		public static List<PoQtyAmtModel> GetPoQtyAmtList()
 		{
 			using var connection = new SqlConnection(defaultConnection);
-			connection.Open();
+			if(connection.State == System.Data.ConnectionState.Closed)connection.Open();			
 			return connection.Query<PoQtyAmtModel>(@"EXEC dbo.GetPoQtyAmtList @apId=@apId", new { apId }).ToList();
 		}
 	}

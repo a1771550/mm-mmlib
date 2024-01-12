@@ -380,8 +380,8 @@ namespace MMLib.Models.Purchase
 			var connection = new SqlConnection(defaultConnection);
 			connection.Open();
 			var purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
-			connection.Close();
-			connection.Dispose();
+			//connection.Close();
+			//connection.Dispose();
 			return purchase;
 		}
 

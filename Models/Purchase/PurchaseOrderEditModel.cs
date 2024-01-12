@@ -86,8 +86,8 @@ namespace MMLib.Models.Purchase
 				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}
 
-			connection.Close();
-			connection.Dispose();
+			//connection.Close();
+			//connection.Dispose();
 		}
 
 		private List<PurchaseModel> FilterOrderList(string Keyword, string searchmode, List<PurchaseModel> orderlist)

@@ -46,20 +46,27 @@ namespace MMLib.Models.Supplier
         public void Get(int supId=0, string supCode=null)
         {
             using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
-            connection.Open();
-            Supplier = connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId,supId,supCode });
-            if (Supplier != null)
+            if(connection.State == System.Data.ConnectionState.Closed)
             {
-                Supplier.StreetLines[0] = Supplier.supAddrStreetLine1;
-                Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
-                Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
-                Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
-                Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supId=@supId", new { apId,supId }).ToHashSet();
+                connection.Open();
+            }
+
+            if (supId == 0 || supCode == null)
+            {
+				Supplier = new SupplierModel();
             }
             else
             {
-                Supplier = new SupplierModel();
-            }
+				Supplier = connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId, supId, supCode });
+				if (Supplier != null)
+				{
+					Supplier.StreetLines[0] = Supplier.supAddrStreetLine1;
+					Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
+					Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
+					Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
+					Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supId=@supId", new { apId, supId }).ToHashSet();
+				}
+			}
 
             MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
             #region Handle View File
