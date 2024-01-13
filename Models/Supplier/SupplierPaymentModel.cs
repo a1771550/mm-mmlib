@@ -10,6 +10,7 @@ namespace MMLib.Models.Supplier
 {
 	public class SupplierPaymentModel:SupplierPayment
 	{	
+		public long payId { get; set; }
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
 		public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
 		public string dateformat { get; set; }

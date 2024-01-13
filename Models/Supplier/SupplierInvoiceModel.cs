@@ -11,7 +11,7 @@ namespace MMLib.Models.Supplier
 	{
 		public decimal PayAmt { get; set; }
 		public string PayRemark { get; set; }
-		public long InvoiceId { get; set; }
+		public string InvoiceId { get; set; }
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
 		public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
 		public string dateformat { get; set; }
@@ -27,6 +27,7 @@ namespace MMLib.Models.Supplier
 
 		public List<SupplierPaymentModel> Payments { get; set; } = [];
 		public string spChequeNo { get; set; }
+		public long payId { get; set; }
 	}
 
 }

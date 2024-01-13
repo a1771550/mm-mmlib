@@ -26,8 +26,8 @@ namespace MMLib.Models.Purchase
 	public class PurchaseEditModel : PagingBaseModel
 	{
 		public string ProcurementPersonName { get; set; }
-		public long LastSupplierInvoiceId { get; set; }
-		public Dictionary<long, List<SupplierPaymentModel>> DicSupInvoicePayments { get; set; } = new Dictionary<long, List<SupplierPaymentModel>>();
+		public string LastSupplierInvoiceId { get; set; }
+		public Dictionary<string, List<SupplierPaymentModel>> DicSupInvoicePayments { get; set; } = new Dictionary<string, List<SupplierPaymentModel>>();
 		public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
 		public SupplierModel SelectedSupplier { get; set; }
 		public List<SupplierInvoiceModel> SupplierInvoiceList { get; set; }
@@ -121,7 +121,7 @@ namespace MMLib.Models.Purchase
 						foreach(var payment in invoice.Payments)
 						{
 							payments.Add(new SupplierPayment
-							{
+							{								
 								InvoiceId = payment.InvoiceId,
 								Amount = payment.Amount,
 								spChequeNo = payment.spChequeNo,
@@ -189,8 +189,18 @@ namespace MMLib.Models.Purchase
 					SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
 
 					SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
-					LastSupplierInvoiceId = SupplierInvoiceList.Count == 0 ? 0 : SupplierInvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id;
-					HashSet<long> SupInvoiceIds = new HashSet<long>();
+
+					if (SupplierInvoiceList.Count == 0)
+					{
+						LastSupplierInvoiceId = GenInvoiceId(Purchase.pstCode, 0);
+					}
+					else
+					{
+						int? numId = CommonHelper.GetNumberFrmString(SupplierInvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id.Split('-')[1]);
+						LastSupplierInvoiceId = GenInvoiceId(Purchase.pstCode, (int)numId);
+					}
+
+					HashSet<string> SupInvoiceIds = new HashSet<string>();
 
 					if(SupplierInvoiceList.Count>0)
 					{
@@ -206,7 +216,7 @@ namespace MMLib.Models.Purchase
 								{
 									DicSupInvoicePayments[supInvoice.Id].Add(new SupplierPaymentModel
 									{
-										Id=suppayment.Id,
+										payId = suppayment.payId,
 										InvoiceId=suppayment.InvoiceId,
 										InvoiceCode = suppayment.supInvoice,
 										Amount = suppayment.PayAmt,
@@ -270,6 +280,11 @@ namespace MMLib.Models.Purchase
 					}
 				}
 			}
+		}
+
+		private string GenInvoiceId(string pstCode, int numId)
+		{
+			return CommonHelper.GenOrderNumber(pstCode, int.Parse(ConfigurationManager.AppSettings["SupInvoiceLength"]), numId);
 		}
 
 		private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
@@ -396,10 +411,7 @@ namespace MMLib.Models.Purchase
 				//device = context.Devices.FirstOrDefault(x => x.dvcUID == dev.dvcUID);
 				device = context.Devices.First();
 			}
-		}
-
-
-		
+		}		
 
 		public List<PurchaseModel> GetList(SessUser user, string strfrmdate, string strtodate, string keyword, PurchaseStatus type = PurchaseStatus.all)
 		{
