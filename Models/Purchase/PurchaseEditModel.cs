@@ -76,8 +76,22 @@ namespace MMLib.Models.Purchase
 			PoQtyAmtList = [];
 		}
 
+        public static SupplierInvoice addSupplierInvoice(string pstCode, string invoiceId, MMDbContext context)
+        {
+            SupplierInvoice supplierInvoice = new SupplierInvoice
+            {
+                Id = invoiceId,
+                pstCode = pstCode,
+                AccountProfileId = apId,
+                CreateTime = DateTime.Now,
+                CreateBy = user.UserCode,
+            };
+            supplierInvoice = context.SupplierInvoices.Add(supplierInvoice);
+            context.SaveChanges();
+            return supplierInvoice;
+        }
 
-		public static void EditPayments(List<SupplierInvoiceModel> SupplierInvoices)
+        public static void EditPayments(List<SupplierInvoiceModel> SupplierInvoices)
 		{
 			using var context = new MMDbContext();
 			List<SupplierInvoice> invoices = [];
@@ -188,7 +202,8 @@ namespace MMLib.Models.Purchase
 				{
 					SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
 
-					SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+					string baseUrl = UriHelper.GetBaseUrl();
+                    SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
 
 					if (SupplierInvoiceList.Count == 0)
 					{

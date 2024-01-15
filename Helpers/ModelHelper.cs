@@ -34,6 +34,7 @@ using CommonLib.BaseModels;
 using CommonLib.App_GlobalResources;
 using System.Collections;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Drawing.Drawing2D;
 
 namespace MMLib.Helpers
 {
@@ -3987,7 +3988,25 @@ namespace MMLib.Helpers
 		{
 			return MYOBHelper.GetConnectionString(context, accesstype, apId);
 		}
-	}
+
+        public static void HandleViewFile(string filepath, int apId, string invoiceId, ref List<string> ImgList, ref InvoiceFileData filedata)
+        {
+            if (!string.IsNullOrEmpty(filepath))
+            {
+                var filelnk = Path.Combine(apId.ToString(), invoiceId, filepath);
+                if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
+                {
+                    filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
+                    ImgList.Add(filelnk);
+                }
+                else
+                {
+                    string filename = Path.GetFileName(filepath);
+                    filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-id='{filedata.InvoiceId}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.InvoiceId}' data-name='{filename}'></i>";
+                }
+            }
+        }
+    }
 
 	public class VtTotalQty
 	{
@@ -4108,7 +4127,15 @@ namespace MMLib.Helpers
 		public List<string> vtlist { get; set; }
 	}
 
-	public class FileData()
+    public class InvoiceFileData()
+    {
+        public string InvoiceId { get; set; }
+        public string Name { get; set; }
+        public string FilePath { get; set; }
+        public string ImgPath { get; set; }
+        public long FileId { get; set; }
+    }
+    public class FileData()
 	{
 		public long Id { get; set; }
 		public string Name { get; set; }

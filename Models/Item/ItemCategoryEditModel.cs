@@ -26,7 +26,7 @@ namespace MMLib.Models.Item
         { 
             using var connection = new SqlConnection(ConnectionString);
             connection.Open();
-            ItemCategory = connection.QueryFirstOrDefault<ItemCategoryModel>(@"EXEC dbo.GetCategoryById @Id=@Id,@apId=@apId", new {Id, apId = AccountProfileId })??new ItemCategoryModel();
+            ItemCategory = connection.QueryFirstOrDefault<ItemCategoryModel>(@"EXEC dbo.GetCategoryById @InvoiceId=@InvoiceId,@apId=@apId", new {Id, apId = AccountProfileId })??new ItemCategoryModel();
         }
         public void GetList(int SortCol=3, string SortOrder="desc", string Keyword = null)
         {

@@ -25,7 +25,7 @@ namespace MMLib.Models.Item
             {
                 using var connection = new SqlConnection(ConnectionString);
                 connection.Open();
-                Promotion = connection.QueryFirstOrDefault<PromotionModel>(@"EXEC dbo.GetPromotion @Id=@Id", new { Id });
+                Promotion = connection.QueryFirstOrDefault<PromotionModel>(@"EXEC dbo.GetPromotion @InvoiceId=@InvoiceId", new { Id });
             }
             else
             {
@@ -50,7 +50,7 @@ namespace MMLib.Models.Item
         {
             using var connection = new SqlConnection(ConnectionString);
             connection.Open();
-            connection.Execute(@"EXEC dbo.DeletePromotion @Id=@Id", new { Id });
+            connection.Execute(@"EXEC dbo.DeletePromotion @InvoiceId=@InvoiceId", new { Id });
         }
 
         public void Add(PromotionModel model)
@@ -68,7 +68,7 @@ namespace MMLib.Models.Item
             model.proDateTo = CommonHelper.GetDateFrmString4SQL(model.JsDateTo, DateTimeFormat.YYYYMMDD);
             using var connection = new SqlConnection(ConnectionString);
             connection.Open();
-            connection.Execute(@"EXEC dbo.EditPromotion @Id=@Id,@proName=@proName,@proDesc=@proDesc,@proNameTC=@proNameTC,@proDescTC=@proDescTC,@proNameSC=@proNameSC,@proDescSC=@proDescSC,@proDateFrm=@proDateFrm,@proDateTo=@proDateto,@proDiscPc=@proDiscPc,@pro4Period=@pro4Period,@proQty=@proQty,@proPrice=@proPrice", new {model.Id, model.proName, model.proDesc, model.proNameTC, model.proDescTC, model.proNameSC, model.proDescSC, model.proDateFrm, model.proDateTo, model.proDiscPc, model.pro4Period, model.proQty, model.proPrice });
+            connection.Execute(@"EXEC dbo.EditPromotion @InvoiceId=@InvoiceId,@proName=@proName,@proDesc=@proDesc,@proNameTC=@proNameTC,@proDescTC=@proDescTC,@proNameSC=@proNameSC,@proDescSC=@proDescSC,@proDateFrm=@proDateFrm,@proDateTo=@proDateto,@proDiscPc=@proDiscPc,@pro4Period=@pro4Period,@proQty=@proQty,@proPrice=@proPrice", new {model.Id, model.proName, model.proDesc, model.proNameTC, model.proDescTC, model.proNameSC, model.proDescSC, model.proDateFrm, model.proDateTo, model.proDiscPc, model.pro4Period, model.proQty, model.proPrice });
         }
 
         public void GetList()

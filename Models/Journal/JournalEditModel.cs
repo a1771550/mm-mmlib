@@ -48,7 +48,7 @@ namespace MMLib.Models.Journal
 			}
 			else
 			{
-				JournalLnList = connection.Query<JournalLnView>(@"EXEC dbo.GetJournalById @Id=@Id,@apId=@apId", new { Id, apId }).ToList();
+				JournalLnList = connection.Query<JournalLnView>(@"EXEC dbo.GetJournalById @InvoiceId=@InvoiceId,@apId=@apId", new { Id, apId }).ToList();
 				var journalLn = JournalLnList.FirstOrDefault();
 				Journal.Id = journalLn.mainId;
 				Journal.JournalNumber = journalLn.JournalNumber;

@@ -88,7 +88,7 @@ namespace MMLib.Models.Item
         {
             using var connection = new SqlConnection(ConnectionString);
             connection.Open();
-            connection.Execute(@"EXEC dbo.DeleteItemQtyPromotion @Id=@Id", new { Id });
+            connection.Execute(@"EXEC dbo.DeleteItemQtyPromotion @InvoiceId=@InvoiceId", new { Id });
         }
 
         public void Delete(string Ids, SqlConnection connection)

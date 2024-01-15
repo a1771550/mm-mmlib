@@ -28,6 +28,8 @@ namespace MMLib.Models.Supplier
 		public List<SupplierPaymentModel> Payments { get; set; } = [];
 		public string spChequeNo { get; set; }
 		public long payId { get; set; }
+		public string filePath { get; set; }
+		public string Files { get; set; }
 	}
 
 }
