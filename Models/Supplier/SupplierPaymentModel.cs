@@ -19,7 +19,7 @@ namespace MMLib.Models.Supplier
 		public string JsModifyTime { get; set; }
 		public string Creator { get; set; }
 		public string Modifier { get; set; }
-		public string InvoiceCode { get; set; }
+		//public string InvoiceCode { get; set; }
 		public string SupplierName { get; set; }
 	}
 

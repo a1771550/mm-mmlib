@@ -30,6 +30,11 @@ namespace MMLib.Models.Supplier
 		public long payId { get; set; }
 		public string filePath { get; set; }
 		public string Files { get; set; }
+
+		//public SupplierInvoiceModel()
+		//{
+		//	Payments = new List<SupplierPaymentModel>();
+		//}
 	}
 
 }

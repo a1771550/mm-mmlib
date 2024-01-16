@@ -4002,7 +4002,7 @@ namespace MMLib.Helpers
                 else
                 {
                     string filename = Path.GetFileName(filepath);
-                    filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-id='{filedata.InvoiceId}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.InvoiceId}' data-name='{filename}'></i>";
+                    filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-invoiceid='{filedata.InvoiceId}' data-fileid='{filedata.FileId}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-name='{filename}' data-invoiceid='{filedata.InvoiceId}' data-fileid='{filedata.FileId}'></i>";
                 }
             }
         }
