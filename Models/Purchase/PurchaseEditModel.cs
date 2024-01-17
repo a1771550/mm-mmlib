@@ -20,6 +20,7 @@ using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
+using System.Data.Entity.Migrations.Model;
 
 namespace MMLib.Models.Purchase
 {
@@ -31,7 +32,7 @@ namespace MMLib.Models.Purchase
         public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
         public SupplierModel SelectedSupplier { get; set; }
         public List<SupplierInvoiceModel> SupplierInvoiceList { get; set; }
-        public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
+        //public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
         public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
         public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
         public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
@@ -103,14 +104,14 @@ namespace MMLib.Models.Purchase
             foreach (var invoice in SupplierInvoices)
             {
                 var si = currentSIs.FirstOrDefault(x => x.Id == invoice.Id);
+                DateTime operationTime = CommonHelper.GetDateTimeFrmString(invoice.JsOperationTime);
 
                 if (si == null)
                 {
-                    DateTime createTime = CommonHelper.GetDateTimeFrmString(invoice.JsCreateTime);
                     invoices.Add(new SupplierInvoice
                     {
                         Id = invoice.Id,
-                        pstCode = pstCode,
+                        pstCode = pstCode,                        
                         supInvoice = invoice.supInvoice,
                         Amount = invoice.Amount,
                         supCode = invoice.supCode,
@@ -118,36 +119,37 @@ namespace MMLib.Models.Purchase
                         Remark = invoice.Remark,
                         AccountProfileId = apId,
                         CreateBy = user.UserCode,
-                        CreateTime = createTime,
+                        CreateTime = operationTime,
                     });
                 }
                 else
                 {
                     si.supInvoice = invoice.supInvoice;
                     si.Amount = invoice.Amount;
+                    si.supCode = invoice.supCode;
                     si.siChequeNo = invoice.siChequeNo;
                     si.Remark = invoice.Remark;
-                    si.ModifyTime = invoice.ModifyTime;
+                    si.ModifyTime = operationTime;
                     si.ModifyBy = user.UserCode;
+                }
 
-                    if (invoice.Payments.Count > 0)
+                if (invoice.Payments.Count > 0)
+                {
+                    foreach (var payment in invoice.Payments)
                     {
-                        foreach (var payment in invoice.Payments)
+                        payments.Add(new SupplierPayment
                         {
-                            payments.Add(new SupplierPayment
-                            {
-                                InvoiceId = payment.InvoiceId,
-                                seq = payment.seq,
-                                Amount = payment.Amount,
-                                spChequeNo = payment.spChequeNo,
-                                spCheckout = false,
-                                pstCode = pstCode,
-                                Remark = payment.Remark,
-                                AccountProfileId = apId,
-                                CreateBy = user.UserCode,
-                                CreateTime = DateTime.Now,
-                            });
-                        }
+                            InvoiceId = payment.InvoiceId,
+                            seq = payment.seq,
+                            Amount = payment.Amount,
+                            spChequeNo = payment.spChequeNo,
+                            Remark = payment.Remark,
+                            pstCode = pstCode,
+                            spCheckout = false,
+                            AccountProfileId = apId,
+                            CreateBy = user.UserCode,
+                            CreateTime = DateTime.Now,
+                        });
                     }
                 }
             }
@@ -197,11 +199,11 @@ namespace MMLib.Models.Purchase
 
                 Purchase.IsEditMode = true;
 
-                SelectedSuppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+                SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
                 if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
                 {
-                    SelectedSupplier = SelectedSuppliers.First(x => x.Selected);
+                    SelectedSupplier = SupplierList.Single(x => x.Selected);
 
                     string baseUrl = UriHelper.GetBaseUrl();
                     SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
@@ -224,6 +226,8 @@ namespace MMLib.Models.Purchase
                         foreach (var id in SupInvoiceIds) if (!DicSupInvoicePayments.ContainsKey(id)) DicSupInvoicePayments[id] = [];
 
                         InvoicePayments = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", SupInvoiceIds) }).ToList();
+
+                        foreach(var invoice in SupplierInvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
 
                         foreach (var payment in InvoicePayments)
                         {

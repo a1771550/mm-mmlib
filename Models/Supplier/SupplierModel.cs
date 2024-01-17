@@ -38,7 +38,7 @@ namespace MMLib.Models.Supplier
         public List<string> ImgList;
         public List<string> FileList;
 
-        public string Remark;
+        public string Remark { get; set; }
         
         /// <summary>
         /// for js only
