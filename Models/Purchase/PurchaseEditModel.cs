@@ -1416,7 +1416,8 @@ namespace MMLib.Models.Purchase
                 }
                 strcolumn = string.Join(",", columns);
                 value = "";
-                string payac = comInfo.comPayAccountNo.Replace("-", "");
+                
+                //string payac = comInfo.comPayAccountNo.Replace("-", "");
 
                 dmodel.CheckOutIds_SupPayLn = new HashSet<long>();
 
@@ -1424,6 +1425,7 @@ namespace MMLib.Models.Purchase
                 {
                     dmodel.CheckOutIds_SupPayLn.Add(sp.Id);
                     sp.dateformat = purchase.dateformat;
+                    string payac = sp.supAccount.Replace("-", "");
                     //INSERT INTO Import_Pay_Bills (CoLastName,PaymentAccount,PurchaseNumber,SuppliersNumber,AmountApplied,PaymentDate,ChequeNumber) VALUES ('{supname}','{payac}','{pono}','{supno}','500','{date}','897852')
                     value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), payac, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.Amount), sp.PayDate4ABSS, StringHandlingForSQL(sp.spChequeNo));
                     values.Add(value);

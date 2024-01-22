@@ -51,7 +51,7 @@ namespace MMLib.Models.Supplier
                 connection.Open();
             }
 
-            if (supId == 0 || supCode == null)
+            if (supId == 0 && supCode == null)
             {
 				Supplier = new SupplierModel();
             }
@@ -77,30 +77,13 @@ namespace MMLib.Models.Supplier
         public List<SupplierModel> SupplierList { get; set; }
         public PagedList.IPagedList<SupplierModel> PagingSupplierList { get; set; }
         public void GetList()
-        {
-            using var context = new MMDbContext();
-            SupplierList = new List<SupplierModel>();       
-            //var absssplist
-            var pslist = context.GetSupplierList5(ComInfo.AccountProfileId, SortName, SortOrder, Keyword).ToList();
-            foreach (var ps in pslist)
+        {           
+            using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
+            if (connection.State == System.Data.ConnectionState.Closed)
             {
-                SupplierList.Add(new SupplierModel
-                {
-                    supId = ps.supId,
-                    AccountProfileId = ps.AccountProfileId,                  
-                    supIsActive = ps.supIsActive,
-                    supAbss = ps.supAbss,
-                    supName = ps.supName,
-                    supCode = ps.supCode,
-                    supPhone = ps.supPhone,
-                    supEmail = ps.supEmail,
-                    supContact = ps.supContact,
-                    CreateTime = ps.CreateTime,
-                    ModifyTime = ps.ModifyTime,
-                    supCheckout = ps.supCheckout,
-                    AccountProfileName = ps.AccountProfileName,
-                });
+                connection.Open();
             }
+            SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();           
         }
 
         public static void Edit(SupplierModel model)
@@ -117,6 +100,7 @@ namespace MMLib.Models.Supplier
                     supName = model.supName,
                     supCode = CommonHelper.GenerateNonce(codelength,false),
                     supAbss = false,
+                    supAccount = model.supAccount,
                     AccountProfileId = comInfo.AccountProfileId,                    
                     supIsActive = true,
                     supPhone = model.supPhone,
@@ -145,6 +129,7 @@ namespace MMLib.Models.Supplier
             {
                 MMDAL.Supplier ps = context.Suppliers.FirstOrDefault(x=>x.supId==model.supId);
                 ps.supName = model.supName;
+                ps.supAccount = model.supAccount;
                 ps.ModifyTime = dateTime;
                 ps.supPhone = model.supPhone;
                 ps.supEmail = model.supEmail;

@@ -21,6 +21,7 @@ namespace MMLib.Models.Supplier
 		public string Modifier { get; set; }
 		//public string InvoiceCode { get; set; }
 		public string SupplierName { get; set; }
-	}
+        public string supAccount { get; set; }
+    }
 
 }
