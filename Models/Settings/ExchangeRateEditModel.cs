@@ -10,6 +10,7 @@ using System.Configuration;
 using System.Threading.Tasks;
 using System;
 using System.Text.Json;
+using MMLib.Models.ForEx;
 
 namespace MMLib.Models.POS.Settings
 {
@@ -27,22 +28,59 @@ namespace MMLib.Models.POS.Settings
         }
 
         public static bool GetForexInfo(MMDbContext context)
-        {           
+        {
             var useapi = context.ComInfoes.FirstOrDefault(x => x.AccountProfileId == comInfo.AccountProfileId).UseForexAPI;
-            return useapi==null?false:(bool)useapi;
+            return useapi == null ? false : (bool)useapi;
+        }
+
+        public List<ForExModel> ForExList
+        {
+            get
+            {
+                using var context = new MMDbContext();
+                var list = new List<ForExModel>();
+
+                var exchangerates = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
+                if (exchangerates != null && exchangerates.Count > 0)
+                {
+                    foreach (var exrate in exchangerates)
+                    {
+                        list.Add(new ForExModel
+                        {
+                            ExchangeRate = exrate.ExchangeRate,
+                            CurrencyCode = exrate.CurrencyCode,
+                            CurrencySymbol = exrate.CurrencySymbol,
+                        });                        
+                    }
+                }
+                else
+                {
+                    var comInfo = context.ComInfoes.FirstOrDefault(x => x.Id == ComInfo.Id && x.AccountProfileId == ComInfo.AccountProfileId);
+                    foreach (var exrate in comInfo.ExchangeRates.Split(';'))
+                    {
+                        var arr = exrate.Split(':');
+                        var currencycode = arr[0];
+                        var exchangeRate = double.Parse(arr[1]);
+                        var symbol = arr[2];
+                        list.Add(new ForExModel { CurrencyCode = currencycode, ExchangeRate = exchangeRate, CurrencySymbol = symbol });
+                    }
+                }
+                return list;
+            }
+
         }
 
         public Dictionary<string, string> ExRateList
         {
             get
             {
-                using var context=new MMDbContext();
+                using var context = new MMDbContext();
                 var list = new Dictionary<string, string>();
 
                 var exchangerates = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
-                if(exchangerates!=null && exchangerates.Count > 0)
+                if (exchangerates != null && exchangerates.Count > 0)
                 {
-                    foreach(var exrate in exchangerates)
+                    foreach (var exrate in exchangerates)
                     {
                         list[exrate.CurrencyCode] = exrate.ExchangeRate.ToString();
                     }
@@ -56,7 +94,7 @@ namespace MMLib.Models.POS.Settings
                         var currencycode = arr[0];
                         list[currencycode] = arr[1];
                     }
-                } 
+                }
                 return list;
             }
         }
@@ -85,8 +123,9 @@ namespace MMLib.Models.POS.Settings
             }
             return list;
 
-        }
-        public static void Save(Dictionary<string, decimal> model, int useapi, int apId)
+        }      
+
+        public static void Save(List<ForExModel> model, int useapi, int apId)
         {
             using var context = new MMDbContext();
             List<MyobCurrency> myobCurrencies = context.MyobCurrencies.Where(x => x.AccountProfileId == apId).ToList();
@@ -95,27 +134,27 @@ namespace MMLib.Models.POS.Settings
             cominfo.UseForexAPI = useapi == 1;
             cominfo.ModifyTime = DateTime.Now;
             List<MyobCurrency> newforexes = new List<MyobCurrency>();
-            foreach(var item in model)
+            int idx = 0;
+            foreach (var item in model)
             {
-                var forex = myobCurrencies.FirstOrDefault(x => x.CurrencyCode == item.Key);
-                if (forex!=null){
-                    forex.ExchangeRate = Convert.ToDouble(item.Value);
+                idx++;
+                var forex = myobCurrencies.FirstOrDefault(x => x.CurrencyCode == item.CurrencyCode);
+                if (forex != null)
+                {
+                    forex.ExchangeRate = Convert.ToDouble(item.ExchangeRate);
+                    forex.CurrencySymbol = item.CurrencySymbol;
                     forex.ModifyTime = DateTime.Now;
                 }
                 else
                 {
                     var currency = myobCurrencies.FirstOrDefault();
-                    var newcurrId = myobCurrencies.Max(x => x.CurrencyID)+1;
+                    var newcurrId = myobCurrencies.Max(x => x.CurrencyID) + idx;
                     newforexes.Add(new MyobCurrency
                     {
-                        CurrencyID=newcurrId,
-                        CurrencyCode=item.Key,
-                        ExchangeRate=Convert.ToDouble(item.Value),        
-                        SymbolPosition=currency.SymbolPosition,
-                        DecimalPlaces=currency.DecimalPlaces,
-                        NumberDigitsInGroup = currency.NumberDigitsInGroup,
-                        NegativeFormat=currency.NegativeFormat,
-                        UseLeadingZero=currency.UseLeadingZero,                        
+                        CurrencyID = newcurrId,
+                        CurrencyCode = item.CurrencyCode,
+                        ExchangeRate = Convert.ToDouble(item.ExchangeRate),
+                        CurrencySymbol = item.CurrencySymbol,                       
                         AccountProfileId = apId,
                         CreateTime = DateTime.Now,
                     });
@@ -126,8 +165,19 @@ namespace MMLib.Models.POS.Settings
                 context.MyobCurrencies.AddRange(newforexes);
                 context.SaveChanges();
             }
-                
+
             context.SaveChanges();
+        }
+
+        public static void Remove(string code)
+        {
+            using var context = new MMDbContext();
+            MyobCurrency myobCurrency = context.MyobCurrencies.FirstOrDefault(x=>x.CurrencyCode == code);
+            if(myobCurrency != null)
+            {
+                context.MyobCurrencies.Remove(myobCurrency);
+                context.SaveChanges();
+            }
         }
     }
 
@@ -135,6 +185,6 @@ namespace MMLib.Models.POS.Settings
     {
         public Dictionary<string, decimal> ExList { get; set; }
         public string Currency { get; set; }
-        public decimal ExRate { get; set; }         
+        public decimal ExRate { get; set; }
     }
 }
