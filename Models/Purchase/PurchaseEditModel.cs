@@ -32,7 +32,7 @@ namespace MMLib.Models.Purchase
         public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
         public SupplierModel SelectedSupplier { get; set; }
         public List<SupplierInvoiceModel> SupplierInvoiceList { get; set; }
-        //public List<SupplierModel> SelectedSuppliers { get; set; } = new List<SupplierModel>();
+        //public List<SupplierModel> SupplierList { get; set; } = new List<SupplierModel>();
         public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
         public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
         public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
@@ -111,7 +111,7 @@ namespace MMLib.Models.Purchase
                     invoices.Add(new SupplierInvoice
                     {
                         Id = invoice.Id,
-                        pstCode = pstCode,                        
+                        pstCode = pstCode,
                         supInvoice = invoice.supInvoice,
                         Amount = invoice.Amount,
                         supCode = invoice.supCode,
@@ -171,13 +171,22 @@ namespace MMLib.Models.Purchase
         public void Get(long Id = 0, string pstCode = null, int? ireadonly = 0, int? idoapproval = 1, string status = "", bool forprint = false)
         {
             bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
-            get0(isapprover, out MMDbContext context, out Device device);
-            SqlConnection connection = get1(Id, pstCode);
-            int apId = ComInfo.AccountProfileId;
+            using var context = new MMDbContext();
+
+            Purchase = new PurchaseModel();
+            Device device = null;
+            if (!isapprover) device = context.Devices.First();
+
+            var connection = new SqlConnection(defaultConnection);
+            connection.Open();
+           
+
             DateTime dateTime = DateTime.Now;
 
             if (Id > 0 || !string.IsNullOrEmpty(pstCode))
             {
+                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code=pstCode });
+
                 Readonly = ireadonly == 1;
                 DoApproval = idoapproval == 1;
 
@@ -200,6 +209,9 @@ namespace MMLib.Models.Purchase
                 Purchase.IsEditMode = true;
 
                 SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+
+                DicSupCodeName = new Dictionary<string, string>();
+                foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;              
 
                 if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
                 {
@@ -227,7 +239,7 @@ namespace MMLib.Models.Purchase
 
                         InvoicePayments = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", SupInvoiceIds) }).ToList();
 
-                        foreach(var invoice in SupplierInvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
+                        foreach (var invoice in SupplierInvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
 
                         foreach (var payment in InvoicePayments)
                         {
@@ -273,7 +285,37 @@ namespace MMLib.Models.Purchase
                 }
                 else addNewPurchase(context, apId, pstcode, status, pqstatus);
             }
-            get2(context, device);
+
+            Purchase.Device = device != null ? device as DeviceModel : null;            
+
+            var stocklocationlist = context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
+            LocationList = new List<SelectListItem>();
+            foreach (var item in stocklocationlist)
+            {
+                LocationList.Add(new SelectListItem
+                {
+                    Value = item,
+                    Text = item
+                });
+            }
+
+            var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
+            if (myobcurrencylist != null && myobcurrencylist.Count > 0)
+            {
+                DicCurrencyExRate = new Dictionary<string, double>();
+                foreach (var currency in myobcurrencylist)
+                {
+                    DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
+                }
+            }
+
+            Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
+            Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
+            DicLocation = new Dictionary<string, string>();
+            foreach (var shop in stocklocationlist)
+            {
+                DicLocation[shop] = shop;
+            }
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
             Purchase.Mode = ireadonly == 1 ? "readonly" : "";
 
@@ -346,91 +388,6 @@ namespace MMLib.Models.Purchase
             };
         }
 
-        private void get2(MMDbContext context, Device device)
-        {
-            Purchase.Device = device != null ? device as DeviceModel : null;
-            SupplierEditModel model = new(Purchase.supCode);
-            Purchase.Supplier = model.Supplier;
-            var supplierlist = context.Suppliers.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).OrderBy(x => x.supName).ToList();
-            SupplierList = new List<SupplierModel>();
-            DicSupCodeName = new Dictionary<string, string>();
-            foreach (var supplier in supplierlist)
-            {
-                SupplierList.Add(
-                    new SupplierModel
-                    {
-                        supId = supplier.supId,
-                        supCode = supplier.supCode,
-                        supName = supplier.supName,
-                    }
-                );
-                if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
-            }
-
-            var stocklocationlist = context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
-            LocationList = new List<SelectListItem>();
-            foreach (var item in stocklocationlist)
-            {
-                LocationList.Add(new SelectListItem
-                {
-                    Value = item,
-                    Text = item
-                });
-            }
-
-            var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
-            if (myobcurrencylist != null && myobcurrencylist.Count > 0)
-            {
-                DicCurrencyExRate = new Dictionary<string, double>();
-                foreach (var currency in myobcurrencylist)
-                {
-                    DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
-                }
-            }
-
-            Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
-            Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
-            DicLocation = new Dictionary<string, string>();
-            foreach (var shop in stocklocationlist)
-            {
-                DicLocation[shop] = shop;
-            }
-        }
-
-        private SqlConnection get1(long Id = 0, string pstCode = null)
-        {
-            return this.getPurchaseModelByIdCode(Id, pstCode);
-        }
-
-        public SqlConnection getPurchaseModelByIdCode(long Id, string pstCode)
-        {
-            var connection = new SqlConnection(DefaultConnection);
-            connection.Open();
-            Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@code=@code,@Id=@Id", new { apId, Id, code = pstCode });
-            return connection;
-        }
-        public static PurchaseModel getPurchaseModelById(long Id)
-        {
-            var connection = new SqlConnection(defaultConnection);
-            connection.Open();
-            var purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
-            //connection.Close();
-            //connection.Dispose();
-            return purchase;
-        }
-
-        private void get0(bool isapprover, out MMDbContext context, out Device device)
-        {
-            device = null;
-            Purchase = new PurchaseModel();
-            context = new MMDbContext();
-            if (!isapprover)
-            {
-                //DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
-                //device = context.Devices.FirstOrDefault(x => x.dvcUID == dev.dvcUID);
-                device = context.Devices.First();
-            }
-        }
 
         public List<PurchaseModel> GetList(SessUser user, string strfrmdate, string strtodate, string keyword, PurchaseStatus type = PurchaseStatus.all)
         {
@@ -451,11 +408,11 @@ namespace MMLib.Models.Purchase
             return PSList;
         }
 
-        public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SelectedSuppliers)
+        public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList)
         {
             List<PurchaseReturnMsg> msglist = new List<PurchaseReturnMsg>();
             List<Superior> SuperiorList = new List<Superior>();
-            string supnames = string.Join(",", SelectedSuppliers.Select(x => x.supName).Distinct().ToList());
+            string supnames = string.Join(",", SupplierList.Select(x => x.supName).Distinct().ToList());
 
             string status = "";
             string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
@@ -487,9 +444,9 @@ namespace MMLib.Models.Purchase
             if (IsUserRole.isdirectorboard)
             {
                 if (!model.IsEditMode)
-                    updatePurchaseRequest(model, SelectedSuppliers, context, dateTime, purchasedate, promiseddate, purchasestatus);
+                    updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
                 else
-                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SelectedSuppliers);
+                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
             }
             else
             {
@@ -507,11 +464,11 @@ namespace MMLib.Models.Purchase
 
                 if (!model.IsEditMode)
                 {
-                    updatePurchaseRequest(model, SelectedSuppliers, context, dateTime, purchasedate, promiseddate, purchasestatus);
+                    updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
                 }
                 else
                 {
-                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SelectedSuppliers);
+                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
                 }
 
                 status = "purchaseordersaved";
@@ -566,9 +523,9 @@ namespace MMLib.Models.Purchase
             }
         }
 
-        private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, List<SupplierModel> SelectedSuppliers)
+        private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, List<SupplierModel> SupplierList)
         {
-            MMDAL.Purchase ps = updatePurchaseRequest(model, SelectedSuppliers, context, dateTime, purchasedate, promiseddate, purchasestatus);
+            MMDAL.Purchase ps = updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
 
             if (purchasestatus.ToLower() == PurchaseStatus.order.ToString())
             {
@@ -600,12 +557,12 @@ namespace MMLib.Models.Purchase
         }
 
 
-        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, List<SupplierModel> SelectedSuppliers, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
+        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
         {
-            var supcodes = string.Join(",", SelectedSuppliers.Select(x => x.supCode).Distinct().ToList());
+            var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
             MMDAL.Purchase ps = _updatePurchaseRequest(model, supcodes, context, dateTime, purchasedate, promiseddate, purchasestatus);
 
-            AddSelectedSuppliers(model.pstCode, SelectedSuppliers, context);
+            AddSelectedSuppliers(model.pstCode, SupplierList, context);
             return ps;
         }
 
@@ -641,11 +598,11 @@ namespace MMLib.Models.Purchase
             return ps;
         }
 
-        private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SelectedSuppliers, MMDbContext context)
+        private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
         {
             var currentIds = context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode).Select(x => x.Id).ToList();
             List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();
-            foreach (SupplierModel supplier in SelectedSuppliers)
+            foreach (SupplierModel supplier in SupplierList)
             {
                 if (!currentIds.Contains(supplier.Id))
                 {
@@ -1416,7 +1373,7 @@ namespace MMLib.Models.Purchase
                 }
                 strcolumn = string.Join(",", columns);
                 value = "";
-                
+
                 //string payac = comInfo.comPayAccountNo.Replace("-", "");
 
                 dmodel.CheckOutIds_SupPayLn = new HashSet<long>();
@@ -1442,6 +1399,13 @@ namespace MMLib.Models.Purchase
 
 
             return sqllist;
+        }
+
+        public static PurchaseModel getPurchaseModelById(long Id)
+        {
+            var connection = new SqlConnection(defaultConnection);
+            connection.Open();
+            return connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
         }
     }
 
