@@ -64,7 +64,7 @@ namespace MMLib.Models.Supplier
 					Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
 					Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
 					Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
-					Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supId=@supId", new { apId, supId }).ToHashSet();
+					Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supCodes=@supCodes", new { apId, supCodes=Supplier.supCode }).ToHashSet();
 				}
 			}
 
@@ -83,7 +83,7 @@ namespace MMLib.Models.Supplier
             {
                 connection.Open();
             }
-            SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();           
+            SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();           
         }
 
         public static void Edit(SupplierModel model)

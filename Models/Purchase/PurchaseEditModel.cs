@@ -26,6 +26,10 @@ namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
     {
+        /// <summary>
+        /// for choose
+        /// </summary>
+        public List<SupplierModel> Suppliers { get; set; } = new List<SupplierModel>();
         public string ProcurementPersonName { get; set; }
         public string LastSupplierInvoiceId { get; set; }
         public Dictionary<string, List<SupplierPaymentModel>> DicSupInvoicePayments { get; set; } = new Dictionary<string, List<SupplierPaymentModel>>();
@@ -179,7 +183,6 @@ namespace MMLib.Models.Purchase
 
             var connection = new SqlConnection(defaultConnection);
             connection.Open();
-           
 
             DateTime dateTime = DateTime.Now;
 
@@ -285,6 +288,8 @@ namespace MMLib.Models.Purchase
                 }
                 else addNewPurchase(context, apId, pstcode, status, pqstatus);
             }
+
+            Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
             Purchase.Device = device != null ? device as DeviceModel : null;            
 
@@ -1241,7 +1246,7 @@ namespace MMLib.Models.Purchase
             return sqllist;
         }
 
-        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, List<string> SelectedSupCodes, MMDbContext context)
+        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context)
         {
             pqStatus = "";
             if (purchase.pstStatus == RequestStatus.approved.ToString())
@@ -1251,12 +1256,11 @@ namespace MMLib.Models.Purchase
                 {
                     purchase.pstStatus = PurchaseStatus.order.ToString();
                     pqStatus = RequestStatus.approved.ToString();
-                    reactType = ReactType.Approved;
-                    string selectedSupCode = SelectedSupCodes.First();
-                    PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == selectedSupCode);
+                    reactType = ReactType.Approved;                    
+                    PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
                     purchaseSupplier.Selected = true;
                     purchaseSupplier.ModifyTime = DateTime.Now;
-                    purchase.supCode = selectedSupCode;
+                    purchase.supCode = SelectedSupCode;
                     purchase.pstAmount = purchaseSupplier.Amount;
                     //purchase.ModifyTime = DateTime.Now;
                     context.SaveChanges();
