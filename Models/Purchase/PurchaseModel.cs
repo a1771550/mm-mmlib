@@ -3,20 +3,16 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Web;
-using System.Web.Mvc;
 using CommonLib.Helpers;
 using CommonLib.Models;
 using System.Text.Json;
 using MMDAL;
 using MMLib.Models.Supplier;
-using MMLib.Models.MYOB;
-using MMLib.Models.Item;
 using CommonLib.App_GlobalResources;
-using RestSharp;
 
 namespace MMLib.Models.Purchase
 {
-	public class PurchaseModel : MMDAL.Purchase
+    public class PurchaseModel : MMDAL.Purchase
 	{
 		public ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] == null ? null : HttpContext.Current.Session["ComInfo"] as ComInfo; } }
 
@@ -25,6 +21,21 @@ namespace MMLib.Models.Purchase
 		public string JsPurchaseDate { get; set; }
 		public string JsPromisedDate { get; set; }
 		public string SupplierNames { get; set; }
+		public string SupNamesDisplay { get
+			{
+				//MaxSupNamesDisplayLength
+                int maxlength4name = int.Parse(ConfigurationManager.AppSettings["MaxSupNamesDisplayLength"]);
+				return (SupplierNames!=null && SupplierNames.Length > maxlength4name)? string.Concat(SupplierNames.Substring(0, maxlength4name), "..."):SupplierNames??string.Empty;
+            }
+        }
+        public string RemarkDisplay
+        {
+            get
+            {
+				int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxRemarkDisplayLength"]);
+                return pstRemark != null && pstRemark.Length > maxremarkdisplaylength ? string.Concat(pstRemark.Substring(0, maxremarkdisplaylength), "...") : pstRemark ?? string.Empty;
+            }
+		}
 		public DateTime? ResponseTime { get; set; }
 		public string ResponseTimeDisplay { get { return ResponseTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ResponseTime, true); } }
 		public string PromisedDateDisplay { get { return pstPromisedDate == null ? "N/A" : CommonHelper.FormatDate((DateTime)pstPromisedDate, true); } }
@@ -33,9 +44,7 @@ namespace MMLib.Models.Purchase
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
 		public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
 		public string TrimmedRemark { get { return string.IsNullOrEmpty(pstRemark) ? "N/A" : CommonHelper.GetTrimmedCharacters(pstRemark, int.Parse(ConfigurationManager.AppSettings["MaxCharacterNumInList"])); } }
-
-		public List<PurchaseItemModel> PurchaseItems;
-		public string JsonPurchaseItems { get { return JsonSerializer.Serialize(PurchaseItems); } }
+	
 		public bool EnableTax { get { return TaxModel != null ? TaxModel.EnableTax : false; } }
 		public bool InclusiveTax { get { return TaxModel != null ? TaxModel.TaxType == TaxType.Inclusive : false; } }
 		public bool EnableSerialNo { get { return (bool)ComInfo.comEnableSN; } }
@@ -46,17 +55,6 @@ namespace MMLib.Models.Purchase
 		public string itmName { get; set; }
 		public string itmDesc { get; set; }
 		public string PSCodeDisplay { get { return string.Concat(pstLocStock, "-", pstCode); } }
-
-		public decimal SubTotal { get { return PurchaseItems == null ? 0 : PurchaseItems.Sum(x => x.piUnitPrice * x.piQty); } }
-		public string FormatSubTotal { get { return CommonHelper.FormatMoney(Currency, SubTotal); } }
-		public decimal DiscTotal { get { return PurchaseItems == null ? 0 : (decimal)PurchaseItems.Sum(x => x.piUnitPrice * x.piDiscPc); } }
-		public string FormatDiscTotal { get { return CommonHelper.FormatMoney(Currency, DiscTotal); } }
-		public decimal TaxTotal { get { return PurchaseItems == null ? 0 : (decimal)PurchaseItems.Sum(x => x.piTaxAmt); } }
-		public string FormatTaxTotal { get { return CommonHelper.FormatMoney(Currency, TaxTotal); } }
-		public decimal Total { get { return PurchaseItems == null ? 0 : (decimal)PurchaseItems.Sum(x => x.piAmtPlusTax); } }
-		public string FormatTotal { get { return CommonHelper.FormatMoney(Currency, Total); } }
-
-
 
 		public int ireviewmode { get; set; }
 		public SupplierModel Supplier { get; set; }

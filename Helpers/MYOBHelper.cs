@@ -8,14 +8,13 @@ using CommonLib.Models.MYOB;
 using MMCommonLib.BaseModels;
 using MMCommonLib.CommonModels;
 using MMDAL;
-using MMLib.Models.Item;
 using MMLib.Models.MYOB;
 using MMLib.Models.POS.MYOB;
 using MMMyobLib;
 
 namespace MMLib.Helpers
 {
-	public static class MYOBHelper
+    public static class MYOBHelper
 	{
 		private static string ConnectionString = ConfigurationManager.AppSettings["DefaultConnection"];
 		//private static ComInfo ComInfo = HttpContext.Current.Session == null?null: HttpContext.Current.Session["ComInfo"] as ComInfo;
@@ -30,31 +29,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static List<AddOnItem> GetStockList(AbssConn abssConn)
-		{
-			string sql = @"Select il.ItemID, il.QuantityOnHand, il.SellOnOrder, il.PurchaseOnOrder, l.LocationIdentification, i.ItemNumber, il.ItemLocationID, l.LocationName,il.LocationID,i.QuantityAvailable From Items i Join ItemLocations il on i.ItemID = il.ItemID  Join Locations l on il.LocationID=l.LocationID Where l.IsInactive='N' And l.CanBeSold='Y';";
-			Repository repos = new Repository();
-			DataSet ds = repos.Query(sql, abssConn);
-			DataTable dt = ds.Tables[0];
-			List<AddOnItem> AddOnItems = new List<AddOnItem>();
-			AddOnItems = (from DataRow dr in dt.Rows
-
-						  select new AddOnItem()
-						  {
-							  ItemID = Convert.ToInt32(dr[0]),
-							  ItemNumber = dr[5].ToString(),
-							  QuantityOnHand = Convert.ToDecimal(dr[1]),
-							  SellOnOrder = Convert.ToDecimal(dr[2]),
-							  PurchaseOnOrder = Convert.ToDecimal(dr[3]),
-							  LocationIDTxt = dr[4].ToString(),
-							  ItemLocationID = Convert.ToInt32(dr[6]),
-							  LocationName = dr[7].ToString(),
-							  LocationID = Convert.ToInt32(dr[8]),
-							  QuantityAvailable = Convert.ToDecimal(dr[9])
-						  }
-					 ).ToList();
-			return AddOnItems;
-		}
+		
 
 		public static List<AccountClassificationModel> GetAccountClassificationList(string connectionstring, string sql = "")
 		{

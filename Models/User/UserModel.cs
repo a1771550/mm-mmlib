@@ -1,29 +1,79 @@
 ﻿using MMDAL;
+using MMLib.Models.Account;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Resources = CommonLib.App_GlobalResources;
 
 namespace MMLib.Models.User
 {
     //[Serializable]
-    public class UserModel : SysUser
+    public class UserModel
     {
-        public bool checkpass { get; set; }
+        [Key]
+        [Display(Name = "ID")]
+        public int surUID { get; set; }
+        [Display(Name = "UserCode", ResourceType = typeof(Resources.Resource))]
+        [Required(ErrorMessageResourceName = "UserCodeRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        public string UserCode { get; set; }
+
+
+        [Display(Name = "UserName", ResourceType = typeof(Resources.Resource))]
+        [Required(ErrorMessageResourceName = "UserNameRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        public string UserName { get; set; }
+
+        [Display(Name = "Email", ResourceType = typeof(Resources.Resource))]
+        [Required(ErrorMessageResourceName = "EmailRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        [EmailAddress(ErrorMessageResourceName = "EmailFormatErrMsg", ErrorMessageResourceType = typeof(Resources.Resource))]
+        public string Email { get; set; }
+
+        [Display(Name = "Password", ResourceType = typeof(Resources.Resource))]
+        [Required(ErrorMessageResourceName = "PasswordRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        [StringLength(10, ErrorMessageResourceName = "PasswordStrengthError", ErrorMessageResourceType = typeof(Resources.Resource), MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [Display(Name = "ConfirmPassword", ResourceType = typeof(Resources.Resource))]
+        [Required(ErrorMessageResourceName = "ConfirmPasswordRequired", ErrorMessageResourceType = typeof(Resources.Resource))]
+        [StringLength(10, ErrorMessageResourceName = "PasswordStrengthError", ErrorMessageResourceType = typeof(Resources.Resource), MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Compare("Password")]
         public string ConfirmPassword { get; set; }
+
+        [Display(Name = "AccessRights", ResourceType = typeof(Resources.Resource))]
+        public List<string> AccessRights { get; set; }
+
+        [Display(Name = "Status", ResourceType = typeof(Resources.Resource))]
+        public bool surIsActive { get; set; }
+        public bool checkpass { get; set; }
+    
         public string SalesmanName { get; set; }
-        public string CreateTimeDisplay { get { return surCreateTime == null ? "N/A" : CommonLib.Helpers.CommonHelper.FormatDateTime(surCreateTime); } }
+        public string CreateTimeDisplay { get { return surCreateTime == null ? "N/A" : CommonLib.Helpers.CommonHelper.FormatDateTime((DateTime)surCreateTime); } }
         public string ModifyTimeDisplay { get { return surModifyTime == null ? "N/A" : CommonLib.Helpers.CommonHelper.FormatDateTime((DateTime)surModifyTime); } }
         public int IsActive { get { return surIsActive ? 1 : 0; } }
        
-        public List<AccessRight> AccessRights { get; set; }
+     
         public int CustomerId { get; set; }
         public string ManagerName { get; set; }
         public RoleType Role { get; set; }
        
         public long ContactId { get; set; }
+        public string UserRole { get; set; }
+        public string Roles { get; set; }
+        public DateTime? surCreateTime { get; set; }
+        public DateTime? surModifyTime { get; set; }
+        public int ManagerId { get; set; }
+        public string SuperiorIds { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public int AccountProfileId { get; set; }
+        public string Phone { get; set; }
+        public HashSet<int> SuperiorIdList { get; set; }
 
         public UserModel()
         {
-            AccessRights = new List<AccessRight>();
+            AccessRights = new List<string>();
+            SuperiorIdList = new HashSet<int>();
         }
 
     }

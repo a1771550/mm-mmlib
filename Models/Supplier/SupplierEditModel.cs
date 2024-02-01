@@ -13,6 +13,7 @@ namespace MMLib.Models.Supplier
 {
     public class SupplierEditModel : PagingBaseModel
     {
+        public HashSet<string> SupplierNameList {  get; set; }
 		public string IpCountry { get; set; }
 		public List<Country> MyobCountries { get; set; }
 		public List<string> Countries { get; set; }
@@ -46,27 +47,23 @@ namespace MMLib.Models.Supplier
         public void Get(int supId=0, string supCode=null)
         {
             using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
-            if(connection.State == System.Data.ConnectionState.Closed)
-            {
-                connection.Open();
-            }
+            if(connection.State == System.Data.ConnectionState.Closed)connection.Open();
 
-            if (supId == 0 && supCode == null)
-            {
-				Supplier = new SupplierModel();
-            }
+            if (supId == 0 && supCode == null) Supplier = new SupplierModel();
             else
             {
-				Supplier = connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId, supId, supCode });
-				if (Supplier != null)
-				{
-					Supplier.StreetLines[0] = Supplier.supAddrStreetLine1;
-					Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
-					Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
-					Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
-					Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supCodes=@supCodes", new { apId, supCodes=Supplier.supCode }).ToHashSet();
-				}
-			}
+                Supplier = connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId, supId, supCode });
+                if (Supplier != null)
+                {
+                    Supplier.StreetLines[0] = Supplier.supAddrStreetLine1;
+                    Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
+                    Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
+                    Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
+                    Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supCodes=@supCodes", new { apId, supCodes = Supplier.supCode }).ToHashSet();
+                }
+            }
+            //GetSupplierNameList
+            SupplierNameList = connection.Query<string>(@"EXEC dbo.GetSupplierNameList @apId=@apId,@active=@active", new { apId, active=true }).ToHashSet();
 
             MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
             #region Handle View File

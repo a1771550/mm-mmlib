@@ -2,7 +2,6 @@
 using Dapper;
 using PagedList;
 using MMDAL;
-using MMLib.Models.Item;
 using MMLib.Models.Supplier;
 using MMLib.Models.User;
 using System;
@@ -10,17 +9,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using MMLib.Helpers;
+using Microsoft.Data.SqlClient;
 
 namespace MMLib.Models.Purchase
 {
-	public class PurchaseOrderEditModel : PagingBaseModel
+    public class PurchaseOrderEditModel : PagingBaseModel
 	{
 		public PurchaseModel PurchaseOrder { get; set; }
 		public List<PurchaseModel> PurchaseOrderList { get; set; }
-		public List<PurchaseItemModel> PurchaseItems { get; set; }
 		public List<SerialNoView> SerialNoList { get; set; }
 		public Dictionary<string, List<SerialNoView>> DicItemSNs;
-		public List<ItemModel> Items { get; set; }
+	
 		public SupplierModel Supplier;
 		public PurchaseOrderEditModel() { }
 		public PagedList.IPagedList<PurchaseModel> PagingProcurementList { get; set; }
@@ -50,10 +49,9 @@ namespace MMLib.Models.Purchase
 			PurchaseOrderList = new List<PurchaseModel>();
 
 			string userCode = UserHelper.CheckIfApprover(User) ? null : user.UserCode;
-
-			using var connection = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
-			connection.Open();
-			var orderlist = connection.Query<PurchaseModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
+			
+			if(SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
+			var orderlist = SqlConnection.Query<PurchaseModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
@@ -71,7 +69,7 @@ namespace MMLib.Models.Purchase
 				}
 				else filteredOrderList = orderlist;
 
-				var supplierPaymentList = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
+				var supplierPaymentList = SqlConnection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)

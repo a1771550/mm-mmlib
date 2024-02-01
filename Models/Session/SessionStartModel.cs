@@ -1,11 +1,10 @@
 ﻿using MMCommonLib.BaseModels;
-using MMLib.Models.Item;
 using MMLib.Models.MYOB;
 using System.Collections.Generic;
 
 namespace MMLib.Models
 {
-	public class SessionStartModel:SessionStartModelBase
+    public class SessionStartModel:SessionStartModelBase
 	{
 	
 		public ComInfoView CompanyInfo { get; set; }
@@ -14,7 +13,6 @@ namespace MMLib.Models
 		
 
 		public List<OtherSettingsView> OtherSettings { get; set; }
-		public List<ItemModel> ItemList { get; set; }
         public string TaxCode { get; set; }
 
 		public List<SalesmanModel> PosAbssSalesmanList { get; set; }
@@ -27,7 +25,6 @@ namespace MMLib.Models
 		{
 			
 			OtherSettings = new List<OtherSettingsView>();
-			ItemList = new List<ItemModel>();
 			PosAbssSalesmanList = new List<SalesmanModel>();
 		}
 	}

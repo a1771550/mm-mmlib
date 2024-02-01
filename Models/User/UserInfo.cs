@@ -1,11 +1,6 @@
 ﻿using MMCommonLib.CommonModels;
 using MMDAL;
-using MMLib.Models.Item;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MMLib.Models.User
 {
@@ -21,7 +16,6 @@ namespace MMLib.Models.User
         public List<UserSalesPerson> UserSalesPeople { get; set; }
 
         public List<Location> Locations { get; set; }
-        public List<ARItem> Items { get; set; }
         public List<QuotationView> Quotations { get; set; }
         public List<AccountReceivableView> AccountReceivables { get; set; }
         public List<SPPView> SalesPersonPerformances { get; set; }
