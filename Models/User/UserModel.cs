@@ -69,11 +69,12 @@ namespace MMLib.Models.User
         public int AccountProfileId { get; set; }
         public string Phone { get; set; }
         public HashSet<int> SuperiorIdList { get; set; }
+        public int RoleId { get; set; }
 
         public UserModel()
         {
-            AccessRights = new List<string>();
-            SuperiorIdList = new HashSet<int>();
+            AccessRights = [];
+            SuperiorIdList = [];
         }
 
     }
