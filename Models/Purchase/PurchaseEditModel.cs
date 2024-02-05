@@ -26,6 +26,8 @@ namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
     {
+        public PoSettings PoSettings { get; set; } = new PoSettings();
+
         /// <summary>
         /// for choose
         /// </summary>
@@ -188,7 +190,7 @@ namespace MMLib.Models.Purchase
 
             if (Id > 0 || !string.IsNullOrEmpty(pstCode))
             {
-                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code=pstCode });
+                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code = pstCode });
 
                 Readonly = ireadonly == 1;
                 DoApproval = idoapproval == 1;
@@ -214,7 +216,7 @@ namespace MMLib.Models.Purchase
                 SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
                 DicSupCodeName = new Dictionary<string, string>();
-                foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;              
+                foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
 
                 if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
                 {
@@ -291,7 +293,7 @@ namespace MMLib.Models.Purchase
 
             Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
-            Purchase.Device = device != null ? device as DeviceModel : null;            
+            Purchase.Device = device != null ? device as DeviceModel : null;
 
             var stocklocationlist = context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
             LocationList = new List<SelectListItem>();
@@ -324,7 +326,7 @@ namespace MMLib.Models.Purchase
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
             Purchase.Mode = ireadonly == 1 ? "readonly" : "";
 
-            PoQtyAmtList = PoSettingsEditModel.GetPoQtyAmtList();
+            PoSettings = PoSettingsEditModel.GetPoSettings(connection);
 
             void getDicSupInfoes(List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes)
             {
@@ -676,26 +678,45 @@ namespace MMLib.Models.Purchase
             return CommonHelper.StringHandlingForSQL(str);
         }
 
-      
-        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context)
+
+        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context, int poThreshold)
         {
             pqStatus = "";
             if (purchase.pstStatus == RequestStatus.approved.ToString())
             {
                 reactType = ReactType.PassedByDeptHead;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+
+                if (poThreshold == 1)
                 {
-                    purchase.pstStatus = PurchaseStatus.order.ToString();
-                    pqStatus = RequestStatus.approved.ToString();
-                    reactType = ReactType.Approved;                    
-                    PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
-                    purchaseSupplier.Selected = true;
-                    purchaseSupplier.ModifyTime = DateTime.Now;
-                    purchase.supCode = SelectedSupCode;
-                    purchase.pstAmount = purchaseSupplier.Amount;
-                    //purchase.ModifyTime = DateTime.Now;
-                    context.SaveChanges();
+                    if (IsUserRole.isdirectorboard)
+                    {
+                        pqStatus = RequestStatus.approvedByDirectorBoard.ToString();
+                        reactType = ReactType.ApprovedByDirectorBoard;
+                    }
+
+                    if (IsUserRole.ismuseumdirector)
+                    {
+                        pqStatus = RequestStatus.requestingByMuseumDirector.ToString();
+                        reactType = ReactType.PassedToDirectorBoard;
+                    }
                 }
+                else
+                {
+                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                    {
+                        purchase.pstStatus = PurchaseStatus.order.ToString();
+                        pqStatus = RequestStatus.approved.ToString();
+                        reactType = ReactType.Approved;
+                        PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
+                        purchaseSupplier.Selected = true;
+                        purchaseSupplier.ModifyTime = DateTime.Now;
+                        purchase.supCode = SelectedSupCode;
+                        purchase.pstAmount = purchaseSupplier.Amount;
+                        context.SaveChanges();
+                    }
+                }
+
+                
 
                 if (IsUserRole.isdepthead)
                 {
@@ -714,6 +735,7 @@ namespace MMLib.Models.Purchase
                     pqStatus = RequestStatus.requestingByStaff.ToString();
                     reactType = ReactType.RequestingByStaff;
                 }
+
             }
 
             if (purchase.pstStatus == RequestStatus.rejected.ToString())
@@ -751,6 +773,27 @@ namespace MMLib.Models.Purchase
                 {
                     pqStatus = RequestStatus.onholdByFinanceDept.ToString();
                     reactType = ReactType.OnHoldByFinanceDept;
+                }
+            }
+
+            if (purchase.pstStatus == RequestStatus.voided.ToString())
+            {
+                if (IsUserRole.isdepthead)
+                {
+                    pqStatus = RequestStatus.voidedByDeptHead.ToString();
+                    reactType = ReactType.VoidedByDeptHead;
+                }
+
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                {
+                    pqStatus = RequestStatus.voidedByMuseumDirector.ToString();
+                    reactType = ReactType.Voided;
+                }
+
+                if (IsUserRole.isfinancedept)
+                {
+                    pqStatus = RequestStatus.voidedByFinanceDept.ToString();
+                    reactType = ReactType.VoidedByFinanceDept;
                 }
             }
         }
@@ -825,7 +868,7 @@ namespace MMLib.Models.Purchase
 
                 sql = string.Format(sql, string.Join(",", values));
                 sqllist.Add(sql);
-            }           
+            }
             #endregion
 
             return sqllist;

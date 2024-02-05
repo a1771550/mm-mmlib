@@ -42,16 +42,17 @@ namespace MMLib.Models.Purchase
 			//if(filter==0)
 			this.SortOrder = SortOrder == "desc" ? "asc" : "desc";
 
-			if (filter == 1)
-			{
-				SortOrder = SortOrder == "desc" ? "asc" : "desc";
-			}
+			if (filter == 1)SortOrder = SortOrder == "desc" ? "asc" : "desc";
+			
 			PurchaseOrderList = new List<PurchaseModel>();
 
 			string userCode = UserHelper.CheckIfApprover(User) ? null : user.UserCode;
 			
 			if(SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
-			var orderlist = SqlConnection.Query<PurchaseModel>(@"EXEC dbo.GetProcurement4Approval @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", new {apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
+			var objects = new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode };
+			var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
+
+            var orderlist = SqlConnection.Query<PurchaseModel>($"EXEC dbo.{spname} @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", objects).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();

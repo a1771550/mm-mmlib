@@ -1524,7 +1524,7 @@ namespace MMLib.Helpers
 						mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);						
 					}
 
-					if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToBoard)
+					if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToDirectorBoard)
 					{
 						mailbody = EnableReviewUrl ? string.Format(Resource.RespondWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
 					}
