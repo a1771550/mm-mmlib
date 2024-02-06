@@ -27,7 +27,6 @@ using System.IO;
 using MMLib.Models.User;
 using CommonLib.BaseModels;
 using CommonLib.App_GlobalResources;
-using System.Runtime.Remoting.Contexts;
 using MMLib.Models.Account;
 
 namespace MMLib.Helpers
@@ -1468,7 +1467,7 @@ namespace MMLib.Helpers
 		}
 
 
-		public static bool SendNotificationEmail(Dictionary<string, string> DicReviewUrl, ReactType reactType,string desc=null, string rejectonholdreason = null, string suppernames = null)
+		public static bool SendNotificationEmail(string pstCode, Dictionary<string, string> DicReviewUrl, ReactType reactType,string desc=null, string rejectonholdreasonremark = null, string suppernames = null, int isThreshold = 0)
 		{
 			int okcount = 0;
 			int ngcount = 0;
@@ -1504,67 +1503,124 @@ namespace MMLib.Helpers
 				if (ngcount >= mailsettings.emMaxEmailsFailed || okcount > 0)
 				{
 					break;
-				}		
+				}
 
-				foreach (var item in DicReviewUrl)
+                string mailbody = string.Empty;
+				string orderlnk;
+                string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
+
+                foreach (var item in DicReviewUrl)
+                {
+                    var arr = item.Key.Split(':');
+                    var name = arr[0];
+                    var email = arr[1];
+                    var ordercode = arr[2];
+                    orderlnk = getOrderLnk(item.Value, ordercode);
+                    string orderdesc = getOrderDesc(desc, ordercode);
+                    message.To.Add(new MailAddress(email, name));
+
+                    if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
+                    {
+                        mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
+                    }
+
+                    if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToDirectorBoard)
+                    {
+                        mailbody = EnableReviewUrl ? string.Format(Resource.RespondWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
+                    }
+                    if (reactType == ReactType.Approved)
+                    {
+                        mailbody = EnableReviewUrl ? string.Format(Resource.ApprovedPoMsgWLnkFormat, strorder, suppernames, orderlnk) : string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
+                    }
+                    if (reactType == ReactType.Rejected || reactType == ReactType.RejectedByDeptHead || reactType == ReactType.RejectedByFinanceDept)
+                    {
+                        message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
+                        var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.Reject) + ":";
+                        mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                    }
+                    if (reactType == ReactType.OnHoldByDirector || reactType == ReactType.OnHoldByFinanceDept)
+                    {
+                        message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
+                        var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.OnHold) + ":";
+                        mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                    }
+
+                    sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                }
+
+
+                if (isThreshold==1)
 				{
-					var arr = item.Key.Split(':');
-					var name = arr[0];
-					var email = arr[1];
-					var ordercode = arr[2];
-					var orderlnk = $"<a href='{item.Value}' target='_blank'>{ordercode}</a>";
-					var orderdesc = $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
-					message.To.Add(new MailAddress(email, name));
-					string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
+					if (SqlConnection.State == ConnectionState.Closed) SqlConnection.Open();
 
-					string mailbody = string.Empty;
-
-					if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
-					{						
-						mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);						
-					}
-
-					if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept || reactType == ReactType.PassedToDirectorBoard)
+					if(reactType == ReactType.PassedToMuseumDirector)
 					{
-						mailbody = EnableReviewUrl ? string.Format(Resource.RespondWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
-					}
-					if (reactType == ReactType.Approved)
-					{						
-						mailbody = EnableReviewUrl ? string.Format(Resource.ApprovedPoMsgWLnkFormat, strorder, suppernames, orderlnk) : string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
-					}
-					if (reactType == ReactType.Rejected)
-					{
-						var rejectonholdreasontxt = string.Format(Resource.ReasonForFormat, Resource.Reject)+":";
-						mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectonholdreasontxt, rejectonholdreason);
-					}
-					if (reactType == ReactType.OnHoldByDirector || reactType == ReactType.OnHoldByFinanceDept)
-					{						
-						var rejectonholdreasontxt = string.Format(Resource.ReasonForFormat, Resource.OnHold)+":";
-						mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasontxt, rejectonholdreason);
-					}
+						var mdInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new {apId}).ToList();
+                        message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
-					mailbody = string.Concat(mailbody, orderdesc);
-
-					message.Body = mailbody;
-					using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
-					{
-						smtp.UseDefaultCredentials = false;
-						smtp.EnableSsl = mailsettings.emSMTP_EnableSSL;
-						smtp.Credentials = new NetworkCredential(mailsettings.emSMTP_UserName, mailsettings.emSMTP_Pass);
-						try
+                        foreach (var md in mdInfo)
 						{
-							smtp.Send(message);
-							okcount++;
-						}
-						catch (Exception)
-						{
-							ngcount++;
-						}
-					}
+                            var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], pstCode, 0, md.surUID);
+                            orderlnk = getOrderLnk(reviewurl, pstCode);
+                            string orderdesc = getOrderDesc(desc, pstCode);
+                            mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, md.UserName, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
+                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                        }
+                       
+                    }
+					if(reactType == ReactType.PassedToDirectorBoard)
+					{
+                        var dbInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
+                        var rejectonholdreasonremarktxt = string.Concat(Resource.MsgToDB,":");
+                        message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
+
+                        foreach (var db in dbInfo)
+                        {
+                            var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], pstCode, 0, db.surUID);
+                            orderlnk = getOrderLnk(reviewurl, pstCode);
+                            string orderdesc = getOrderDesc(desc, pstCode);
+
+                            mailbody = string.Format(Resource.MsgToDBHtmlFormat, db.UserName, strorder, pstCode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                          
+                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                        }
+                    }
 				}
 			}
 			return okcount > 0;
-		}
+
+            static void sendMail(ref int okcount, ref int ngcount, EmailModel mailsettings, MailMessage message, ref string mailbody, string orderdesc)
+            {
+                mailbody = string.Concat(mailbody, orderdesc);
+
+                message.Body = mailbody;
+                using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
+                {
+                    smtp.UseDefaultCredentials = false;
+                    smtp.EnableSsl = mailsettings.emSMTP_EnableSSL;
+                    smtp.Credentials = new NetworkCredential(mailsettings.emSMTP_UserName, mailsettings.emSMTP_Pass);
+                    try
+                    {
+                        smtp.Send(message);
+                        okcount++;
+                    }
+                    catch (Exception)
+                    {
+                        ngcount++;
+                    }
+                }
+            }
+
+            static string getOrderLnk(string lnk, string ordercode)
+            {
+                return $"<a href='{lnk}' target='_blank'>{ordercode}</a>";
+            }
+
+            static string getOrderDesc(string desc, string ordercode)
+            {
+                return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
+            }
+        }
 
 
 

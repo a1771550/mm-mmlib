@@ -26,6 +26,9 @@ namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
     {
+        public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
+        public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
+        public bool IsDB { get { return IsUserRole.isdirectorboard; } }
         public PoSettings PoSettings { get; set; } = new PoSettings();
 
         /// <summary>
@@ -286,9 +289,9 @@ namespace MMLib.Models.Purchase
                 if (latestpurchase != null)
                 {
                     if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);
-                    else addNewPurchase(context, apId, pstcode, status, pqstatus);
+                    else addNewPurchase(context, apId, pstcode, status, latestpurchase.IsThreshold, pqstatus);
                 }
-                else addNewPurchase(context, apId, pstcode, status, pqstatus);
+                else addNewPurchase(context, apId, pstcode, status, false, pqstatus);
             }
 
             Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
@@ -355,7 +358,7 @@ namespace MMLib.Models.Purchase
             return CommonHelper.GenOrderNumber(pstCode, int.Parse(ConfigurationManager.AppSettings["SupInvoiceLength"]), numId);
         }
 
-        private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
+        private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, bool isThreshold, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
         {
             DateTime dateTime = DateTime.Now;
 
@@ -367,6 +370,7 @@ namespace MMLib.Models.Purchase
                 pstPurchaseTime = dateTime,
                 pstPromisedDate = dateTime.AddDays(1),
                 pstStatus = status,
+                IsThreshold = isThreshold,
                 AccountProfileId = apId,
                 CreateTime = dateTime,
                 CreateBy = user.UserCode,
@@ -491,7 +495,7 @@ namespace MMLib.Models.Purchase
                             ReactType reactType = ReactType.RequestingByStaff;
                             if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
                             if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-                            if (Helpers.ModelHelper.SendNotificationEmail(DicReviewUrl, reactType, model.pstDesc))
+                            if (ModelHelper.SendNotificationEmail(model.pstCode, DicReviewUrl, reactType, model.pstDesc))
                             {
                                 var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
                                 purchase.pstSendNotification = true;
@@ -552,6 +556,7 @@ namespace MMLib.Models.Purchase
                 {
                     pstCode = code,
                     pstRefCode = ps.pstCode,
+                    IsThreshold = false,
                     AccountProfileId = apId,
                     CreateBy = user.UserCode,
                     CreateTime = dateTime,
@@ -591,11 +596,15 @@ namespace MMLib.Models.Purchase
                 ps.pstPromisedDate = promiseddate;
                 ps.pstStatus = purchasestatus;
                 ps.pqStatus = pqstatus;
+                
                 ps.pstSupplierInvoice = model.pstSupplierInvoice;
                 ps.pstRemark = model.pstRemark;
 
                 ps.pstCheckout = false;
                 ps.pstIsPartial = false;
+
+                ps.IsThreshold = model.IsThreshold;
+                ps.ThresholdMsg = model.ThresholdMsg;
 
                 ps.CreateBy = ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
                 ps.ModifyTime = dateTime;
@@ -656,8 +665,6 @@ namespace MMLib.Models.Purchase
             context.SaveChanges();
         }
 
-
-
         public static void Delete(int id)
         {
             using var context = new MMDbContext();
@@ -677,127 +684,6 @@ namespace MMLib.Models.Purchase
         {
             return CommonHelper.StringHandlingForSQL(str);
         }
-
-
-        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context, int poThreshold)
-        {
-            pqStatus = "";
-            if (purchase.pstStatus == RequestStatus.approved.ToString())
-            {
-                reactType = ReactType.PassedByDeptHead;
-
-                if (poThreshold == 1)
-                {
-                    if (IsUserRole.isdirectorboard)
-                    {
-                        pqStatus = RequestStatus.approvedByDirectorBoard.ToString();
-                        reactType = ReactType.ApprovedByDirectorBoard;
-                    }
-
-                    if (IsUserRole.ismuseumdirector)
-                    {
-                        pqStatus = RequestStatus.requestingByMuseumDirector.ToString();
-                        reactType = ReactType.PassedToDirectorBoard;
-                    }
-                }
-                else
-                {
-                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
-                    {
-                        purchase.pstStatus = PurchaseStatus.order.ToString();
-                        pqStatus = RequestStatus.approved.ToString();
-                        reactType = ReactType.Approved;
-                        PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
-                        purchaseSupplier.Selected = true;
-                        purchaseSupplier.ModifyTime = DateTime.Now;
-                        purchase.supCode = SelectedSupCode;
-                        purchase.pstAmount = purchaseSupplier.Amount;
-                        context.SaveChanges();
-                    }
-                }
-
-                
-
-                if (IsUserRole.isdepthead)
-                {
-                    pqStatus = RequestStatus.requestingByDeptHead.ToString();
-                    reactType = ReactType.PassedByDeptHead;
-                }
-
-                if (IsUserRole.isfinancedept)
-                {
-                    pqStatus = RequestStatus.requestingByFinanceDept.ToString();
-                    reactType = ReactType.PassedByFinanceDept;
-                }
-
-                if (IsUserRole.isstaff)
-                {
-                    pqStatus = RequestStatus.requestingByStaff.ToString();
-                    reactType = ReactType.RequestingByStaff;
-                }
-
-            }
-
-            if (purchase.pstStatus == RequestStatus.rejected.ToString())
-            {
-                reactType = ReactType.RejectedByDeptHead;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
-                {
-                    pqStatus = RequestStatus.rejectedByMuseumDirector.ToString();
-                    reactType = ReactType.Rejected;
-                }
-
-                if (IsUserRole.isdepthead)
-                {
-                    pqStatus = RequestStatus.rejectedByDeptHead.ToString();
-                    reactType = ReactType.RejectedByDeptHead;
-                }
-
-                if (IsUserRole.isfinancedept)
-                {
-                    pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
-                    reactType = ReactType.RejectedByFinanceDept;
-                }
-            }
-
-            if (purchase.pstStatus == RequestStatus.onhold.ToString())
-            {
-                reactType = ReactType.OnHoldByFinanceDept;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
-                {
-                    pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
-                    reactType = ReactType.OnHoldByDirector;
-                }
-
-                if (IsUserRole.isfinancedept)
-                {
-                    pqStatus = RequestStatus.onholdByFinanceDept.ToString();
-                    reactType = ReactType.OnHoldByFinanceDept;
-                }
-            }
-
-            if (purchase.pstStatus == RequestStatus.voided.ToString())
-            {
-                if (IsUserRole.isdepthead)
-                {
-                    pqStatus = RequestStatus.voidedByDeptHead.ToString();
-                    reactType = ReactType.VoidedByDeptHead;
-                }
-
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
-                {
-                    pqStatus = RequestStatus.voidedByMuseumDirector.ToString();
-                    reactType = ReactType.Voided;
-                }
-
-                if (IsUserRole.isfinancedept)
-                {
-                    pqStatus = RequestStatus.voidedByFinanceDept.ToString();
-                    reactType = ReactType.VoidedByFinanceDept;
-                }
-            }
-        }
-
 
         public static List<string> GetUploadServiceSqlList(ref DataTransferModel dmodel, MMDbContext context)
         {
@@ -880,6 +766,131 @@ namespace MMLib.Models.Purchase
             connection.Open();
             return connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
         }
+
+        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context, int poThreshold)
+        {
+            pqStatus = "";
+            if (purchase.pstStatus == RequestStatus.approved.ToString())
+            {
+                reactType = ReactType.PassedByDeptHead;
+
+                if (poThreshold == 1)
+                {
+                    if (IsUserRole.isdirectorboard)
+                    {
+                        pqStatus = RequestStatus.approvedByDirectorBoard.ToString();
+                        reactType = ReactType.ApprovedByDirectorBoard;
+                    }
+
+                    if (IsUserRole.ismuseumdirector)
+                    {
+                        pqStatus = RequestStatus.requestingByMuseumDirector.ToString();
+                        reactType = ReactType.PassedToDirectorBoard;
+                    }
+
+                    if (IsUserRole.isfinancedept)
+                    {
+                        pqStatus = RequestStatus.requestingByFinanceDept.ToString();
+                        reactType = ReactType.PassedToMuseumDirector;
+                    }
+                }
+                else
+                {
+                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                    {
+                        purchase.pstStatus = PurchaseStatus.order.ToString();
+                        pqStatus = RequestStatus.approved.ToString();
+                        reactType = ReactType.Approved;
+                        PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
+                        purchaseSupplier.Selected = true;
+                        purchaseSupplier.ModifyTime = DateTime.Now;
+                        purchase.supCode = SelectedSupCode;
+                        purchase.pstAmount = purchaseSupplier.Amount;
+                        context.SaveChanges();
+                    }
+
+                    if (IsUserRole.isfinancedept)
+                    {
+                        pqStatus = RequestStatus.requestingByFinanceDept.ToString();
+                        reactType = ReactType.PassedByFinanceDept;
+                    }
+                }
+
+
+                if (IsUserRole.isdepthead)
+                {
+                    pqStatus = RequestStatus.requestingByDeptHead.ToString();
+                    reactType = ReactType.PassedByDeptHead;
+                }
+
+                if (IsUserRole.isstaff)
+                {
+                    pqStatus = RequestStatus.requestingByStaff.ToString();
+                    reactType = ReactType.RequestingByStaff;
+                }
+
+            }
+
+            if (purchase.pstStatus == RequestStatus.rejected.ToString())
+            {
+                reactType = ReactType.RejectedByDeptHead;
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                {
+                    pqStatus = RequestStatus.rejectedByMuseumDirector.ToString();
+                    reactType = ReactType.Rejected;
+                }
+
+                if (IsUserRole.isdepthead)
+                {
+                    pqStatus = RequestStatus.rejectedByDeptHead.ToString();
+                    reactType = ReactType.RejectedByDeptHead;
+                }
+
+                if (IsUserRole.isfinancedept)
+                {
+                    pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
+                    reactType = ReactType.RejectedByFinanceDept;
+                }
+            }
+
+            if (purchase.pstStatus == RequestStatus.onhold.ToString())
+            {
+                reactType = ReactType.OnHoldByFinanceDept;
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                {
+                    pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
+                    reactType = ReactType.OnHoldByDirector;
+                }
+
+                if (IsUserRole.isfinancedept)
+                {
+                    pqStatus = RequestStatus.onholdByFinanceDept.ToString();
+                    reactType = ReactType.OnHoldByFinanceDept;
+                }
+            }
+
+            if (purchase.pstStatus == RequestStatus.voided.ToString())
+            {
+                if (IsUserRole.isdepthead)
+                {
+                    pqStatus = RequestStatus.voidedByDeptHead.ToString();
+                    reactType = ReactType.VoidedByDeptHead;
+                }
+
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                {
+                    pqStatus = RequestStatus.voidedByMuseumDirector.ToString();
+                    reactType = ReactType.Voided;
+                }
+
+                if (IsUserRole.isfinancedept)
+                {
+                    pqStatus = RequestStatus.voidedByFinanceDept.ToString();
+                    reactType = ReactType.VoidedByFinanceDept;
+                }
+            }
+        }
+
     }
 
     public class PurchaseReturnMsg
