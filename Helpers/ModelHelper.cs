@@ -1500,10 +1500,7 @@ namespace MMLib.Helpers
 
 			while (okcount == 0)
 			{
-				if (ngcount >= mailsettings.emMaxEmailsFailed || okcount > 0)
-				{
-					break;
-				}
+				if (ngcount >= mailsettings.emMaxEmailsFailed || okcount > 0)break;			
 
                 string mailbody = string.Empty;
 				string orderlnk;
@@ -1544,8 +1541,8 @@ namespace MMLib.Helpers
                         var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.OnHold) + ":";
                         mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
                     }
-
-                    sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                    mailbody = string.Concat(mailbody, orderdesc);
+                    sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                 }
 
 
@@ -1564,7 +1561,8 @@ namespace MMLib.Helpers
                             orderlnk = getOrderLnk(reviewurl, pstCode);
                             string orderdesc = getOrderDesc(desc, pstCode);
                             mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, md.UserName, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
-                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+							mailbody = string.Concat(mailbody, orderdesc);
+                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                        
                     }
@@ -1579,20 +1577,21 @@ namespace MMLib.Helpers
                             var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], pstCode, 0, db.surUID);
                             orderlnk = getOrderLnk(reviewurl, pstCode);
                             string orderdesc = getOrderDesc(desc, pstCode);
-
-                            mailbody = string.Format(Resource.MsgToDBHtmlFormat, db.UserName, strorder, pstCode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                            /*
+							 * <h3>Hi {0}</h3><p>The following <strong>{1}</strong> is pending for your review:</p>{2}<h4>{3}</h4><p>{4}</p>
+							 */
+                            mailbody = string.Format(Resource.MsgToDBHtmlFormat, db.UserName, strorder, orderdesc, rejectonholdreasonremarktxt, rejectonholdreasonremark);
                           
-                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
 				}
 			}
 			return okcount > 0;
 
-            static void sendMail(ref int okcount, ref int ngcount, EmailModel mailsettings, MailMessage message, ref string mailbody, string orderdesc)
+            static void sendMail(ref int okcount, ref int ngcount, EmailModel mailsettings, MailMessage message, ref string mailbody)
             {
-                mailbody = string.Concat(mailbody, orderdesc);
-
+               
                 message.Body = mailbody;
                 using (SmtpClient smtp = new SmtpClient(mailsettings.emSMTP_Server, mailsettings.emSMTP_Port))
                 {
@@ -1762,6 +1761,28 @@ namespace MMLib.Helpers
                     filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-invoiceid='{filedata.InvoiceId}' data-fileid='{filedata.FileId}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-name='{filename}' data-invoiceid='{filedata.InvoiceId}' data-fileid='{filedata.FileId}'></i>";
                 }
             }
+        }
+
+        public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection)
+        {
+            var DicAcAccounts = new Dictionary<string, List<AccountModel>>();
+            var acIdList = connection.Query<string>(@"EXEC dbo.GetAccountClassificationIDList @apId=@apId", new { apId }).ToList();
+            foreach (var ac in acIdList)
+            {
+                DicAcAccounts[ac] = new List<AccountModel>();
+            }
+            List<AccountModel> AccountList = connection.Query<AccountModel>(@"EXEC dbo.GetAccountList @apId=@apId", new { apId }).ToList();
+            foreach (var key in DicAcAccounts.Keys)
+            {
+                foreach (var account in AccountList)
+                {
+                    if (account.AccountClassificationID == key)
+                    {
+                        DicAcAccounts[key].Add(account);
+                    }
+                }
+            }
+            return DicAcAccounts;
         }
     }
 

@@ -21,11 +21,15 @@ using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
 using System.Data.Entity.Migrations.Model;
+using Microsoft.Identity.Client;
+using System.Security.Cryptography;
+using System.Web.UI.WebControls.WebParts;
 
 namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
     {
+        public bool ThresholdRequestApproved { get; set; } = false;
         public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
         public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
         public bool IsDB { get { return IsUserRole.isdirectorboard; } }
@@ -56,6 +60,8 @@ namespace MMLib.Models.Purchase
         public List<SupplierModel> SupplierList { get; set; }
         public List<SelectListItem> LocationList { get; set; }
         public List<MyobJobModel> JobList { get; set; }
+        public Dictionary<string, List<AccountModel>> DicAcAccounts { get; set; }
+
         public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
 
         public List<string> ImgList;
@@ -195,6 +201,9 @@ namespace MMLib.Models.Purchase
             {
                 Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code = pstCode });
 
+                //GetPurchaseServiceList
+                Purchase.ServiceList = connection.Query<PurchaseServiceModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code = pstCode }).ToList();
+
                 Readonly = ireadonly == 1;
                 DoApproval = idoapproval == 1;
 
@@ -326,7 +335,11 @@ namespace MMLib.Models.Purchase
             {
                 DicLocation[shop] = shop;
             }
+
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
+
+            DicAcAccounts = ModelHelper.GetDicAcAccounts(connection);
+
             Purchase.Mode = ireadonly == 1 ? "readonly" : "";
 
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
@@ -443,70 +456,58 @@ namespace MMLib.Models.Purchase
             purchasestatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
                 ? PurchaseStatus.draft.ToString()
                 : IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
-            //pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
-            //	? RequestStatus.draftingByStaff.ToString() : model.IsEditMode ? RequestStatus.requestingByStaff.ToString():;
-            //getPurchaseRequestStatus(out reactType, IsUserRole, ref purchase, ref pstStatus, out string pqStatus);
 
             List<string> reviewurls = new();
             List<GetSuperior4Notification2_Result> superiors = new();
             Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
             Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
 
-            if (IsUserRole.isdirectorboard)
+            sqlConnection.Open();
+            SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId,@shopcode=@shopcode", new { apId, userId = user.surUID, shopcode = comInfo.Shop }).ToList();
+
+            foreach (var superior in SuperiorList)
             {
-                if (!model.IsEditMode)
-                    updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
-                else
-                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
+                var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], model.pstCode, 0, superior.surUID);
+                var key = string.Concat(superior.UserName, ":", superior.Email, ":", model.pstCode);
+                if (!DicReviewUrl.ContainsKey(key))
+                    DicReviewUrl[key] = reviewurl;
+                reviewurls.Add(reviewurl);
+            }
+
+            if (!model.IsEditMode)
+            {
+                updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
             }
             else
             {
-                sqlConnection.Open();
-                SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId,@shopcode=@shopcode", new { apId, userId = user.surUID, shopcode = comInfo.Shop }).ToList();
-
-                foreach (var superior in SuperiorList)
-                {
-                    var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], model.pstCode, 0, superior.surUID);
-                    var key = string.Concat(superior.UserName, ":", superior.Email, ":", model.pstCode);
-                    if (!DicReviewUrl.ContainsKey(key))
-                        DicReviewUrl[key] = reviewurl;
-                    reviewurls.Add(reviewurl);
-                }
-
-                if (!model.IsEditMode)
-                {
-                    updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
-                }
-                else
-                {
-                    processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
-                }
-
-                status = "purchaseordersaved";
-                if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
-                {
-                    HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
-
-                    if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
-                    {
-                        #region Send Notification Email   
-                        if ((bool)comInfo.enableEmailNotification)
-                        {
-                            ReactType reactType = ReactType.RequestingByStaff;
-                            if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
-                            if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-                            if (ModelHelper.SendNotificationEmail(model.pstCode, DicReviewUrl, reactType, model.pstDesc))
-                            {
-                                var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
-                                purchase.pstSendNotification = true;
-                                context.SaveChanges();
-                            }
-                        }
-                        #endregion
-                    }
-                    GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
-                }
+                processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
             }
+
+            status = "purchaseordersaved";
+            if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
+            {
+                HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
+
+                if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
+                {
+                    #region Send Notification Email   
+                    if ((bool)comInfo.enableEmailNotification)
+                    {
+                        ReactType reactType = ReactType.RequestingByStaff;
+                        if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
+                        if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+                        if (ModelHelper.SendNotificationEmail(model.pstCode, DicReviewUrl, reactType, model.pstDesc))
+                        {
+                            var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
+                            purchase.pstSendNotification = true;
+                            context.SaveChanges();
+                        }
+                    }
+                    #endregion
+                }
+                GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+            }
+
 
             return msglist;
         }
@@ -574,6 +575,44 @@ namespace MMLib.Models.Purchase
             var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
             MMDAL.Purchase ps = _updatePurchaseRequest(model, supcodes, context, dateTime, purchasedate, promiseddate, purchasestatus);
 
+            #region Update Purchase Service List
+            List<PurchaseService> currentpslist = [.. context.PurchaseServices.Where(x=>x.pstCode==ps.pstCode)];
+            List<PurchaseService> newpslist = [];
+            foreach (var item in model.ServiceList)
+            {
+                var currentps = currentpslist.FirstOrDefault(x=>x.Id == item.Id);
+                if (currentps!=null)
+                {
+                    currentps.psSeq = item.psSeq;
+                    currentps.psDesc = item.psDesc;
+                    currentps.AccountID = item.AccountID;
+                    currentps.JobID = item.JobID;
+                    currentps.psAmt = item.psAmt;
+                    currentps.psAmtPlusTax = item.psAmtPlusTax;
+                    currentps.ModifyTime = dateTime;
+                }
+                else
+                {
+                    newpslist.Add(new PurchaseService
+                    {
+                        pstCode = item.pstCode,
+                        psSeq = item.psSeq,
+                        psDesc = item.psDesc,
+                        AccountID = item.AccountID,
+                        JobID = item.JobID,
+                        psAmt = item.psAmt,
+                        psAmtPlusTax = item.psAmtPlusTax,
+                        AccountProfileId = apId,
+                        CreateTime = dateTime
+                    });
+                }                
+            }
+
+            if(newpslist.Count > 0) context.PurchaseServices.AddRange(newpslist);          
+            
+            context.SaveChanges();
+            #endregion
+
             AddSelectedSuppliers(model.pstCode, SupplierList, context);
             return ps;
         }
@@ -596,7 +635,7 @@ namespace MMLib.Models.Purchase
                 ps.pstPromisedDate = promiseddate;
                 ps.pstStatus = purchasestatus;
                 ps.pqStatus = pqstatus;
-                
+
                 ps.pstSupplierInvoice = model.pstSupplierInvoice;
                 ps.pstRemark = model.pstRemark;
 
@@ -669,8 +708,8 @@ namespace MMLib.Models.Purchase
         {
             using var context = new MMDbContext();
             var ps = context.Purchases.FirstOrDefault(x => x.Id == id);
-            var psilist = context.PurchaseItems.Where(x => x.AccountProfileId == ps.AccountProfileId && x.pstCode == ps.pstCode);
-            context.PurchaseItems.RemoveRange(psilist);
+            var psilist = context.PurchaseServices.Where(x => x.AccountProfileId == ps.AccountProfileId && x.pstCode == ps.pstCode);
+            context.PurchaseServices.RemoveRange(psilist);
             context.Purchases.Remove(ps);
             context.SaveChanges();
         }

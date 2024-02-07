@@ -118,14 +118,11 @@ namespace MMLib.Models.Purchase
 		public bool FullPaidCheckedOut { get; set; }
 
 		public bool IsSupplierABSS { get; set; }
+
+		public List<PurchaseServiceModel> ServiceList { get; set; }
 		public PurchaseModel()
 		{
-		}
-
-		public PurchaseModel(long Id, MMDbContext context)
-		{
-			//string value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount, purchase.Amount, status);
-			
-		}
+            ServiceList = new List<PurchaseServiceModel>();
+        }
 	}
 }

@@ -255,6 +255,7 @@
     <Compile Include="Models\EmailEditModel.cs" />
     <Compile Include="Models\EmailModel.cs" />
     <Compile Include="Models\ForEx\ForExModel.cs" />
+    <Compile Include="Models\Purchase\PurchaseServiceModel.cs" />
     <Compile Include="Models\Supplier\SupplierInvoiceModel.cs" />
     <Compile Include="Models\Supplier\SupplierPaymentModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
@@ -285,7 +286,6 @@
     <Compile Include="Models\POS\OtherSettingsView.cs" />
     <Compile Include="Models\POS\SetupModel.cs" />
     <Compile Include="Models\POS\UFSearchResult.cs" />
-    <Compile Include="Models\Purchase\BatchModel.cs" />
     <Compile Include="Models\Purchase\PayBillLnView.cs" />
     <Compile Include="Models\Purchase\PoQtyAmtModel.cs" />
     <Compile Include="Models\Purchase\PoSettingsEditModel.cs" />
