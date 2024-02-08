@@ -14,9 +14,6 @@ namespace MMLib.Models.Purchase
 {
     public class PurchaseModel : MMDAL.Purchase
 	{
-		public ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] == null ? null : HttpContext.Current.Session["ComInfo"] as ComInfo; } }
-
-		public DeviceModel Device { get; set; }
 		public string Mode { get; set; }
 		public string JsPurchaseDate { get; set; }
 		public string JsPromisedDate { get; set; }
@@ -46,16 +43,11 @@ namespace MMLib.Models.Purchase
 		public string TrimmedRemark { get { return string.IsNullOrEmpty(pstRemark) ? "N/A" : CommonHelper.GetTrimmedCharacters(pstRemark, int.Parse(ConfigurationManager.AppSettings["MaxCharacterNumInList"])); } }
 	
 		public bool EnableTax { get { return TaxModel != null ? TaxModel.EnableTax : false; } }
-		public bool InclusiveTax { get { return TaxModel != null ? TaxModel.TaxType == TaxType.Inclusive : false; } }
-		public bool EnableSerialNo { get { return (bool)ComInfo.comEnableSN; } }
-		public bool PriceEditable { get { return (bool)ComInfo.comEnablePriceEditable; } }
-		public bool DiscEditable { get { return (bool)ComInfo.comEnableDiscEditable; } }
-
-		public string Currency { get { return ComInfo.Currency; } }
+		public bool InclusiveTax { get { return TaxModel != null ? TaxModel.TaxType == TaxType.Inclusive : false; } }		
+		
 		public string itmName { get; set; }
 		public string itmDesc { get; set; }
-		public string PSCodeDisplay { get { return string.Concat(pstLocStock, "-", pstCode); } }
-
+		
 		public int ireviewmode { get; set; }
 		public SupplierModel Supplier { get; set; }
 		public string ItemCodes { get; set; }

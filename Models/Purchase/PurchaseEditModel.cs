@@ -305,8 +305,6 @@ namespace MMLib.Models.Purchase
 
             Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
-            Purchase.Device = device != null ? device as DeviceModel : null;
-
             var stocklocationlist = context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
             LocationList = new List<SelectListItem>();
             foreach (var item in stocklocationlist)
@@ -328,8 +326,10 @@ namespace MMLib.Models.Purchase
                 }
             }
 
+            Purchase.pstPurchaseDate = DateTime.Now.Date;
             Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
             Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
+
             DicLocation = new Dictionary<string, string>();
             foreach (var shop in stocklocationlist)
             {
@@ -450,9 +450,6 @@ namespace MMLib.Models.Purchase
             using var context = new MMDbContext();
             DateTime dateTime = DateTime.Now;
 
-            DateTime purchasedate = CommonHelper.GetDateFrmString4SQL(model.JsPurchaseDate, DateTimeFormat.YYYYMMDD);
-            DateTime promiseddate = CommonHelper.GetDateFrmString4SQL(model.JsPromisedDate, DateTimeFormat.YYYYMMDD);
-
             purchasestatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString()
                 ? PurchaseStatus.draft.ToString()
                 : IsUserRole.isdirectorboard ? model.pstStatus : !model.IsEditMode ? PurchaseStatus.requesting.ToString() : model.pstStatus;
@@ -476,11 +473,11 @@ namespace MMLib.Models.Purchase
 
             if (!model.IsEditMode)
             {
-                updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
+                updatePurchaseRequest(model, SupplierList, context, purchasestatus);
             }
             else
             {
-                processPurchase(model, dev, context, dateTime, purchasedate, promiseddate, purchasestatus, SupplierList);
+                processPurchase(model, dev, context, purchasestatus, SupplierList);
             }
 
             status = "purchaseordersaved";
@@ -507,8 +504,6 @@ namespace MMLib.Models.Purchase
                 }
                 GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
             }
-
-
             return msglist;
         }
 
@@ -535,16 +530,16 @@ namespace MMLib.Models.Purchase
             }
         }
 
-        private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus, List<SupplierModel> SupplierList)
+        private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList)
         {
-            MMDAL.Purchase ps = updatePurchaseRequest(model, SupplierList, context, dateTime, purchasedate, promiseddate, purchasestatus);
+            MMDAL.Purchase ps = updatePurchaseRequest(model, SupplierList, context, purchasestatus);
 
             if (purchasestatus.ToLower() == PurchaseStatus.order.ToString())
             {
                 #region Update Purchase Status
                 // update wholesales status:                
                 ps.pstStatus = PurchaseStatus.order.ToString();
-                ps.ModifyTime = dateTime;
+                ps.ModifyTime = DateTime.Now;
                 context.SaveChanges();
                 #endregion
 
@@ -560,7 +555,7 @@ namespace MMLib.Models.Purchase
                     IsThreshold = false,
                     AccountProfileId = apId,
                     CreateBy = user.UserCode,
-                    CreateTime = dateTime,
+                    CreateTime = DateTime.Now,
                 };
                 context.Purchases.Add(purchase);
                 device.dvcNextPurchaseOrderNo++;
@@ -570,10 +565,10 @@ namespace MMLib.Models.Purchase
         }
 
 
-        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
+        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, List<SupplierModel> SupplierList, MMDbContext context, string purchasestatus)
         {
             var supcodes = string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList());
-            MMDAL.Purchase ps = _updatePurchaseRequest(model, supcodes, context, dateTime, purchasedate, promiseddate, purchasestatus);
+            MMDAL.Purchase ps = _updatePurchaseRequest(model, supcodes, context, purchasestatus);
 
             #region Update Purchase Service List
             List<PurchaseService> currentpslist = [.. context.PurchaseServices.Where(x=>x.pstCode==ps.pstCode)];
@@ -589,7 +584,7 @@ namespace MMLib.Models.Purchase
                     currentps.JobID = item.JobID;
                     currentps.psAmt = item.psAmt;
                     currentps.psAmtPlusTax = item.psAmtPlusTax;
-                    currentps.ModifyTime = dateTime;
+                    currentps.ModifyTime = DateTime.Now;
                 }
                 else
                 {
@@ -603,7 +598,7 @@ namespace MMLib.Models.Purchase
                         psAmt = item.psAmt,
                         psAmtPlusTax = item.psAmtPlusTax,
                         AccountProfileId = apId,
-                        CreateTime = dateTime
+                        CreateTime = DateTime.Now
                     });
                 }                
             }
@@ -617,9 +612,8 @@ namespace MMLib.Models.Purchase
             return ps;
         }
 
-        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, string supcodes, MMDbContext context, DateTime dateTime, DateTime purchasedate, DateTime promiseddate, string purchasestatus)
-        {
-            var pstTime = purchasedate.Add(dateTime.TimeOfDay);
+        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, string supcodes, MMDbContext context, string purchasestatus)
+        {          
             MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 
             var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString() ? RequestStatus.draftingByStaff.ToString() : model.pqStatus;
@@ -630,23 +624,16 @@ namespace MMLib.Models.Purchase
                 ps.pstType = PurchaseType;
                 ps.pstDesc = model.pstDesc;
                 ps.pstAmount = model.pstAmount;
-                ps.pstPurchaseDate = purchasedate;
-                ps.pstPurchaseTime = pstTime;
-                ps.pstPromisedDate = promiseddate;
                 ps.pstStatus = purchasestatus;
                 ps.pqStatus = pqstatus;
-
                 ps.pstSupplierInvoice = model.pstSupplierInvoice;
                 ps.pstRemark = model.pstRemark;
-
                 ps.pstCheckout = false;
                 ps.pstIsPartial = false;
-
                 ps.IsThreshold = model.IsThreshold;
                 ps.ThresholdMsg = model.ThresholdMsg;
-
                 ps.CreateBy = ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
-                ps.ModifyTime = dateTime;
+                ps.ModifyTime = DateTime.Now;
                 context.SaveChanges();
             }
 
