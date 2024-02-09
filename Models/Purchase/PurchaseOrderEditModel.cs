@@ -70,14 +70,14 @@ namespace MMLib.Models.Purchase
 				}
 				else filteredOrderList = orderlist;
 
-				var supplierPaymentList = SqlConnection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId", new { apId }).ToList();
+				var invoicePaymentList = SqlConnection.Query<SupInvoicePaymentModel>(@"EXEC dbo.GetSupInvoicePaymentsByCode @apId=@apId", new { apId }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)
 				{
 					var g = group.FirstOrDefault();
 
-					decimal totalCheckedOutPayments = supplierPaymentList.Where(x => x.pstCode == g.pstCode && x.spCheckout).Sum(x => x.Amount);
+					decimal totalCheckedOutPayments = invoicePaymentList.Where(x => x.pstCode == g.pstCode && x.sipCheckout).Sum(x => x.sipAmt);
 					if (totalCheckedOutPayments >= g.pstAmount) g.FullPaidCheckedOut = true;
 
 					PurchaseOrderList.Add(g);				
@@ -139,6 +139,6 @@ namespace MMLib.Models.Purchase
 			return orderlist;
 		}
 
-	
-	}
+        
+    }
 }

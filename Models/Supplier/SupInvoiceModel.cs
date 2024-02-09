@@ -1,4 +1,5 @@
 ﻿using CommonLib.Helpers;
+using MMDAL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +8,12 @@ using System.Threading.Tasks;
 
 namespace MMLib.Models.Supplier
 {
-	public class SupplierInvoiceModel:MMDAL.SupplierInvoice
-	{
-		public decimal PayAmt { get; set; }
+    public class SupInvoiceModel : SupplierInvoice
+    {
+        public string AmountDisplay { get { return siAmt==null?"": CommonHelper.FormatNumber((decimal)siAmt); } }
+        public string AccountName { get; set; }
+        public string AccountNo { get; set; }
+        public decimal PayAmt { get; set; }
 		public string PayRemark { get; set; }
 		public string InvoiceId { get; set; }
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
@@ -25,16 +29,11 @@ namespace MMLib.Models.Supplier
 		public string PayCreateBy { get; set; }
 		public DateTime PayCreateTime { get; set; }
 
-		public List<SupplierPaymentModel> Payments { get; set; } = [];
+		public List<SupInvoicePaymentModel> Payments { get; set; } = [];
 		public string spChequeNo { get; set; }
 		public long payId { get; set; }
 		public string filePath { get; set; }
 		public string Files { get; set; }
-
-		//public SupplierInvoiceModel()
-		//{
-		//	Payments = new List<SupplierPaymentModel>();
-		//}
 	}
 
 }

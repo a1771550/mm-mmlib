@@ -1405,38 +1405,7 @@ namespace MMLib.Helpers
 			context.SaveChanges();
 		}
 
-		public static void HandleLastSellingPrice4Customer(MMDbContext context, int cusID, Dictionary<string, decimal> DicItemPrice)
-		{
-			var customer = context.GetCustomer4SalesById1(cusID, apId).FirstOrDefault();
-			if (customer != null && customer.IsLastSellingPrice != null && (bool)customer.IsLastSellingPrice)
-			{
-				var itemcodes = string.Join(",", DicItemPrice.Keys);
-				var cusItems = context.CustomerItems.Where(x => x.cusCode == customer.cusCode && itemcodes.Contains(x.itmCode) && x.AccountProfileId == apId).ToList();
-				List<CustomerItem> newCusItems = new List<CustomerItem>();
-				foreach (var key in DicItemPrice.Keys)
-				{
-					var cusItem = cusItems.FirstOrDefault(x => x.itmCode == key);
-					if (cusItem == null)
-					{
-						newCusItems.Add(new CustomerItem
-						{
-							AccountProfileId = apId,
-							cusCode = customer.cusCode,
-							itmCode = key,
-							LastSellingPrice = DicItemPrice[key],
-							CreateTime = DateTime.Now,
-						});
-					}
-					else
-					{
-						cusItem.LastSellingPrice = DicItemPrice[key];
-						cusItem.ModifyTime = DateTime.Now;
-					}
-				}
-				context.CustomerItems.AddRange(newCusItems);
-				context.SaveChanges();
-			}
-		}
+	
 		public static string GetNewPurchaseRequestCode(SessUser user, MMDbContext context)
 		{
 			Device device = context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID);

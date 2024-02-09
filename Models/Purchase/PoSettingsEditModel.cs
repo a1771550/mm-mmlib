@@ -27,13 +27,13 @@ namespace MMLib.Models.Purchase
             {
                 //MUST NOT use Session here!!!
                 poThreshold = connection.QueryFirstOrDefault<decimal>(@"EXEC dbo.GetPoThreshold @apId=@apId", new { apId }),
-                poSettingItems = GetPoQtyAmtList(connection)
+                poSettingItems = GetPoSettingItems(connection)
             };
         }
 
-        public static List<PoQtyAmtModel> GetPoQtyAmtList(SqlConnection connection)
+        public static List<PoQtyAmtModel> GetPoSettingItems(SqlConnection connection)
         {            
-            return connection.Query<PoQtyAmtModel>(@"EXEC dbo.GetPoQtyAmtList @apId=@apId", new { apId }).ToList();
+            return connection.Query<PoQtyAmtModel>(@"EXEC dbo.GetPoSettingItems @apId=@apId", new { apId }).ToList();
         }
 
 

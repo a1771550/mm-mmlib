@@ -111,10 +111,8 @@ namespace MMLib.Models.Purchase
 
 		public bool IsSupplierABSS { get; set; }
 
-		public List<PurchaseServiceModel> ServiceList { get; set; }
-		public PurchaseModel()
-		{
-            ServiceList = new List<PurchaseServiceModel>();
-        }
+
+		public PurchaseModel() { }
+		
 	}
 }
