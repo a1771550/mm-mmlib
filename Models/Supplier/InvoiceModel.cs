@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MMLib.Models.Supplier
 {
-    public class SupInvoiceModel : SupplierInvoice
+    public class InvoiceModel : SupplierInvoice
     {
         public string AmountDisplay { get { return siAmt==null?"": CommonHelper.FormatNumber((decimal)siAmt); } }
         public string AccountName { get; set; }
@@ -29,7 +29,7 @@ namespace MMLib.Models.Supplier
 		public string PayCreateBy { get; set; }
 		public DateTime PayCreateTime { get; set; }
 
-		public List<SupInvoicePaymentModel> Payments { get; set; } = [];
+		public List<InvoicePaymentModel> Payments { get; set; } = [];
 		public string spChequeNo { get; set; }
 		public long payId { get; set; }
 		public string filePath { get; set; }

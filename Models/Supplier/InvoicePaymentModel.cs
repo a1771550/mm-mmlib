@@ -4,7 +4,7 @@ using System;
 
 namespace MMLib.Models.Supplier
 {
-    public class SupInvoicePaymentModel:SupInvoicePayment
+    public class InvoicePaymentModel:SupInvoicePayment
 	{	
 		public long payId { get; set; }
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }

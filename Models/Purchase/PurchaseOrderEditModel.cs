@@ -70,7 +70,7 @@ namespace MMLib.Models.Purchase
 				}
 				else filteredOrderList = orderlist;
 
-				var invoicePaymentList = SqlConnection.Query<SupInvoicePaymentModel>(@"EXEC dbo.GetSupInvoicePaymentsByCode @apId=@apId", new { apId }).ToList();
+				var invoicePaymentList = SqlConnection.Query<InvoicePaymentModel>(@"EXEC dbo.GetSupInvoicePaymentsByCode @apId=@apId", new { apId }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)

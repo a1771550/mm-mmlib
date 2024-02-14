@@ -256,8 +256,9 @@
     <Compile Include="Models\EmailModel.cs" />
     <Compile Include="Models\ForEx\ForExModel.cs" />
     <Compile Include="Models\Purchase\InvoiceEditModel.cs" />
-    <Compile Include="Models\Supplier\SupInvoiceModel.cs" />
-    <Compile Include="Models\Supplier\SupInvoicePaymentModel.cs" />
+    <Compile Include="Models\Supplier\PaymentEditModel.cs" />
+    <Compile Include="Models\Supplier\InvoiceModel.cs" />
+    <Compile Include="Models\Supplier\InvoicePaymentModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Job\JobEditModel.cs" />
     <Compile Include="Models\Job\JobModel.cs" />

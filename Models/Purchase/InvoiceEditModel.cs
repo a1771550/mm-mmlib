@@ -10,14 +10,56 @@ using System.Linq;
 using System.Web;
 using MMLib.Helpers;
 using Microsoft.Data.SqlClient;
+using MMLib.Models.MYOB;
+using System.Text.Json;
+using ModelHelper = MMLib.Helpers.ModelHelper;
+using MMLib.Models.Purchase;
 
 namespace MMLib.Models.Invoice
 {
     public class InvoiceEditModel:PagingBaseModel
     {
-        public SupInvoiceModel Invoice { get; set; }
+        public Dictionary<string, List<InvoicePaymentModel>> DicSupInvoicePayments { get; set; } = new Dictionary<string, List<InvoicePaymentModel>>();
+        public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
+        public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
+        public bool IsDB { get { return IsUserRole.isdirectorboard; } }
 
-        public static void SaveInvoice(SupInvoiceModel invoice)
+        public string LastSupplierInvoiceId { get; set; }
+        public PoSettings PoSettings { get; set; } = new PoSettings();
+        public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
+
+        public SupplierModel SelectedSupplier { get; set; }
+
+        //public List<SupplierModel> SupplierList { get; set; } = new List<SupplierModel>();
+        public string RemoveFileIcon { get { return $"<i class='mx-2 fa-solid fa-trash removefile' data-id='{{2}}'></i>"; } }
+        public string PDFThumbnailPath { get { return $"<img src='{UriHelper.GetBaseUrl()}/Images/pdf.jpg' class='thumbnail'/>"; } }
+        public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
+
+        public List<string> ImgList;
+        public List<string> FileList;
+        public List<SupplierModel> SupplierList { get; set; }
+        public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
+        public List<SupplierModel> Suppliers { get; set; } = new List<SupplierModel>();
+        public Dictionary<string, double> DicCurrencyExRate { get; set; }
+        public List<MyobJobModel> JobList { get; set; }
+        public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
+        public Dictionary<string, List<AccountModel>> DicAcAccounts { get; set; }
+        public List<InvoicePaymentModel> InvoicePayments { get; set; }
+        public List<InvoiceModel> SupplierInvoiceList { get; set; }
+        public bool Readonly { get; set; }
+        public InvoiceModel SelectedSupInvoice { get; set; }
+        public List<InvoiceModel> InvoiceList { get; set; }
+        public IPagedList<InvoiceModel> PagingInvoiceList { get; set; }
+        public InvoiceModel Invoice { get; set; }
+        public InvoiceEditModel()
+        {
+            JobList = new List<MyobJobModel>();
+            ImgList = new List<string>();
+            FileList = new List<string>();
+            DicSupInfoes = new Dictionary<string, List<SupplierModel>>();
+            PoQtyAmtList = [];
+        }
+        public static void SaveInvoice(InvoiceModel invoice)
         {
             using var context = new MMDbContext();
             SupplierInvoice currentInvoice = context.SupplierInvoices.FirstOrDefault(x => x.AccountProfileId == apId && x.Id == invoice.Id);
@@ -71,7 +113,7 @@ namespace MMLib.Models.Invoice
             context.SaveChanges();
         }
 
-        public void GetSupplierInvoiceList(string strfrmdate, string strtodate, int PageNo, int SortCol, string SortOrder, string Keyword, int filter, string searchmode)
+        public void GetInvoiceList(string strfrmdate, string strtodate, int PageNo, int SortCol, string SortOrder, string Keyword, int filter, string searchmode)
         {
             IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
 
@@ -98,7 +140,7 @@ namespace MMLib.Models.Invoice
             var objects = new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode, baseUrl, Keyword };
             //var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
 
-            InvoiceList = SqlConnection.Query<SupInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode,@baseUrl=@baseUrl,@Keyword=@Keyword", objects).ToList();
+            InvoiceList = SqlConnection.Query<InvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode,@baseUrl=@baseUrl,@Keyword=@Keyword", objects).ToList();
 
             PagingInvoiceList = InvoiceList.ToPagedList(PageNo, PageSize);
         }
@@ -108,7 +150,7 @@ namespace MMLib.Models.Invoice
             bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
             using var context = new MMDbContext();
 
-            Invoice = new SupInvoiceModel();
+            Invoice = new InvoiceModel();
             Device device = null;
             if (!isapprover) device = context.Devices.First();
 
@@ -117,187 +159,85 @@ namespace MMLib.Models.Invoice
 
             DateTime dateTime = DateTime.Now;
 
-            if (Id > 0)
+            string baseUrl = UriHelper.GetBaseUrl();
+
+            //SupplierInvoiceList = connection.Query<SupplierInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
+
+            //if (SupplierInvoiceList.Count == 0)
+            //{
+            //    LastSupplierInvoiceId = GenInvoiceId(Purchase.pstCode, 0);
+            //}
+            //else
+            //{
+            //    int? numId = CommonHelper.GetNumberFrmString(SupplierInvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id.Split('-')[1]);
+            //    LastSupplierInvoiceId = GenInvoiceId(Purchase.pstCode, (int)numId);
+            //}
+
+            HashSet<string> SupInvoiceIds = new HashSet<string>();
+
+            if (SupplierInvoiceList.Count > 0)
             {
-                Invoice = connection.QueryFirstOrDefault<SupInvoiceModel>(@"EXEC dbo.GetInvoiceById @apId=@apId,@Id=@Id", new { apId, Id });
-              
-                var suppurchaseInfoes = connection.Query<SupInvoiceModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Invoice.pstCode }).ToList();
+                //SupInvoiceIds = SupplierInvoiceList.Select(x => x.Id).Distinct().ToHashSet();
+                //foreach (var id in SupInvoiceIds) if (!DicSupInvoicePayments.ContainsKey(id)) DicSupInvoicePayments[id] = [];
 
-                List<IGrouping<string, SupInvoiceModel>> groupedsupInvoiceInfoes = new List<IGrouping<string, SupInvoiceModel>>();
-                if (suppurchaseInfoes != null && suppurchaseInfoes.Count > 0) groupedsupInvoiceInfoes = suppurchaseInfoes.GroupBy(x => x.supCode).ToList();           
+                //InvoicePayments = connection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", SupInvoiceIds) }).ToList();
 
-                if (Invoice.pstStatus.ToLower() == InvoiceStatus.order.ToString())
-                {
-                    SelectedSupInvoice = InvoiceList.Single(x => x.Selected);
+                //foreach (var invoice in SupplierInvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
 
-                    string baseUrl = UriHelper.GetBaseUrl();
-                    InvoiceList = connection.Query<SupInvoiceModel>(@"EXEC dbo.GetSupplierInvoicesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Invoice.pstCode, baseUrl }).ToList();
+                //foreach (var payment in InvoicePayments)
+                //{
+                //    if (DicSupInvoicePayments.ContainsKey(payment.InvoiceId))
+                //    {
+                //        DicSupInvoicePayments[payment.InvoiceId].Add(new SupplierPaymentModel
+                //        {
+                //            payId = payment.Id,
+                //            InvoiceId = payment.InvoiceId,
+                //            seq = payment.seq,
+                //            Amount = payment.Amount,
+                //            spChequeNo = payment.spChequeNo,
+                //            Remark = payment.Remark,
+                //            CreateTime = payment.CreateTime,
+                //            CreateBy = payment.CreateBy,
+                //        });
 
-                    if (InvoiceList.Count == 0)
-                    {
-                        LastSupplierInvoiceId = GenInvoiceId(Invoice.pstCode, 0);
-                    }
-                    else
-                    {
-                        int? numId = CommonHelper.GetNumberFrmString(Invoice.InvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id.Split('-')[1]);
-                        LastSupplierInvoiceId = GenInvoiceId(Invoice.pstCode, (int)numId);
-                    }
-
-                    HashSet<string> SupInvoiceIds = new HashSet<string>();
-
-                    if (Invoice.InvoiceList.Count > 0)
-                    {
-                        SupInvoiceIds = Invoice.InvoiceList.Select(x => x.Id).Distinct().ToHashSet();
-                        foreach (var id in SupInvoiceIds) if (!DicSupInvoicePayments.ContainsKey(id)) DicSupInvoicePayments[id] = [];
-
-                        InvoicePayments = connection.Query<SupInvoicePaymentModel>(@"EXEC dbo.GetSupplierPaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", SupInvoiceIds) }).ToList();
-                        //foreach (var invoice in Invoice.InvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
-
-                        foreach (var payment in InvoicePayments)
-                        {
-                            if (DicSupInvoicePayments.ContainsKey(payment.InvoiceId))
-                            {
-                                DicSupInvoicePayments[payment.InvoiceId].Add(new SupInvoicePaymentModel
-                                {
-                                    payId = payment.Id,
-                                    InvoiceId = payment.InvoiceId,
-                                    seq = payment.seq,
-                                    sipAmt = payment.sipAmt,
-                                    sipChequeNo = payment.sipChequeNo,
-                                    Remark = payment.Remark,
-                                    CreateTime = payment.CreateTime,
-                                    CreateBy = payment.CreateBy,
-                                });
-                            }
-                        }
-                    }
-
-                    groupedsupInvoiceInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupInvoice.supCode).GroupBy(x => x.supCode).ToList();
-
-                }
-
-                getDicSupInfoes(groupedsupInvoiceInfoes);
-            }
-            else
-            {
-                var purchaseinitcode = device.dvcInvoiceRequestPrefix;
-                var purchaseno = $"{device.dvcNextInvoiceRequestNo:000000}";
-                device.dvcNextInvoiceRequestNo++;
-                device.dvcModifyTime = dateTime;
-                string pqstatus = RequestStatus.requestingByStaff.ToString();
-                string pstcode = string.Concat(purchaseinitcode, purchaseno);
-
-                status = InvoiceStatus.requesting.ToString();
-                var latestpurchase = context.Invoices.OrderByDescending(x => x.Id).FirstOrDefault();
-                if (latestpurchase != null)
-                {
-                    if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulateInvoiceModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);
-                    else addNewInvoice(context, apId, pstcode, status, latestpurchase.IsThreshold, pqstatus);
-                }
-                else addNewInvoice(context, apId, pstcode, status, false, pqstatus);
+                //    }
+                //}
             }
 
-            Suppliers = connection.Query<SupInvoiceModel>(@"EXEC dbo.GetInvoiceList6 @apId=@apId", new { apId }).ToList();
-
-            var stocklocationlist = context.GetStockLocationList1(ComInfo.AccountProfileId).ToList();
-            LocationList = new List<SelectListItem>();
-            foreach (var item in stocklocationlist)
-            {
-                LocationList.Add(new SelectListItem
-                {
-                    Value = item,
-                    Text = item
-                });
-            }
-
-            var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
-            if (myobcurrencylist != null && myobcurrencylist.Count > 0)
-            {
-                DicCurrencyExRate = new Dictionary<string, double>();
-                foreach (var currency in myobcurrencylist)
-                {
-                    DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
-                }
-            }
-
-            Invoice.pstInvoiceDate = DateTime.Now.Date;
-            Invoice.TaxModel = ModelHelper.GetTaxInfo(context);
-            Invoice.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
-
-            DicLocation = new Dictionary<string, string>();
-            foreach (var shop in stocklocationlist)
-            {
-                DicLocation[shop] = shop;
-            }
 
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
 
             DicAcAccounts = ModelHelper.GetDicAcAccounts(connection);
 
-            Invoice.Mode = ireadonly == 1 ? "readonly" : "";
+            Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
+
+            SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Invoice.pstCode }).ToList();
+            SelectedSupplier = SupplierList.Single(x => x.Selected);
+
+            DicSupCodeName = new Dictionary<string, string>();
+            foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
 
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
+            var suppurchaseInfoes = connection.Query<SupplierModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Invoice.pstCode }).ToList();
 
-            populateFundingSources();
-            populateNotEnoughQuoReasons();
-            populateReasons4ChoosingSupplier();
-
-            void populateFundingSources()
+            List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes = new List<IGrouping<string, SupplierModel>>();
+            if (suppurchaseInfoes != null && suppurchaseInfoes.Count > 0)
             {
-                FundingSources = [];
-                var sources = ConfigurationManager.AppSettings["FundingSources"].Split('|').ToList();
-                int idx = 0;
-                foreach (var source in sources)
-                {
-                    idx++;
-                    FundingSources.Add(new SelectListItem
-                    {
-                        Value = $"fs{idx}",
-                        Text = source.ToString()
-                    });
-                }
+                groupedsupPurchaseInfoes = suppurchaseInfoes.GroupBy(x => x.supCode).ToList();
             }
+            groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
 
-            void populateNotEnoughQuoReasons()
-            {
-                NotEnoughQuoReasons = [];
-                var reasons = ConfigurationManager.AppSettings["NotEnoughQuoReasons"].Split('|').ToList();
-                int idx = 0;
-                foreach (var reason in reasons)
-                {
-                    idx++;
-                    NotEnoughQuoReasons.Add(new SelectListItem
-                    {
-                        Value = $"nrq{idx}",
-                        Text = reason.ToString()
-                    });
-                }
-            }
+            getDicSupInfoes(groupedsupPurchaseInfoes);
 
-            void populateReasons4ChoosingSupplier()
-            {
-                Reasons4ChoosingSupplier = [];
-                var reasons = ConfigurationManager.AppSettings["Reasons4ChoosingSupplier"].Split('|').ToList();
-                int idx = 0;
-                foreach (var reason in reasons)
-                {
-                    idx++;
-                    Reasons4ChoosingSupplier.Add(new SelectListItem
-                    {
-                        Value = $"rcs{idx}",
-                        Text = reason.ToString()
-                    });
-                }
-            }
 
-            void getDicSupInfoes(List<IGrouping<string, SupInvoiceModel>> groupedsupInvoiceInfoes)
+            void getDicSupInfoes(List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes)
             {
-                foreach (var group in groupedsupInvoiceInfoes)
+                foreach (var group in groupedsupPurchaseInfoes)
                 {
                     var g = group.FirstOrDefault();
-                    if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<SupInvoiceModel>();
+                    if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<SupplierModel>();
                 }
-                foreach (var group in groupedsupInvoiceInfoes)
+                foreach (var group in groupedsupPurchaseInfoes)
                 {
                     var g = group.FirstOrDefault();
                     if (DicSupInfoes.ContainsKey(g.supCode))
@@ -310,6 +250,14 @@ namespace MMLib.Models.Invoice
                     }
                 }
             }
+        }
+
+        public static void EditPayment(InvoicePaymentModel model)
+        {
+            using var context = new MMDbContext();
+            
+
+            context.SaveChanges();
         }
     }
 
