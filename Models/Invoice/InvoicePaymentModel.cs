@@ -2,9 +2,9 @@
 using MMDAL;
 using System;
 
-namespace MMLib.Models.Supplier
+namespace MMLib.Models.Invoice
 {
-    public class InvoicePaymentModel:SupInvoicePayment
+    public class InvoicePaymentModel:InvoicePayment
 	{	
 		public long payId { get; set; }
 		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }

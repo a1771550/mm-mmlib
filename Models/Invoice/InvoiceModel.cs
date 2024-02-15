@@ -2,11 +2,12 @@
 using MMDAL;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MMLib.Models.Supplier
+namespace MMLib.Models.Invoice
 {
     public class InvoiceModel : SupplierInvoice
     {
@@ -15,8 +16,15 @@ namespace MMLib.Models.Supplier
         public string AccountNo { get; set; }
         public decimal PayAmt { get; set; }
 		public string PayRemark { get; set; }
-		public string InvoiceId { get; set; }
-		public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
+        public string RemarkDisplay
+        {
+            get
+            {
+                int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxRemarkDisplayLength"]);
+                return Remark != null && Remark.Length > maxremarkdisplaylength ? string.Concat(Remark.Substring(0, maxremarkdisplaylength), "...") : Remark ?? string.Empty;
+            }
+        }
+        public string CreateTimeDisplay { get { return CommonHelper.FormatDateTime(CreateTime, true); } }
 		public string ModifyTimeDisplay { get { return ModifyTime == null ? "N/A" : CommonHelper.FormatDateTime((DateTime)ModifyTime, true); } }
 		public string dateformat { get; set; }
 		public string PayDate4ABSS { get { return CreateTime != null ? CommonHelper.FormatDate4ABSS(CreateTime, dateformat) : ModifyTime != null ? CommonHelper.FormatDate4ABSS((DateTime)ModifyTime, dateformat) : string.Empty; } }

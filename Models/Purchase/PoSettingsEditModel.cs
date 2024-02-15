@@ -12,7 +12,7 @@ namespace MMLib.Models.Purchase
     public class PoSettingsEditModel : PagingBaseModel
     {
         public PoSettingsEditModel() { }
-        public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
+   
         public PoSettings PoSettings { get; set; }
         public void GetList()
         {

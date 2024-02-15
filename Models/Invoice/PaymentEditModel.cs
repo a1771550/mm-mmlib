@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MMLib.Models.Supplier
+namespace MMLib.Models.Invoice
 {
     public class PaymentEditModel:PagingBaseModel
     {

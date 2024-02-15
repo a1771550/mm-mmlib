@@ -1,8 +1,11 @@
-﻿using System;
+﻿using MMLib.Models.Purchase;
+using MMLib.Models.Supplier;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -17,5 +20,13 @@ namespace MMLib.Models
 	
 		public SessUser User => HttpContext.Current.Session["User"] as SessUser;
 		public static SessUser user => HttpContext.Current.Session["User"] as SessUser;
-	}
+
+        public List<string> ImgList;
+        public List<string> FileList;
+
+        public SupplierModel SelectedSupplier { get; set; }
+        public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
+        public Dictionary<string, double> DicCurrencyExRate { get; set; }
+        public string JsonDicCurrencyExRate { get { return JsonSerializer.Serialize(DicCurrencyExRate); } }
+    }
 }

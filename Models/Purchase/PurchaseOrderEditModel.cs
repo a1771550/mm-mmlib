@@ -10,6 +10,7 @@ using System.Linq;
 using System.Web;
 using MMLib.Helpers;
 using Microsoft.Data.SqlClient;
+using MMLib.Models.Invoice;
 
 namespace MMLib.Models.Purchase
 {
@@ -70,7 +71,7 @@ namespace MMLib.Models.Purchase
 				}
 				else filteredOrderList = orderlist;
 
-				var invoicePaymentList = SqlConnection.Query<InvoicePaymentModel>(@"EXEC dbo.GetSupInvoicePaymentsByCode @apId=@apId", new { apId }).ToList();
+				var invoicePaymentList = SqlConnection.Query<InvoicePaymentModel>(@"EXEC dbo.GetInvoicePaymentsByCode @apId=@apId", new { apId }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)
@@ -84,9 +85,6 @@ namespace MMLib.Models.Purchase
 				}
 				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}
-
-			//connection.Close();
-			//connection.Dispose();
 		}
 
 		private List<PurchaseModel> FilterOrderList(string Keyword, string searchmode, List<PurchaseModel> orderlist)

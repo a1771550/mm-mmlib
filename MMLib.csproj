@@ -256,9 +256,9 @@
     <Compile Include="Models\EmailModel.cs" />
     <Compile Include="Models\ForEx\ForExModel.cs" />
     <Compile Include="Models\Purchase\InvoiceEditModel.cs" />
-    <Compile Include="Models\Supplier\PaymentEditModel.cs" />
-    <Compile Include="Models\Supplier\InvoiceModel.cs" />
-    <Compile Include="Models\Supplier\InvoicePaymentModel.cs" />
+    <Compile Include="Models\Invoice\PaymentEditModel.cs" />
+    <Compile Include="Models\Invoice\InvoiceModel.cs" />
+    <Compile Include="Models\Invoice\InvoicePaymentModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Job\JobEditModel.cs" />
     <Compile Include="Models\Job\JobModel.cs" />
@@ -348,9 +348,7 @@
     <Content Include=".gitignore" />
     <Content Include="Content\PagedList.css" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\InvoicePayment\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
