@@ -124,7 +124,7 @@ namespace MMLib.Models.Purchase
             FileList = new List<string>();
             DicSupInfoes = new Dictionary<string, List<SupplierModel>>();
             PoQtyAmtList = [];
-
+            SupplierList = new List<SupplierModel>();
         }
 
 
@@ -445,6 +445,7 @@ namespace MMLib.Models.Purchase
                 ps.pstStatus = purchasestatus;
                 ps.pqStatus = pqstatus;
 
+                ps.pstExpectedCost = model.pstExpectedCost;
                 ps.pstExpectedCostDesc = model.pstExpectedCostDesc;
                 ps.pstFundingSource = model.pstFundingSource;
                 ps.pstFSOthers = model.pstFSOthers;
@@ -650,12 +651,19 @@ namespace MMLib.Models.Purchase
                     {
                         pqStatus = RequestStatus.requestingByMuseumDirector.ToString();
                         reactType = ReactType.PassedToDirectorBoard;
+                        updatePurchase4MDApproval(purchase, SelectedSupCode, context);
                     }
 
                     if (IsUserRole.isfinancedept)
                     {
                         pqStatus = RequestStatus.requestingByFinanceDept.ToString();
-                        reactType = ReactType.PassedToMuseumDirector;
+                        reactType = ReactType.PassedByFinanceDept;
+                    }
+
+                    if (IsUserRole.isdepthead)
+                    {
+                        pqStatus = RequestStatus.requestingByDeptHead.ToString();
+                        reactType = ReactType.PassedByDeptHead;
                     }
                 }
                 else
@@ -665,13 +673,8 @@ namespace MMLib.Models.Purchase
                         purchase.pstStatus = PurchaseStatus.order.ToString();
                         pqStatus = RequestStatus.approvedByMuseumDirector.ToString();
                         reactType = ReactType.ApprovedByMuseumDirector;
-                        PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.supCode == SelectedSupCode);
-                        purchaseSupplier.Selected = true;
-                        purchaseSupplier.ModifyTime = DateTime.Now;
-                        purchase.supCode = SelectedSupCode;
-                        purchase.pstAmount = purchaseSupplier.Amount;
-                        //purchase.ModifyTime = DateTime.Now;
-                        context.SaveChanges();
+                        updatePurchase4MDApproval(purchase, SelectedSupCode, context);
+                        //purchase.ModifyTime = DateTime.Now;                       
                     }
 
                     if (IsUserRole.isfinancedept)
@@ -751,6 +754,16 @@ namespace MMLib.Models.Purchase
                     pqStatus = RequestStatus.voidedByFinanceDept.ToString();
                     reactType = ReactType.VoidedByFinanceDept;
                 }
+            }
+
+            static void updatePurchase4MDApproval(MMDAL.Purchase purchase, string SelectedSupCode, MMDbContext context)
+            {
+                PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.pstCode==purchase.pstCode && x.supCode == SelectedSupCode && x.AccountProfileId==apId);
+                purchaseSupplier.Selected = true;
+                purchaseSupplier.ModifyTime = DateTime.Now;
+                purchase.supCode = SelectedSupCode;
+                purchase.pstAmount = purchaseSupplier.Amount;
+                context.SaveChanges();
             }
         }
 

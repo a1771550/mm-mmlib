@@ -20,7 +20,7 @@ namespace MMCommonLib.Models
         public decimal toBeRefunded { get; set; }
         public decimal remainamt { get; set; }
       
-        public List<SerialNoView> snlist { get; set; }
+       
       
        
         public ComInfoView companyinfo { get; set; }
@@ -37,7 +37,7 @@ namespace MMCommonLib.Models
         public Dictionary<string, List<VtQty>> DicItemVtQtyList;
         public Dictionary<string, List<VtDelQty>> DicItemVtDelQtyList;
         public List<PoItemBatVQ> PoItemBatVQList;
-        public Dictionary<string, List<ItemAttribute>> DicItemAttrList { get; set; }
+      
       
         public Dictionary<string, int> DicBatTotalQty { get; set; }
         public string PrimaryLocation { get; set; }

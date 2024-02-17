@@ -231,24 +231,17 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Helpers\ARHelper.cs" />
-    <Compile Include="Helpers\CIHelper.cs" />
     <Compile Include="Helpers\JsonHelper.cs" />
     <Compile Include="Helpers\MenuHelper.cs" />
     <Compile Include="Helpers\ModelHelper.cs" />
     <Compile Include="Helpers\MYOBHelper.cs" />
-    <Compile Include="Helpers\QuotationHelper.cs" />
     <Compile Include="Helpers\ReportHelper.cs" />
-    <Compile Include="Helpers\SPPHelper.cs" />
     <Compile Include="Helpers\UserHelper.cs" />
-    <Compile Include="Models\AccountReceivable\AREditModel.cs" />
     <Compile Include="Models\Account\AccessRightModel.cs" />
     <Compile Include="Models\Account\AccountProfileView.cs" />
     <Compile Include="Models\Account\LoginUserModel.cs" />
     <Compile Include="Models\ActionLogEditModel.cs" />
     <Compile Include="Models\ActionLogModel.cs" />
-    <Compile Include="Models\Attendance\AttendanceEditModel.cs" />
-    <Compile Include="Models\Attendance\AttendanceModel.cs" />
     <Compile Include="Models\BaseModel.cs" />
     <Compile Include="Models\DayEndsItem.cs" />
     <Compile Include="Models\DayEndsModel.cs" />
@@ -269,11 +262,7 @@
     <Compile Include="Models\MYOB\MyobCurrencyModel.cs" />
     <Compile Include="Models\MYOB\MyobCustomListModel.cs" />
     <Compile Include="Models\MYOB\MyobEmployeeModel.cs" />
-    <Compile Include="Models\MYOB\MyobItemLocModel.cs" />
-    <Compile Include="Models\MYOB\MyobItemModel.cs" />
-    <Compile Include="Models\MYOB\MyobItemPriceModel.cs" />
     <Compile Include="Models\MYOB\MyobJobModel.cs" />
-    <Compile Include="Models\MYOB\MyobLocationModel.cs" />
     <Compile Include="Models\MYOB\MyobSupplierModel.cs" />
     <Compile Include="Models\PagingBaseModel.cs" />
     <Compile Include="Models\POS\CentralDataModel.cs" />
@@ -286,7 +275,6 @@
     <Compile Include="Models\POS\OtherSettingsModel.cs" />
     <Compile Include="Models\POS\OtherSettingsView.cs" />
     <Compile Include="Models\POS\SetupModel.cs" />
-    <Compile Include="Models\POS\UFSearchResult.cs" />
     <Compile Include="Models\Purchase\PayBillLnView.cs" />
     <Compile Include="Models\Purchase\PoQtyAmtModel.cs" />
     <Compile Include="Models\Purchase\PoSettingsEditModel.cs" />
@@ -297,14 +285,12 @@
     <Compile Include="Models\Purchase\PurchaseOrderReviewModel.cs" />
     <Compile Include="Models\Supplier\SupplierEditModel.cs" />
     <Compile Include="Models\Supplier\SupplierModel.cs" />
-    <Compile Include="Models\Quotation\QuotationEditModel.cs" />
     <Compile Include="Models\Receipt\ReceiptViewModel.cs" />
     <Compile Include="Models\Receipt\SearchReceiptModel.cs" />
     <Compile Include="Models\RecurOrder.cs" />
     <Compile Include="Models\Reports\ReportBase.cs" />
     <Compile Include="Models\Reports\ReportView.cs" />
     <Compile Include="Models\SalesmanModel.cs" />
-    <Compile Include="Models\SerialNoView.cs" />
     <Compile Include="Models\Session\SessionLnView.cs" />
     <Compile Include="Models\Session\SessionStartModel.cs" />
     <Compile Include="Models\Session\SessionView.cs" />
@@ -313,8 +299,6 @@
     <Compile Include="Models\ShopDataModel.cs" />
     <Compile Include="Models\User\Inferior.cs" />
     <Compile Include="Models\User\Superior.cs" />
-    <Compile Include="Models\Training\TrainingEditModel.cs" />
-    <Compile Include="Models\Training\TrainingModel.cs" />
     <Compile Include="Models\User\UserEditModel.cs" />
     <Compile Include="Models\User\UserInfo.cs" />
     <Compile Include="Models\User\UserModel.cs" />

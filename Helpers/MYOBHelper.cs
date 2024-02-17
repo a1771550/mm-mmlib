@@ -86,113 +86,7 @@ namespace MMLib.Helpers
 			}
 			return -1;
 		}
-		public static List<MyobItemPriceModel> GetItemPriceList(string connectionstring, string sql = "")
-		{
-			if (string.IsNullOrEmpty(sql))
-			{
-				//Select ip.ItemPriceID,ip.ItemID,ip.QuantityBreak,ip.QuantityBreakAmount,ip.PriceLevel,ip.PriceLevelNameID,ip.SellingPrice,ip.ChangeControl,i.ItemNumber,i.LastUnitPrice From ItemPrices ip Join Items i on ip.ItemID = i.ItemID Where ip.QuantityBreak=1;
-				sql = MyobHelper.ItemPriceListSql;
-			}
-			Repository rs = new Repository();
-			DataSet ds = rs.Query(connectionstring, sql);
-			DataTable dt = ds.Tables[0];
-			List<MyobItemPriceModel> itemplist = new List<MyobItemPriceModel>();
-			itemplist = (from DataRow dr in dt.Rows
-						 select new MyobItemPriceModel()
-						 {
-							 ItemPriceID = Convert.ToInt32(dr[0]),
-							 ItemID = dr[1] == DBNull.Value ? 0 : Convert.ToInt32(dr[1]),
-							 QuantityBreak = (short?)(dr[2] == DBNull.Value ? 0 : Convert.ToInt16(dr[2])),
-							 QuantityBreakAmount = dr[3] == DBNull.Value ? 0 : Convert.ToDouble(dr[3]),
-							 PriceLevel = dr[4] == DBNull.Value ? '-' : Convert.ToChar(dr[4]),
-							 PriceLevelNameID = dr[5] == DBNull.Value ? null : dr[5].ToString(),
-							 SellingPrice = dr[6] == DBNull.Value ? 0 : Convert.ToDecimal(dr[6]),
-							 ChangeControl = dr[7] == DBNull.Value ? null : dr[7].ToString(),
-							 ItemCode = dr[8].ToString(),
-							 LastUnitPrice = dr[9] == DBNull.Value ? 0 : Convert.ToDecimal(dr[9]),
-						 }
-						).ToList();
-			return itemplist;
-		}
-		public static List<MyobItemModel> GetItemList(string connectionstring, string sql = "")
-		{
-			/*
-			 * SELECT ItemID, IsInactive, ItemName, ItemNumber, QuantityOnHand, ValueOnHand, SellOnOrder, PurchaseOnOrder, ItemIsSold, ItemIsBought, ItemIsInventoried, InventoryAccountID, IncomeAccountID, ExpenseAccountID, Picture, ItemDescription, UseDescription, CustomList1ID, CustomList2ID, CustomList3ID, CustomField1, CustomField2, CustomField3, BaseSellingPrice, ItemIsTaxedWhenSold, SellUnitMeasure, SellUnitQuantity, TaxExclusiveLastPurchasePrice, TaxInclusiveLastPurchasePrice, ItemIsTaxedWhenBought, BuyUnitMeasure, BuyUnitQuantity, PrimarySupplierID, SupplierItemNumber, MinLevelBeforeReorder, DefaultReorderQuantity, DefaultSellLocationID, DefaultReceiveLocationID, TaxExclusiveStandardCost, TaxInclusiveStandardCost, ReceivedOnOrder, QuantityAvailable, LastUnitPrice, NegativeQuantityOnHand, NegativeValueOnHand, NegativeAverageCost, PositiveAverageCost, ShowOnWeb, NameOnWeb, DescriptionOnWeb, WebText, WebCategory1, WebCategory2, WebCategory3, WebField1, WebField2, WebField3, ChangeControl From Items;
-			 */
-			if (string.IsNullOrEmpty(sql))
-			{
-				sql = MyobHelper.ItemListSql;
-			}
-			Repository rs = new Repository();
-			DataSet ds = rs.Query(connectionstring, sql);
-			DataTable dt = ds.Tables[0];
-			List<MyobItemModel> itemlist = new List<MyobItemModel>();
-			itemlist = (from DataRow dr in dt.Rows
-						select new MyobItemModel()
-						{
-							ItemID = Convert.ToInt32(dr[0]),
-							IsInactive = Convert.ToChar(dr[1]),
-							ItemName = dr[2].ToString(),
-							ItemNumber = dr[3].ToString(),
-							QuantityOnHand = decimal.Parse(dr[4].ToString()),
-							ValueOnHand = dr[5] == DBNull.Value ? 0 : decimal.Parse(dr[5].ToString()),
-							SellOnOrder = decimal.Parse(dr[6].ToString()),
-							PurchaseOnOrder = decimal.Parse(dr[7].ToString()),
-							ItemIsSold = Convert.ToChar(dr[8]),
-							ItemIsBought = Convert.ToChar(dr[9]),
-							ItemIsInventoried = Convert.ToChar(dr[10]),
-							InventoryAccountID = Convert.ToInt32(dr[11]),
-							IncomeAccountID = Convert.ToInt32(dr[12]),
-							ExpenseAccountID = Convert.ToInt32(dr[13]),
-							Picture = dr[14].ToString(),
-							ItemDescription = dr[15].ToString(),
-							UseDescription = Convert.ToChar(dr[16]),
-							CustomList1ID = Convert.ToInt32(dr[17]),
-							CustomList2ID = Convert.ToInt32(dr[18]),
-							CustomList3ID = Convert.ToInt32(dr[19]),
-							CustomField1 = dr[20].ToString(),
-							CustomField2 = dr[21].ToString(),
-							CustomField3 = dr[22].ToString(),
-							BaseSellingPrice = decimal.Parse(dr[23].ToString()),
-							ItemIsTaxedWhenSold = Convert.ToChar(dr[24]),
-							SellUnitMeasure = dr[25].ToString(),
-							SellUnitQuantity = Convert.ToInt32(dr[26]),
-							TaxExclusiveLastPurchasePrice = Convert.ToDecimal(dr[27]),
-							TaxInclusiveLastPurchasePrice = Convert.ToDecimal(dr[28]),
-							ItemIsTaxedWhenBought = Convert.ToChar(dr[29]),
-							BuyUnitMeasure = dr[30].ToString(),
-							BuyUnitQuantity = Convert.ToInt32(dr[31]),
-							PrimarySupplierID = Convert.ToInt32(dr[32]),
-							SupplierItemNumber = dr[33].ToString(),
-							MinLevelBeforeReorder = decimal.Parse(dr[34].ToString()),
-							DefaultReorderQuantity = Convert.ToInt32(dr[35]),
-							DefaultReceiveLocationID = Convert.ToInt32(dr[36]),
-							DefaultSellLocationID = Convert.ToInt32(dr[37]),
-							TaxExclusiveStandardCost = decimal.Parse(dr[38].ToString()),
-							TaxInclusiveStandardCost = decimal.Parse(dr[39].ToString()),
-							ReceivedOnOrder = decimal.Parse(dr[40].ToString()),
-							QuantityAvailable = Convert.ToInt32(dr[41]),
-							LastUnitPrice = Convert.ToDecimal(dr[42]),
-							NegativeQuantityOnHand = Convert.ToInt32(dr[43]),
-							NegativeValueOnHand = dr[44] == DBNull.Value ? null : dr[44].ToString(),
-							NegativeAverageCost = Convert.ToDecimal(dr[45]),
-							PositiveAverageCost = Convert.ToDecimal(dr[46]),
-							ShowOnWeb = Convert.ToChar(dr[47]),
-							NameOnWeb = dr[48].ToString(),
-							DescriptionOnWeb = dr[49].ToString(),
-							WebText = dr[50].ToString(),
-							WebCategory1 = dr[51].ToString(),
-							WebCategory2 = dr[52].ToString(),
-							WebCategory3 = dr[53].ToString(),
-							WebField1 = dr[54].ToString(),
-							WebField2 = dr[55].ToString(),
-							WebField3 = dr[56].ToString(),
-							ChangeControl = dr[57].ToString()
-						}
-					 ).ToList();
-			return itemlist;
-		}
-
+		
 		public static List<MyobCommentModel> GetCommentList(string connectionstring)
 		{
 			var sql = "Select CommentID, Comment From Comments;";
@@ -378,41 +272,7 @@ namespace MMLib.Helpers
 						   ).ToList();
 		}
 
-		public static List<MyobItemLocModel> GetItemLocList(string connectionstring, int apId, string sql = "")
-		{
-			string itemoptionsItemCodes = ModelHelper.GetItemOptionsItemCodes(ConnectionString, apId);
-
-			if (string.IsNullOrEmpty(sql))
-			{
-				sql = MyobHelper.getItemLocListSql(itemoptionsItemCodes);
-			}
-
-			Repository rs = new Repository();
-			DataSet ds = rs.Query(connectionstring, sql);
-			DataTable dt = ds.Tables[0];
-			var rows = dt.Rows;
-
-			/*
-             * Select il.ItemID, il.QuantityOnHand, il.SellOnOrder, il.PurchaseOnOrder, l.LocationIdentification, i.ItemNumber, il.ItemLocationID From Items i Join ItemLocations il on i.ItemID = il.ItemID  Join Locations l on il.LocationID=l.LocationID Where l.IsInactive='N' And l.CanBeSold='Y'
-             */
-			List<MyobItemLocModel> itemloclist = new List<MyobItemLocModel>();
-			itemloclist = (from DataRow dr in rows
-							   //where !itemoptionsItemCodes.Contains(dr[5].ToString())
-						   select new MyobItemLocModel()
-						   {
-							   ItemID = Convert.ToInt32(dr[0]),
-							   //Convert.ToInt64(Math.Round(Convert.ToDouble(value)));
-							   QuantityOnHand = Convert.ToInt32(Math.Round(Convert.ToDouble(dr[1]))),
-							   SellOnOrder = int.Parse(dr[2].ToString()),
-							   PurchaseOnOrder = int.Parse(dr[3].ToString()),
-							   LocationCode = dr[4].ToString(),
-							   ItemCode = dr[5].ToString(),
-							   ItemLocationID = Convert.ToInt32(dr[6])
-						   }
-					 ).ToList();
-			//itemloclist = itemloclist.Where(x => !itemoptionsItemCodes.Contains(x.ItemCode)).ToList();
-			return itemloclist;
-		}
+		
 
 		public static List<MyobCurrencyModel> GetCurrencyList(string connectionstring)
 		{
@@ -682,27 +542,7 @@ namespace MMLib.Helpers
 			return joblist;
 		}
 
-		public static List<MyobLocationModel> GetLocationList(string connectionstring)
-		{
-			var sql = MyobHelper.LocationListSql;
-
-			Repository rs = new Repository();
-			DataSet ds = rs.Query(connectionstring, sql);
-			DataTable dt = ds.Tables[0];
-
-			// LocationID, LocationName,LocationIdentification,IsInactive
-			List<MyobLocationModel> locationlist = new List<MyobLocationModel>();
-			locationlist = (from DataRow dr in dt.Rows
-							select new MyobLocationModel()
-							{
-								LocationID = dr[0] == DBNull.Value ? 0 : Convert.ToInt32(dr[0]),
-								LocationIdentification = dr[2] == DBNull.Value ? "" : Convert.ToString(dr[2]),
-								IsInactive = dr[3] == DBNull.Value ? false : Convert.ToChar(dr[3]) == 'Y',
-								LocationName = dr[1] == DBNull.Value ? "" : Convert.ToString(dr[1]),
-
-							}).ToList();
-			return locationlist;
-		}
+		
 
 		public static List<QuotationView> GetQuotationList(AbssConn abssConn)
 		{

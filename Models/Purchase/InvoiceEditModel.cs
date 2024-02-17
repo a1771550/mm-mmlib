@@ -140,13 +140,14 @@ namespace MMLib.Models.Invoice
         {
             bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
             using var context = new MMDbContext();
+            var connection = new SqlConnection(defaultConnection);
+            connection.Open();
+
+            Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id = 0, code = pstCode });
 
             Invoice = new InvoiceModel();
             Device device = null;
             if (!isapprover) device = context.Devices.First();
-
-            var connection = new SqlConnection(defaultConnection);
-            connection.Open();
 
             DateTime dateTime = DateTime.Now;
 
@@ -157,38 +158,74 @@ namespace MMLib.Models.Invoice
             if (InvoiceList.Count == 0)
             {
                 LastInvoiceId = GenInvoiceId(pstCode, 0);
-                HashSet<string> SupInvoiceIds = new HashSet<string>();
-                SupInvoiceIds = InvoiceList.Select(x => x.Id).Distinct().ToHashSet();
-                foreach (var id in SupInvoiceIds) if (!DicInvoicePayments.ContainsKey(id)) DicInvoicePayments[id] = [];
+                Invoice.Id = LastInvoiceId;
+                Invoice.siAmt = Purchase.pstAmount;
+                InvoiceList.Add(Invoice);
 
-                InvoicePayments = connection.Query<InvoicePaymentModel>(@"EXEC dbo.GetInvoicePaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", SupInvoiceIds) }).ToList();
-
-                foreach (var invoice in InvoiceList) invoice.Payments = InvoicePayments.Where(x => x.InvoiceId == invoice.Id).ToList();
-
-                foreach (var payment in InvoicePayments)
+                InvoicePayments = [];
+                InvoicePayments.Add(new InvoicePaymentModel
                 {
-                    if (DicInvoicePayments.ContainsKey(payment.InvoiceId))
-                    {
-                        DicInvoicePayments[payment.InvoiceId].Add(new InvoicePaymentModel
-                        {
-                            payId = payment.Id,
-                            InvoiceId = payment.InvoiceId,
-                            seq = payment.seq,
-                            sipAmt = payment.sipAmt,
-                            sipChequeNo = payment.sipChequeNo,
-                            Remark = payment.Remark,
-                            CreateTime = payment.CreateTime,
-                            CreateBy = payment.CreateBy,
-                        });
+                    InvoiceId = LastInvoiceId,
+                    sipAmt = 0,
+                });
 
-                    }
+                var currentInvoice = context.SupplierInvoices.FirstOrDefault(x => x.Id == LastInvoiceId);
+                if (currentInvoice == null)
+                {
+                    context.SupplierInvoices.Add(new SupplierInvoice
+                    {
+                        Id = LastInvoiceId,
+                        pstCode = pstCode,
+                        siAmt = Purchase.pstAmount,
+                        siCheckout = false,
+                        AccountProfileId = apId,
+                        CreateBy = User.UserCode,
+                        CreateTime = dateTime,
+                    });
+                    context.SaveChanges();
+                }
+
+                var currentPayments = context.InvoicePayments.Where(x => x.InvoiceId == LastInvoiceId).ToList();
+                if (currentPayments.Count == 0)
+                {
+                    context.InvoicePayments.Add(new InvoicePayment
+                    {
+                        InvoiceId = LastInvoiceId,
+                        sipAmt = 0,
+                        sipCheckout = false,
+                        AccountProfileId = apId,
+                        CreateBy = User.UserCode,
+                        CreateTime = dateTime,
+                    });
+                    context.SaveChanges();
                 }
             }
             else
             {
-                int? numId = CommonHelper.GetNumberFrmString(InvoiceList.OrderByDescending(x => x.Id).FirstOrDefault().Id.Split('-')[1]);
-                LastInvoiceId = GenInvoiceId(pstCode, (int)numId);
-                Invoice.Id = LastInvoiceId;
+                HashSet<string> InvoiceIds = new HashSet<string>();
+                InvoiceIds = InvoiceList.Select(x => x.Id).Distinct().ToHashSet();
+                foreach (var id in InvoiceIds) if (!DicInvoicePayments.ContainsKey(id)) DicInvoicePayments[id] = [];
+
+                InvoicePayments = connection.Query<InvoicePaymentModel>(@"EXEC dbo.GetInvoicePaymentsByIds @apId=@apId,@InvoiceIds=@InvoiceIds", new { apId, InvoiceIds = string.Join(",", InvoiceIds) }).ToList();
+            }
+
+            foreach (var payment in InvoicePayments)
+            {
+                if (DicInvoicePayments.ContainsKey(payment.InvoiceId))
+                {
+                    DicInvoicePayments[payment.InvoiceId].Add(new InvoicePaymentModel
+                    {
+                        payId = payment.Id,
+                        InvoiceId = payment.InvoiceId,
+                        seq = payment.seq,
+                        sipAmt = payment.sipAmt,
+                        sipChequeNo = payment.sipChequeNo,
+                        Remark = payment.Remark,
+                        CreateTime = payment.CreateTime,
+                        CreateBy = payment.CreateBy,
+                    });
+
+                }
             }
 
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
@@ -196,9 +233,6 @@ namespace MMLib.Models.Invoice
             DicAcAccounts = ModelHelper.GetDicAcAccounts(connection);
 
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
-
-            Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id = 0, code = pstCode });
-
         }
 
         private string GenInvoiceId(string pstCode, int numId)
@@ -208,7 +242,7 @@ namespace MMLib.Models.Invoice
         public static void EditPayment(InvoicePaymentModel model)
         {
             using var context = new MMDbContext();
-
+            //todo: editpayment
 
             context.SaveChanges();
         }

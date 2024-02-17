@@ -6,7 +6,7 @@ namespace MMLib.Models
 	{
 	
 		public string retmsg { get; set; }
-		public Dictionary<string, List<SerialNoView>> dicItemSNs { get; set; }
+	
 		public bool IsEpay { get; set; }
 	}
 }

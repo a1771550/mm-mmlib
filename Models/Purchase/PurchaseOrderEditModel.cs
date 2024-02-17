@@ -18,8 +18,6 @@ namespace MMLib.Models.Purchase
 	{
 		public PurchaseModel PurchaseOrder { get; set; }
 		public List<PurchaseModel> PurchaseOrderList { get; set; }
-		public List<SerialNoView> SerialNoList { get; set; }
-		public Dictionary<string, List<SerialNoView>> DicItemSNs;
 	
 		public SupplierModel Supplier;
 		public PurchaseOrderEditModel() { }

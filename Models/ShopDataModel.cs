@@ -9,12 +9,6 @@ namespace MMLib.Models
 {
 	public class ShopDataModel
 	{
-		public List<SerialNoView> SerialNoList { get; set; }
 	
-		public ShopDataModel()
-		{
-			SerialNoList = new List<SerialNoView>();
-			
-		}
 	}
 }

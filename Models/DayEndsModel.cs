@@ -58,11 +58,7 @@ namespace MMLib.Models
 			
 			using (var context = new MMDbContext())
 			{
-				DicDeviceInfo = Helpers.ModelHelper.GetDicDeviceInfo(context);			
-
-				ShopCodeList = (from st in context.MyobLocStocks
-								select st.lstStockLoc
-								).Distinct().ToList();
+				DicDeviceInfo = Helpers.ModelHelper.GetDicDeviceInfo(context);		
 
 				PaymentTypes = context.PaymentTypes.Where(x => x.pmtIsActive == true).ToList();
 				currsess = MMLib.Helpers.ModelHelper.GetCurrentSession(context);
