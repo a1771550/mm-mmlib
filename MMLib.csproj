@@ -248,6 +248,7 @@
     <Compile Include="Models\EmailEditModel.cs" />
     <Compile Include="Models\EmailModel.cs" />
     <Compile Include="Models\ForEx\ForExModel.cs" />
+    <Compile Include="Models\Invoice\InvoiceLineModel.cs" />
     <Compile Include="Models\Purchase\InvoiceEditModel.cs" />
     <Compile Include="Models\Invoice\PaymentEditModel.cs" />
     <Compile Include="Models\Invoice\InvoiceModel.cs" />

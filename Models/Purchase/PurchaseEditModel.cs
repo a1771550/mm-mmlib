@@ -642,15 +642,22 @@ namespace MMLib.Models.Purchase
                 {
                     if (IsUserRole.isdirectorboard)
                     {
-                        purchase.pstStatus = PurchaseStatus.order.ToString();
+                        //purchase.pstStatus = PurchaseStatus.order.ToString();
                         pqStatus = RequestStatus.approvedByDirectorBoard.ToString();
                         reactType = ReactType.ApprovedByDirectorBoard;
                     }
 
                     if (IsUserRole.ismuseumdirector)
                     {
-                        pqStatus = RequestStatus.requestingByMuseumDirector.ToString();
-                        reactType = ReactType.PassedToDirectorBoard;
+                        pqStatus =  purchase.pqStatus.ToLower()== RequestStatus.approvedByDirectorBoard.ToString().ToLower()? RequestStatus.approvedByMuseumDirector.ToString() : RequestStatus.requestingByMuseumDirector.ToString();
+
+                        if (purchase.pqStatus.ToLower() == RequestStatus.approvedByDirectorBoard.ToString().ToLower())
+                        {
+                            purchase.pstStatus = PurchaseStatus.order.ToString();
+                            reactType = ReactType.ApprovedByMuseumDirector;
+                        }
+                        else reactType = ReactType.PassedToDirectorBoard;                      
+                        
                         updatePurchase4MDApproval(purchase, SelectedSupCode, context);
                     }
 

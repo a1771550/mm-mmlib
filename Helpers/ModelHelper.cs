@@ -1196,7 +1196,7 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0)
+        public static bool SendNotificationEmail(string pstCode, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
         {
             int okcount = 0;
             int ngcount = 0;
@@ -1233,7 +1233,7 @@ namespace MMLib.Helpers
 
                 string mailbody = string.Empty;
                 string orderlnk;
-                string strorder = string.Format(Resource.RequestFormat, Resource.Purchase);
+                string strorder = string.Concat("<strong>", string.Format(Resource.RequestFormat, Resource.Purchase), "</strong>");
                 string orderdesc = getOrderDesc(desc, pstCode);
 
                 if (isThreshold == 1)
@@ -1280,10 +1280,20 @@ namespace MMLib.Helpers
                         message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
                         foreach (var md in mdInfo)
                         {
-                            mailbody = string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
-                            mailbody = string.Concat(mailbody, $"<p><strong>{string.Format(Resource.SelectedFormat, Resource.Vendor)}:</strong>", " ", selectedSupplier.supName, "</p>");
+                            mailbody = string.Concat("<h3>Hi ", md.UserName, "</h3>", string.Format(Resource.ApprovedByDBPoMsgFormat, strorder, string.Concat("<strong>", pstCode, "</strong>"), string.Concat("<strong>", selectedSupplier.supName, "</strong>")));
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
-                        }                            
+                        }
+                    }
+                    
+                    if (reactType == ReactType.ApprovedByMuseumDirector)
+                    {                        
+                        message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
+
+                        foreach (var inferior in inferiors)
+                        {
+                            mailbody = string.Concat("<h3>Hi ", inferior.UserName, "</h3>", string.Format(Resource.ApprovedByDBPoMsgFormat, strorder, string.Concat("<strong>", pstCode, "</strong>"), string.Concat("<strong>", selectedSupplier.supName, "</strong>")));
+                            sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
+                        }
                     }
                 }
                 else

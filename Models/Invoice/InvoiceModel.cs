@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace MMLib.Models.Invoice
 {
-    public class InvoiceModel : SupplierInvoice
+    public class InvoiceModel : MMDAL.Invoice
     {
         public string AmountDisplay { get { return siAmt==null?"": CommonHelper.FormatNumber((decimal)siAmt); } }
         public string AccountName { get; set; }
@@ -37,11 +37,20 @@ namespace MMLib.Models.Invoice
 		public string PayCreateBy { get; set; }
 		public DateTime PayCreateTime { get; set; }
 
-		public List<InvoicePaymentModel> Payments { get; set; } = [];
+		
 		public string spChequeNo { get; set; }
 		public long payId { get; set; }
 		public string filePath { get; set; }
 		public string Files { get; set; }
-	}
+
+		public List<InvoiceLineModel> Lines { get; set; } = [];
+        public List<InvoicePaymentModel> Payments { get; set; } = [];
+
+		public InvoiceModel()
+		{
+			Lines = new List<InvoiceLineModel>();
+			Payments = new List<InvoicePaymentModel>();
+		}
+    }
 
 }
