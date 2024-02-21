@@ -11,7 +11,7 @@ namespace MMLib.Models.Invoice
 {
     public class InvoiceLineModel:InvoiceLine
     {
-        public string AmountDisplay { get { return ilAmt == null ? "" : CommonHelper.FormatNumber((decimal)ilAmt); } }
+        public string AmountDisplay { get { return ilAmt == null ? "" : CommonHelper.FormatNumber((decimal)ilAmt, false); } }
         public string RemarkDisplay
         {
             get
