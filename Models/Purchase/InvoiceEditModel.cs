@@ -15,11 +15,13 @@ using System.Text.Json;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using MMLib.Models.Purchase;
 using System.Configuration;
+using System.IO;
 
 namespace MMLib.Models.Invoice
 {
     public class InvoiceEditModel : PagingBaseModel
     {
+        public Dictionary<string, List<InvoiceLineInfoModel>> DicInvLnFileList { get; set; } = new Dictionary<string, List<InvoiceLineInfoModel>>();
         public Dictionary<string, List<InvoicePaymentModel>> DicInvoicePayments { get; set; } = new Dictionary<string, List<InvoicePaymentModel>>();
         public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
         public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
@@ -144,20 +146,6 @@ namespace MMLib.Models.Invoice
                 Invoice.Id = LastInvoiceId;
                 Invoice.siAmt = Purchase.pstAmount;
 
-                Invoice.Lines.Add(new InvoiceLineModel
-                {
-                    InvoiceId = LastInvoiceId,
-                    ilAmt = 0,
-                });
-
-                Invoice.Payments.Add(new InvoicePaymentModel
-                {
-                    InvoiceId = LastInvoiceId,
-                    sipAmt = 0,
-                });
-
-                InvoiceList.Add(Invoice);
-
                 var currentInvoice = context.Invoices.FirstOrDefault(x => x.Id == LastInvoiceId);
                 if (currentInvoice == null)
                 {
@@ -175,9 +163,10 @@ namespace MMLib.Models.Invoice
                 }
 
                 var currentLines = context.InvoiceLines.Where(x => x.InvoiceId == LastInvoiceId).ToList();
+                long newLineId = 0;
                 if (currentLines.Count == 0)
                 {
-                    context.InvoiceLines.Add(new InvoiceLine
+                    var Line = context.InvoiceLines.Add(new InvoiceLine
                     {
                         InvoiceId = LastInvoiceId,
                         ilAmt = 0,
@@ -186,12 +175,14 @@ namespace MMLib.Models.Invoice
                         CreateTime = dateTime,
                     });
                     context.SaveChanges();
+                    newLineId = Line.Id;
                 }
 
                 var currentPayments = context.InvoicePayments.Where(x => x.InvoiceId == LastInvoiceId).ToList();
+                long newPayId = 0;
                 if (currentPayments.Count == 0)
                 {
-                    context.InvoicePayments.Add(new InvoicePayment
+                    var Pay = context.InvoicePayments.Add(new InvoicePayment
                     {
                         InvoiceId = LastInvoiceId,
                         sipAmt = 0,
@@ -201,40 +192,62 @@ namespace MMLib.Models.Invoice
                         CreateTime = dateTime,
                     });
                     context.SaveChanges();
+                    newPayId = Pay.Id;
                 }
+
+                Invoice.Lines.Add(new InvoiceLineModel
+                {
+                    Id = newLineId,
+                    InvoiceId = LastInvoiceId,
+                    ilAmt = 0,
+                });
+
+                Invoice.Payments.Add(new InvoicePaymentModel
+                {
+                    Id = newPayId,
+                    InvoiceId = LastInvoiceId,
+                    sipAmt = 0,
+                });
+
+                InvoiceList.Add(Invoice);
             }
             else
             {
-                //HashSet<string> InvoiceIds = new HashSet<string>();
-                //InvoiceIds = InvoiceList.Select(x => x.Id).Distinct().ToHashSet();
-                //foreach (var id in InvoiceIds) if (!DicInvoicePayments.ContainsKey(id)) DicInvoicePayments[id] = [];              
-
                 Invoice = string.IsNullOrEmpty(InvoiceId) ? InvoiceList.OrderByDescending(x => x.CreateTime).FirstOrDefault() : InvoiceList.FirstOrDefault(x => x.Id == InvoiceId);
 
                 Invoice.Lines = connection.Query<InvoiceLineModel>(@"EXEC dbo.GetInvoiceLinesById @apId=@apId,@InvoiceId=@InvoiceId", new { apId, InvoiceId = Invoice.Id }).ToList();
                 Invoice.Payments = connection.Query<InvoicePaymentModel>(@"EXEC dbo.GetInvoicePaymentsById @apId=@apId,@InvoiceId=@InvoiceId", new { apId, InvoiceId = Invoice.Id }).ToList();
 
                 LastInvoiceId = Invoice.Id;
+
+                List<InvoiceLineInfoModel> lineinfoes = connection.Query<InvoiceLineInfoModel>("EXEC dbo.GetInvoiceLineFilesByInvId @apId=@apId,@invoiceId=@invoiceId", new { apId, invoiceId = Invoice.Id }).ToList();
+                DicInvLnFileList = new Dictionary<string, List<InvoiceLineInfoModel>>();
+
+                HashSet<long?> lineIds = new HashSet<long?>();
+                //init DicInvLnFileList
+                if (lineinfoes != null && lineinfoes.Count > 0)
+                {
+                    lineIds = lineinfoes.Select(x => x.lineId).ToHashSet();
+                    foreach (var lineId in lineIds) DicInvLnFileList[lineId.ToString()] = new List<InvoiceLineInfoModel>();
+                }
+
+                if (lineIds.Count > 0)
+                {
+                    foreach (var lineId in lineIds)
+                    {
+                        var infoes = lineinfoes.Where(x=>x.lineId == lineId).ToList();
+                        if (DicInvLnFileList.Keys.Contains(lineId.ToString())) DicInvLnFileList[lineId.ToString()] = infoes;
+
+                        var line = Invoice.Lines.FirstOrDefault(x => x.Id == lineId);
+                        line.FileList = new List<string>();
+                        foreach(var info in infoes)
+                        {
+                            string file = $"<li><a class=\"filelnk\" href=\"#\" data-lnk=\"/Uploads/Inv/{apId}/{Invoice.Id}/{lineId}/{info.fileName}\" data-id=\"{info.Id}\">{info.fileName}</a><i class=\"mx-2 fa-solid fa-trash removefile pointer line\" data-id=\"{info.Id}\" data-lineid=\"{info.lineId}\" data-name=\"{info.fileName}\" aria-hidden=\"true\"></i></li>";
+                            line.FileList.Add(file);                            
+                        }
+                    }                    
+                }
             }
-
-            //foreach (var payment in Invoice.Payments)
-            //{
-            //    if (DicInvoicePayments.ContainsKey(payment.InvoiceId))
-            //    {
-            //        DicInvoicePayments[payment.InvoiceId].Add(new InvoicePaymentModel
-            //        {
-            //            payId = payment.Id,
-            //            InvoiceId = payment.InvoiceId,
-            //            seq = payment.seq,
-            //            sipAmt = payment.sipAmt,
-            //            sipChequeNo = payment.sipChequeNo,
-            //            Remark = payment.Remark,
-            //            CreateTime = payment.CreateTime,
-            //            CreateBy = payment.CreateBy,
-            //        });
-
-            //    }
-            //}
 
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
 

@@ -105,23 +105,7 @@ namespace MMLib.Helpers
                 }
             }
         }
-        public static void HandleViewFile(string filepath, int apId, string filecode, ref List<string> ImgList, ref FileData filedata)
-        {
-            if (!string.IsNullOrEmpty(filepath))
-            {
-                var filelnk = Path.Combine(apId.ToString(), filecode, filepath);
-                if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
-                {
-                    filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
-                    ImgList.Add(filelnk);
-                }
-                else
-                {
-                    string filename = Path.GetFileName(filepath);
-                    filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-id='{filedata.Id}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.Id}' data-name='{filename}'></i>";
-                }
-            }
-        }
+       
 
 
 
@@ -1484,11 +1468,11 @@ namespace MMLib.Helpers
             return MYOBHelper.GetConnectionString(context, accesstype, apId);
         }
 
-        public static void HandleViewFile(string filepath, int apId, string invoiceId, ref List<string> ImgList, ref InvoiceFileData filedata)
+        public static void HandleViewFile(string filepath, int apId, string invoiceId, long lineId, ref List<string> ImgList, ref InvoiceLineFileData filedata)
         {
             if (!string.IsNullOrEmpty(filepath))
             {
-                var filelnk = Path.Combine(apId.ToString(), invoiceId, filepath);
+                var filelnk = Path.Combine(apId.ToString(), invoiceId, lineId.ToString(), filepath);
                 if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
                 {
                     filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
@@ -1502,6 +1486,23 @@ namespace MMLib.Helpers
             }
         }
 
+        public static void HandleViewFile(string filepath, int apId, string filecode, ref List<string> ImgList, ref FileData filedata)
+        {
+            if (!string.IsNullOrEmpty(filepath))
+            {
+                var filelnk = Path.Combine(apId.ToString(), filecode, filepath);
+                if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
+                {
+                    filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
+                    ImgList.Add(filelnk);
+                }
+                else
+                {
+                    string filename = Path.GetFileName(filepath);
+                    filedata.FilePath = $"<a class='filelnk' href='#' data-lnk='{filelnk}' data-name='{filename}' data-id='{filedata.Id}'>{{0}}{filename}</a><i class='mx-2 fa-solid fa-trash removefile pointer' data-id='{filedata.Id}' data-name='{filename}'></i>";
+                }
+            }
+        }
         public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection)
         {
             var DicAcAccounts = new Dictionary<string, List<AccountModel>>();
@@ -1644,8 +1645,9 @@ namespace MMLib.Helpers
         public List<string> vtlist { get; set; }
     }
 
-    public class InvoiceFileData()
+    public class InvoiceLineFileData()
     {
+        public long lineId { get; set; }
         public string InvoiceId { get; set; }
         public string Name { get; set; }
         public string FilePath { get; set; }
