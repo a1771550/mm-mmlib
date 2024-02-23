@@ -20,7 +20,7 @@ namespace MMLib.Models.Invoice
         {
             get
             {
-                int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxRemarkDisplayLength"]);
+                int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxDescRemarkDisplayLength"]);
                 return Remark != null && Remark.Length > maxremarkdisplaylength ? string.Concat(Remark.Substring(0, maxremarkdisplaylength), "...") : Remark ?? string.Empty;
             }
         }
@@ -44,12 +44,12 @@ namespace MMLib.Models.Invoice
 		public string Files { get; set; }
 
 		public List<InvoiceLineModel> Lines { get; set; } = [];
-        public List<InvoicePaymentModel> Payments { get; set; } = [];
+        public List<InvoicePayModel> Pays { get; set; } = [];
 
 		public InvoiceModel()
 		{
 			Lines = new List<InvoiceLineModel>();
-			Payments = new List<InvoicePaymentModel>();
+			Pays = new List<InvoicePayModel>();
 		}
     }
 

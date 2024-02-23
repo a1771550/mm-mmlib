@@ -250,11 +250,11 @@
     <Compile Include="Models\ForEx\ForExModel.cs" />
     <Compile Include="Models\Invoice\InvoiceLineInfoModel.cs" />
     <Compile Include="Models\Invoice\InvoiceLineModel.cs" />
-    <Compile Include="Models\Invoice\InvoicePaymentInfoModel.cs" />
+    <Compile Include="Models\Invoice\InvoicePayInfoModel.cs" />
     <Compile Include="Models\Purchase\InvoiceEditModel.cs" />
-    <Compile Include="Models\Invoice\PaymentEditModel.cs" />
+    <Compile Include="Models\Invoice\PayEditModel.cs" />
     <Compile Include="Models\Invoice\InvoiceModel.cs" />
-    <Compile Include="Models\Invoice\InvoicePaymentModel.cs" />
+    <Compile Include="Models\Invoice\InvoicePayModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Job\JobEditModel.cs" />
     <Compile Include="Models\Job\JobModel.cs" />

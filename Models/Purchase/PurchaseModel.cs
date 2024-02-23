@@ -29,7 +29,7 @@ namespace MMLib.Models.Purchase
         {
             get
             {
-				int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxRemarkDisplayLength"]);
+				int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxDescRemarkDisplayLength"]);
                 return pstRemark != null && pstRemark.Length > maxremarkdisplaylength ? string.Concat(pstRemark.Substring(0, maxremarkdisplaylength), "...") : pstRemark ?? string.Empty;
             }
 		}

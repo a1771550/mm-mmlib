@@ -13,12 +13,21 @@ namespace MMLib.Models.Invoice
     {
         public List<string> FileList { get; set; }
         public string AmountDisplay { get { return ilAmt == null ? "" : CommonHelper.FormatNumber((decimal)ilAmt, false); } }
+
+        public string DescDisplay
+        {
+            get
+            {
+                int maxlength = int.Parse(ConfigurationManager.AppSettings["MaxDescRemarkDisplayLength"]);
+                return ilDesc != null && ilDesc.Length > maxlength ? string.Concat(ilDesc.Substring(0, maxlength), "...") : ilDesc ?? string.Empty;
+            }
+        }
         public string RemarkDisplay
         {
             get
             {
-                int maxremarkdisplaylength = int.Parse(ConfigurationManager.AppSettings["MaxRemarkDisplayLength"]);
-                return Remark != null && Remark.Length > maxremarkdisplaylength ? string.Concat(Remark.Substring(0, maxremarkdisplaylength), "...") : Remark ?? string.Empty;
+                int maxlength = int.Parse(ConfigurationManager.AppSettings["MaxDescRemarkDisplayLength"]);
+                return Remark != null && Remark.Length > maxlength ? string.Concat(Remark.Substring(0, maxlength), "...") : Remark ?? string.Empty;
             }
         }
     }

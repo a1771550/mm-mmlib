@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MMLib.Models.Invoice
 {
-    public class PaymentEditModel:PagingBaseModel
+    public class PayEditModel:PagingBaseModel
     {
 
     }

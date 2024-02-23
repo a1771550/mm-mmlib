@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MMLib.Models.Invoice
 {
-    public class InvoicePaymentInfoModel:MMDAL.InvoicePaymentInfo
+    public class InvoicePayInfoModel:MMDAL.InvoicePayInfo
     {
     }
 

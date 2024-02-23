@@ -1468,11 +1468,11 @@ namespace MMLib.Helpers
             return MYOBHelper.GetConnectionString(context, accesstype, apId);
         }
 
-        public static void HandleViewFile(string filepath, int apId, string invoiceId, long lineId, ref List<string> ImgList, ref InvoiceLineFileData filedata)
+        public static void HandleViewFile(string filepath, int apId, string invoiceId, string type, long? lineId, long? payId, ref List<string> ImgList, ref InvoiceFileData filedata)
         {
             if (!string.IsNullOrEmpty(filepath))
             {
-                var filelnk = Path.Combine(apId.ToString(), invoiceId, lineId.ToString(), filepath);
+                var filelnk = type=="line"? Path.Combine(apId.ToString(), invoiceId, lineId.ToString(), filepath): Path.Combine(apId.ToString(), invoiceId, payId.ToString(), filepath);
                 if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
                 {
                     filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
@@ -1645,15 +1645,17 @@ namespace MMLib.Helpers
         public List<string> vtlist { get; set; }
     }
 
-    public class InvoiceLineFileData()
+    public class InvoiceFileData()
     {
-        public long lineId { get; set; }
+        public long? lineId { get; set; }
+        public long? payId { get; set; }
         public string InvoiceId { get; set; }
         public string Name { get; set; }
         public string FilePath { get; set; }
         public string ImgPath { get; set; }
         public long FileId { get; set; }
     }
+    
     public class FileData()
     {
         public long Id { get; set; }
