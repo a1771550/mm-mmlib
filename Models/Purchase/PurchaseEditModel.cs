@@ -20,6 +20,7 @@ using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
+using MMLib.Models.Invoice;
 
 namespace MMLib.Models.Purchase
 {
@@ -544,87 +545,9 @@ namespace MMLib.Models.Purchase
             //return StringHandlingForSQL(string.Concat(currencycode, " ", paytypeamts, $"({exchangerate})", " ", pstRemark));
             return Helpers.ModelHelper.genMemo(currencycode, exchangerate, paytypeamts, pstRemark);
         }
-        private static string StringHandlingForSQL(string str)
-        {
-            return CommonHelper.StringHandlingForSQL(str);
-        }
+       
 
-        public static List<string> GetUploadServiceSqlList(ref DataTransferModel dmodel, MMDbContext context)
-        {
-            var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId == apId).appVal;
-
-            dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
-            var purchase = dmodel.Purchase; //for later use
-
-            string sql = "";
-            List<string> values = [];
-            List<string> columns = [];
-            string strcolumn = "", value = "";
-            List<string> sqllist = [];
-
-            if (dmodel.Purchase != null)
-            {
-                dmodel.CheckOutIds_Purchase = [purchase.Id];
-                var location = comInfo.Shop;
-
-                sql = MyobHelper.InsertImportServicePurchasesSql;
-                sql = sql.Replace("0", "{0}");
-
-                for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++)
-                {
-                    columns.Add("'{" + j + "}'");
-                }
-                strcolumn = string.Join(",", columns);
-                //INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-                value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, StringHandlingForSQL(purchase.pstSupplierInvoice), "A", comInfo.comAccountNo, StringHandlingForSQL(purchase.SupplierName), purchase.Amount4Abss, purchase.Amount4Abss, StringHandlingForSQL(purchase.pstDesc));
-                values.Add(value);
-
-                sql = string.Format(sql, string.Join(",", values));
-                sqllist.Add(sql);
-            }
-
-            #region Instalment Payments:
-            sqlConnection.Open();
-            //List<SupplierPaymentModel> supplierpayments = sqlConnection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout", new { apId, purchase.pstCode, purchase.supCode, checkout = false }).ToList();
-
-            //if (supplierpayments.Count > 0)
-            //{
-            //    sql = MyobHelper.InsertImportPayBillsSql;
-            //    sql = sql.Replace("0", "{0}");
-            //    values = [];
-            //    columns = [];
-            //    strcolumn = "";
-
-            //    for (int j = 0; j < MyobHelper.ImportPayBillsColCount; j++)
-            //    {
-            //        columns.Add("'{" + j + "}'");
-            //    }
-            //    strcolumn = string.Join(",", columns);
-            //    value = "";
-
-            //    //string payac = comInfo.comPayAccountNo.Replace("-", "");
-
-            //    dmodel.CheckOutIds_SupPayLn = new HashSet<long>();
-
-            //    //todo:
-            //    //foreach (var sp in supplierpayments)
-            //    //{
-            //    //    dmodel.CheckOutIds_SupPayLn.Add(sp.Id);
-            //    //    sp.dateformat = purchase.dateformat;
-            //    //    string payac = sp.supAccount.Replace("-", "");
-            //    //    //INSERT INTO Import_Pay_Bills (CoLastName,PaymentAccount,PurchaseNumber,SuppliersNumber,AmountApplied,PaymentDate,ChequeNumber) VALUES ('{supname}','{payac}','{pono}','{supno}','500','{date}','897852')
-            //    //    value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), payac, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.Amount), sp.PayDate4ABSS, StringHandlingForSQL(sp.spChequeNo));
-            //    //    values.Add(value);
-            //    //}
-
-            //    sql = string.Format(sql, string.Join(",", values));
-            //    sqllist.Add(sql);
-            //}
-            #endregion
-
-            return sqllist;
-        }
-
+       
         public static PurchaseModel getPurchaseModelById(long Id)
         {
             var connection = new SqlConnection(defaultConnection);

@@ -249,7 +249,7 @@
     <Compile Include="Models\Invoice\InvoiceLineInfoModel.cs" />
     <Compile Include="Models\Invoice\InvoiceLineModel.cs" />
     <Compile Include="Models\Invoice\InvoicePayInfoModel.cs" />
-    <Compile Include="Models\Purchase\InvoiceEditModel.cs" />
+    <Compile Include="Models\Invoice\InvoiceEditModel.cs" />
     <Compile Include="Models\Invoice\PayEditModel.cs" />
     <Compile Include="Models\Invoice\InvoiceModel.cs" />
     <Compile Include="Models\Invoice\InvoicePayModel.cs" />

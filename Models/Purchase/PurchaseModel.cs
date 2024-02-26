@@ -13,7 +13,7 @@ using CommonLib.App_GlobalResources;
 namespace MMLib.Models.Purchase
 {
     public class PurchaseModel : MMDAL.Purchase
-	{
+	{		
 		public string Mode { get; set; }
 		public string JsPurchaseDate { get; set; }
 		public string JsPromisedDate { get; set; }

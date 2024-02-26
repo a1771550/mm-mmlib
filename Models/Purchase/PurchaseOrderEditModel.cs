@@ -69,17 +69,18 @@ namespace MMLib.Models.Purchase
 				}
 				else filteredOrderList = orderlist;
 
-				var invoicePaymentList = SqlConnection.Query<InvoicePayModel>(@"EXEC dbo.GetInvoicePaysByCode @apId=@apId", new { apId }).ToList();
+				var pstCodes = string.Join(",", orderlist.Select(x => x.pstCode).Distinct().ToHashSet());
+				var invoicePaymentList = SqlConnection.Query<InvoicePayModel>(@"EXEC dbo.GetInvoicePaysByCodes @apId=@apId,@pstCodes=@pstCodes", new { apId, pstCodes }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)
 				{
 					var g = group.FirstOrDefault();
 
-					decimal totalCheckedOutPayments = invoicePaymentList.Where(x => x.pstCode == g.pstCode && x.sipCheckout).Sum(x => x.sipAmt);
+					decimal totalCheckedOutPayments = invoicePaymentList.Where(x => x.pstCode == g.pstCode).Sum(x => x.sipAmt);
 					if (totalCheckedOutPayments >= g.pstAmount) g.FullPaidCheckedOut = true;
 
-					PurchaseOrderList.Add(g);				
+                    PurchaseOrderList.Add(g);				
 				}
 				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}

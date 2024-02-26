@@ -11,6 +11,8 @@ namespace MMLib.Models.Invoice
 {
     public class InvoiceLineModel:InvoiceLine
     {
+        public string SupplierName { get; set; }
+        public bool Ready4ABSS { get { return AccountID != null && (int)AccountID > 0; } }
         public List<string> FileList { get; set; }
         public string AmountDisplay { get { return ilAmt == null ? "" : CommonHelper.FormatNumber((decimal)ilAmt, false); } }
 

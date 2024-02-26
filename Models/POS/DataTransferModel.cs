@@ -10,8 +10,8 @@ namespace MMLib.Models
 		public PurchaseModel Purchase { get; set; } 
 
         public List<long> CheckOutIds_Supplier { get; set; }
-		public HashSet<long> CheckOutIds_Purchase { get; set; }
-		public HashSet<long> CheckOutIds_PayLn { get; set; }
+		public HashSet<long> CheckOutIds_InvoiceLine { get; set; }
+		public HashSet<long> CheckOutIds_PayLine { get; set; }
         public DateTime FrmToDate { get; set; }
         public DateTime ToDate { get; set; }
         public string SelectedLocation { get; set; }
@@ -24,8 +24,8 @@ namespace MMLib.Models
         {         
             CheckOutIds_Supplier = new List<long>();
             Supplierlist = new List<SupplierModel>();
-            CheckOutIds_Purchase = new HashSet<long>();
-            CheckOutIds_PayLn = new HashSet<long>();
+            CheckOutIds_InvoiceLine = new HashSet<long>();
+            CheckOutIds_PayLine = new HashSet<long>();
         }
     }
 }
