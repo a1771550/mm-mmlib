@@ -240,8 +240,6 @@
     <Compile Include="Models\Account\AccessRightModel.cs" />
     <Compile Include="Models\Account\AccountProfileView.cs" />
     <Compile Include="Models\Account\LoginUserModel.cs" />
-    <Compile Include="Models\ActionLogEditModel.cs" />
-    <Compile Include="Models\ActionLogModel.cs" />
     <Compile Include="Models\BaseModel.cs" />
     <Compile Include="Models\DayEndsItem.cs" />
     <Compile Include="Models\DayEndsModel.cs" />

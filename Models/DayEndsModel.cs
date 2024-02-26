@@ -27,14 +27,13 @@ namespace MMLib.Models
 		//public List<string> AccountProfileList { getPG; set; }
 
 		public CheckInOutModel CheckInOut { get; set; }
-		public SessUser ShopKeeper { get; set; }
 
 		public string[] CentralFileNames { get; set; }
 		public string[] CentralFileCategories { get; set; }
 
 		public List<AccountProfileView> AccountProfiles { get; set; }		
 		
-		public Dictionary<string, DeviceModel> DicDeviceInfo { get; set; }
+		
 		public List<DeviceModel> DeviceList { get; set; }		
 		public DayEndsModel():base()
 		{			
@@ -52,14 +51,11 @@ namespace MMLib.Models
 			ExImViews = new List<DayEndsItem>();
 			//IsLocal = HttpContext.Current.Request.IsLocal;
 			Session currsess = null;
-			DicDeviceInfo = new Dictionary<string, DeviceModel>();
 			
 			DeviceList = new List<DeviceModel>();
 			
 			using (var context = new MMDbContext())
 			{
-				DicDeviceInfo = Helpers.ModelHelper.GetDicDeviceInfo(context);		
-
 				PaymentTypes = context.PaymentTypes.Where(x => x.pmtIsActive == true).ToList();
 				currsess = MMLib.Helpers.ModelHelper.GetCurrentSession(context);
 				ShopCode = currsess.sesShop;

@@ -254,7 +254,8 @@ namespace MMLib.Helpers
         {
             int reId = 0;
             Receipt = (from r in context.Receipts
-                       where r.deviceCode.ToLower() == ComInfo.Device.ToLower() && r.shopCode.ToLower() == ComInfo.Shop.ToLower() && r.AccountProfileId == ComInfo.AccountProfileId
+                       where                        
+                       r.AccountProfileId == ComInfo.AccountProfileId
                        select new ReceiptViewModel { Id = r.Id, CompanyName = r.CompanyName + ":" + r.CompanyNameCN + ":" + r.CompanyNameEng, CompanyAddress = r.CompanyAddress + ":" + r.CompanyAddressCN + ":" + r.CompanyAddressEng, CompanyAddress1 = r.CompanyAddress1 + ":" + r.CompanyAddress1CN + ":" + r.CompanyAddress1Eng, CompanyPhone = r.CompanyPhone, CompanyWebSite = r.CompanyWebSite }
                           ).FirstOrDefault();
             int lang = CultureHelper.CurrentCulture;
@@ -363,79 +364,9 @@ namespace MMLib.Helpers
         public static int GetAccountProfileId(MMDbContext context)
         {
             return GetCurrentSession(context).AccountProfileId;
-        }
-        public static string GetNewPurchaseOrderCode(DeviceModel model, MMDbContext context, bool plusone = true)
-        {
-            var device = context.Devices.Find(model.dvcUID);
-            var purchaseprefix = device.dvcPurchaseOrderPrefix;
-            var nextpurchaseno = plusone ? device.dvcNextPurchaseOrderNo + 1 : device.dvcNextPurchaseOrderNo;
-            string purchaseno = device.dvcNextPurchaseOrderNo > device.dvcPurchaseInitNo ? $"{nextpurchaseno:000000}" : device.dvcPurchaseInitNo.ToString();
-            return string.Concat(purchaseprefix, purchaseno);
-        }
-        public static string GetNewPurchaseRequestCode(DeviceModel model, MMDbContext context, bool plusone = true)
-        {
-            var device = context.Devices.Find(model.dvcUID);
-            var purchaseprefix = device.dvcPurchaseRequestPrefix;
-            var nextpurchaseno = plusone ? device.dvcNextPurchaseRequestNo + 1 : device.dvcNextPurchaseRequestNo;
-            string purchaseno = device.dvcNextPurchaseRequestNo > device.dvcPurchaseInitNo ? $"{nextpurchaseno:000000}" : device.dvcPurchaseInitNo.ToString();
-            return string.Concat(purchaseprefix, purchaseno);
-        }
-        public static string GetNewWholeSalesCode(DeviceModel model, MMDbContext context, bool plusone = true)
-        {
-            var device = context.Devices.Find(model.dvcUID);
-            var purchasecode = device.dvcWholesalesPrefix;
-            var nextpurchaseno = plusone ? device.dvcNextWholeSalesNo + 1 : device.dvcNextWholeSalesNo;
-            string purchaseno = device.dvcNextWholeSalesNo > device.dvcWholeSalesInitNo ? $"{nextpurchaseno:000000}" : device.dvcWholeSalesInitNo.ToString();
-            return string.Concat(purchasecode, purchaseno);
-        }
-        public static string GetNewPurchaseReturnCode(DeviceModel model, MMDbContext context)
-        {
-            var device = context.Devices.FirstOrDefault(x => x.AccountProfileId == model.AccountProfileId && x.dvcShop == model.dvcShop && x.dvcIsActive);
-            var returncode = device.dvcPsReturnCode;
-            string returnno = device.dvcNextPsReturnNo > device.dvcPsReturnInitNo ? $"{device.dvcNextPsReturnNo++:000000}" : device.dvcPsReturnInitNo.ToString();
-            return string.Concat(returncode, returnno);
-        }
-        public static string GetNewWholeSalesReturnCode(DeviceModel model, MMDbContext context)
-        {
-            var device = context.Devices.FirstOrDefault(x => x.AccountProfileId == model.AccountProfileId && x.dvcShop == model.dvcShop && x.dvcIsActive);
-            var returncode = device.dvcWsReturnCode;
-            string returnno = device.dvcNextWsReturnNo > device.dvcWsReturnInitNo ? $"{device.dvcNextWsReturnNo++:000000}" : device.dvcWsReturnInitNo.ToString();
-            return string.Concat(returncode, returnno);
-        }
+        }       
 
-        public static string GetNewRefundCode(string devicecode, DeviceModel device, MMDbContext context)
-        {
-            string refundcode = "";
-            if (device.dvcCode == devicecode)
-            {
-                refundcode = getNewRefundCode(device);
-            }
-            else
-            {
-                var _device = context.Devices.FirstOrDefault(x => x.dvcCode == devicecode && x.AccountProfileId == ComInfo.AccountProfileId);
-                if (_device != null)
-                {
-                    refundcode = getNewRefundCode((DeviceModel)_device);
-                }
-            }
-            return refundcode;
-        }
-
-        private static string getNewRefundCode(DeviceModel device)
-        {
-            string refundcode;
-            var refundinitcode = device.dvcRtlRefundCode ?? "RF";
-            var refundno = $"{device.dvcNextRefundNo:000000}";
-            refundcode = string.Concat(refundinitcode, refundno);
-            return refundcode;
-        }
-
-        public static string GetItemCodes4PayServices(List<string> salesitemcodes)
-        {
-            var codes = string.Join(",", salesitemcodes);
-            return codes.Length <= 127 ? codes : codes.Substring(0, 127);
-        }
-
+       
         public static List<UserModel> GetStaffList(MMDbContext context, SessUser sessUser)
         {
             List<UserModel> stafflist = new List<UserModel>();
@@ -537,11 +468,6 @@ namespace MMLib.Helpers
                     model.CheckOutIds_Supplier.Add(supplier.supId);
                 }
             }
-
-            if (checkOutType == CheckOutType.Device)
-            {
-                model.DeviceList = GetDeviceList4Export(context, apId);
-            }
         }
 
 
@@ -634,56 +560,7 @@ namespace MMLib.Helpers
             return DateTime.MinValue;
         }
 
-        public static DeviceModel GetDevice(int userId, MMDbContext context = null)
-        {
-            DeviceModel device = new DeviceModel();
-
-            device.dvcShop = ComInfo.Shop;
-            device.dvcCode = ComInfo.Device;
-
-            var devlist = context.Devices.Where(x => x.AccountProfileId == ComInfo.AccountProfileId && x.dvcIsActive).ToList();
-            Device dev = null;
-
-            dev = devlist.FirstOrDefault(x => x.dvcSalesId == userId);
-
-            //var dev = context.Devices.FirstOrDefault(x => x.dvcIsActive);
-            device.dvcUID = dev.dvcUID;
-            device.dvcName = dev.dvcName;
-            device.AccountNo = (int)dev.AccountNo;
-            device.AccountProfileId = dev.AccountProfileId;
-            device.dvcStockLoc = dev.dvcStockLoc;
-
-            device.dvcInvoicePrefix = dev.dvcInvoicePrefix;
-            device.dvcRefundPrefix = dev.dvcRefundPrefix;
-            device.dvcPurchaseRequestPrefix = dev.dvcPurchaseRequestPrefix;
-            device.dvcPurchaseOrderPrefix = dev.dvcPurchaseOrderPrefix;
-            device.dvcWholesalesPrefix = dev.dvcWholesalesPrefix;
-            device.dvcDepositPrefix = dev.dvcDepositPrefix;
-            device.dvcPreorderPrefix = dev.dvcPreorderPrefix;
-
-            device.dvcRtlSalesCode = dev.dvcRtlSalesCode;
-            device.dvcRtlRefundCode = dev.dvcRtlRefundCode;
-
-            device.dvcPsReturnCode = dev.dvcPsReturnCode;
-            device.dvcRtlSalesInitNo = dev.dvcRtlSalesInitNo;
-            device.dvcRtlRefundInitNo = dev.dvcPsReturnInitNo;
-            device.dvcPurchaseInitNo = dev.dvcPurchaseInitNo;
-            device.dvcPsReturnInitNo = dev.dvcPsReturnInitNo;
-            device.dvcNextRtlSalesNo = dev.dvcNextRtlSalesNo;
-            device.dvcNextRefundNo = dev.dvcNextRefundNo;
-            device.dvcNextDepositNo = dev.dvcNextDepositNo;
-            device.dvcNextPurchaseRequestNo = dev.dvcNextPurchaseRequestNo;
-            device.dvcNextPurchaseOrderNo = dev.dvcNextPurchaseOrderNo;
-            device.dvcNextPsReturnNo = dev.dvcNextPsReturnNo;
-            device.dvcNextDepositNo = dev.dvcNextDepositNo;
-            device.dvcNextPreorderNo = dev.dvcNextPreorderNo;
-
-            device.dvcTransferCode = dev.dvcTransferCode;
-            device.dvcNextTransferNo = dev.dvcNextTransferNo;
-
-            device.dvcSalesId = dev.dvcSalesId;
-            return device;
-        }
+    
 
 
         public static int GetCurrentCulture(MMDbContext context = null)
@@ -777,7 +654,8 @@ namespace MMLib.Helpers
             Session currsess = GetCurrentSession(context);
 
             ReceiptViewModel receipt = (from r in context.Receipts
-                                        where r.deviceCode.ToLower() == ComInfo.Device.ToLower() && r.shopCode.ToLower() == ComInfo.Shop.ToLower() && r.AccountProfileId == ComInfo.AccountProfileId
+                                        where 
+                        r.AccountProfileId == ComInfo.AccountProfileId
                                         select new ReceiptViewModel
                                         {
                                             Id = r.Id,
@@ -960,7 +838,7 @@ namespace MMLib.Helpers
             if (HttpContext.Current.Session["Session"] == null) //the worst case...the following code is just for Contingency measures
             {
                 DateTime frmDate = DateTime.Now.Date;
-                // var session = context.GetCurrentPCSession(usercode, frmDate, user.Device.dvcCode, user.Device.dvcShop).FirstOrDefault(); don't use this code!!!
+                
                 if (string.IsNullOrEmpty(usercode))
                 {
                     Session session = (from s in context.Sessions
@@ -1011,33 +889,7 @@ namespace MMLib.Helpers
         {
             return context.AccountProfiles.FirstOrDefault(x => x.Id == accountprofileId).DsnName;
         }
-
-        public static void WriteActionLog(ActionLogModel model, MMDbContext context = null)
-        {
-            if (context == null)
-            {
-                using (context = new MMDbContext())
-                {
-                    writeActionLog(model, context);
-                }
-            }
-            else
-            {
-                writeActionLog(model, context);
-            }
-        }
-
-        private static void writeActionLog(ActionLogModel model, MMDbContext context)
-        {
-            context.AddActionLog(model.actUserCode, model.actName, model.actType, model.actOldValue, model.actNewValue, model.actRemark, model.actLogTime, model.actCusCode, model.actCustomerId, model.AccountProfileId, model.actContactId);
-            context.SaveChanges();
-        }
-
-        public static string GetShopCode(MMDbContext context, bool tolowerstring = true)
-        {
-            Session currsess = GetCurrentSession(context);
-            return tolowerstring ? currsess.sesShop.ToLower() : currsess.sesShop;
-        }
+        
         public static void WriteLog(MMDbContext context, string message, string type)
         {
             DebugLog debugLog = new DebugLog();
@@ -1145,40 +997,7 @@ namespace MMLib.Helpers
             };
             return abssConn;
         }
-
-
-
-
-
-        public static string GetNewPurchaseRequestCode(SessUser user, MMDbContext context)
-        {
-            Device device = context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID);
-            return device != null ? string.Concat(device.dvcPurchaseRequestPrefix, device.dvcNextPurchaseRequestNo) : string.Empty;
-        }
-        public static string GetNewWholeSalesCode(SessUser user, MMDbContext context)
-        {
-            Device device = (ApprovalMode) ? context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID) : HttpContext.Current.Session["Device"] as Device;
-            return device != null ? string.Concat(device.dvcWholesalesPrefix, device.dvcNextWholeSalesNo) : string.Empty;
-        }
-        public static string GetNewSalesCode(SessUser user, MMDbContext context, string type = "")
-        {
-            Device device = ApprovalMode ? context.Devices.FirstOrDefault(x => x.dvcSalesId == user.surUID) : HttpContext.Current.Session["Device"] as Device;
-            //int nextsalesno = string.IsNullOrEmpty(type) ? device.dvcNextRtlSalesNo : device.dvcNextPreorderNo;
-            int nextsalesno = device.dvcNextRtlSalesNo ?? 100001;
-            //if (device.dvcUsedInvoiceNo.Split(',').Contains(nextsalesno.ToString())) nextsalesno++;
-            nextsalesno++;
-            return string.IsNullOrEmpty(type) ? string.Concat(device.dvcInvoicePrefix, nextsalesno) : string.Concat(device.dvcPreorderPrefix, nextsalesno);
-        }
-
-        public static string GetPreorderPrefix(Device device)
-        {
-            return device != null ? device.dvcPreorderPrefix : string.Empty;
-        }
-        public static string GetInvoicePrefix(Device device)
-        {
-            return device != null ? device.dvcInvoicePrefix : string.Empty;
-        }
-
+   
 
         public static bool SendNotificationEmail(string pstCode, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
         {
@@ -1361,77 +1180,7 @@ namespace MMLib.Helpers
                 return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
             }
         }
-
-
-        public static void SetNewPurchaseRequestCode(MMDbContext context, bool save)
-        {
-            var Device = HttpContext.Current.Session["Device"] as DeviceModel;
-            Device device = context.Devices.Find(Device.dvcUID);
-            device.dvcNextPurchaseRequestNo++;
-            if (save)
-                context.SaveChanges();
-        }
-        public static void SetNewWholeSalesCode(MMDbContext context, bool save)
-        {
-            var Device = HttpContext.Current.Session["Device"] as DeviceModel;
-            Device device = context.Devices.Find(Device.dvcUID);
-            device.dvcNextWholeSalesNo++;
-            if (save)
-                context.SaveChanges();
-        }
-
-        public static string GetItemOptionsItemCodes(string connectionString, int apId)
-        {
-            using var connection = new SqlConnection(connectionString);
-            connection.Open();
-
-            var itemoptionsItemCodes = connection.Query<string>(@"EXEC dbo.GetItemOptionsItemCodeList1 @apId=@apId", new { apId }).ToList();
-            return itemoptionsItemCodes == null ? string.Empty : string.Join(",", itemoptionsItemCodes);
-        }
-
-
-        public static Dictionary<string, int> GetDicIvTotalQty(List<IvTotalQty> ivTotalQtyList)
-        {
-            var DicIvTotalQty = new Dictionary<string, int>();
-            foreach (var item in ivTotalQtyList)
-            {
-                var key = string.Concat(item.ivIdList, ":", item.itmCode);
-                DicIvTotalQty[key] = item.totalIvQty;
-            }
-            return DicIvTotalQty;
-        }
-        public static Dictionary<string, int> GetDicBatTotalQty(List<BatTotalQty> batTotalQtyList)
-        {
-            var DicBatTotalQty = new Dictionary<string, int>();
-            foreach (var item in batTotalQtyList)
-            {
-                var key = string.Concat(item.batCode, ":", item.batItemCode);
-                DicBatTotalQty[key] = item.totalBatQty;
-            }
-            return DicBatTotalQty;
-        }
-        public static Dictionary<string, int> GetDicVtTotalQty(List<VtTotalQty> vtTotalQtyList)
-        {
-            var DicVtTotalQty = new Dictionary<string, int>();
-            foreach (var item in vtTotalQtyList)
-            {
-                DicVtTotalQty[item.Id.ToString()] = item.totalVtQty;
-            }
-            return DicVtTotalQty;
-        }
-
-
-
-
-
-
-
-
-
-        public static string GetDbName(int apId)
-        {
-            return (apId == 1) ? "SmartBusinessWeb_db" : string.Concat("SBA", (apId - 2).ToString());
-        }
+       
         public static Dictionary<string, double> GetDicCurrencyExRate(MMDbContext context)
         {
             var DicCurrencyExRate = new Dictionary<string, double>();

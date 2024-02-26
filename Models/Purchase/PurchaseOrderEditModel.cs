@@ -45,20 +45,20 @@ namespace MMLib.Models.Purchase
 			
 			PurchaseOrderList = new List<PurchaseModel>();
 
-			string userCode = UserHelper.CheckIfApprover(User) ? null : user.UserCode;
+			string userCode = UserHelper.CheckIfStaff(User) ? user.UserCode : null;
 			
 			if(SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
 			var objects = new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode };
-			var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
+			//var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
 
-            var orderlist = SqlConnection.Query<PurchaseModel>($"EXEC dbo.{spname} @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", objects).ToList();
+            var orderlist = SqlConnection.Query<PurchaseModel>($"EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", objects).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
 
 			if (orderlist.Count > 0)
 			{
-				if(IsUserRole.isdepthead || IsUserRole.isfinancedept)
+				if(IsUserRole.isfinancedept)
 				{
 					var InferiorList = HttpContext.Current.Session["InferiorList"] as List<Inferior>;
 					if (InferiorList != null)

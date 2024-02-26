@@ -99,7 +99,7 @@ namespace MMLib.Models.Purchase
 
         public List<SelectListItem> LocationList { get; set; }
 
-        public bool Readonly { get; set; }
+       
         public bool DoApproval { get; set; }
         static string PurchaseType = "PS";
         public PurchaseStatus ListMode { get; set; }
@@ -108,6 +108,7 @@ namespace MMLib.Models.Purchase
         public ReceiptViewModel Receipt;
         public List<string> DisclaimerList;
         public List<string> PaymentTermsList;
+    
 
         public List<PurchaseModel> PSList { get; set; }
         public IPagedList<PurchaseModel> PagingPSList { get; set; }
@@ -129,16 +130,17 @@ namespace MMLib.Models.Purchase
 
 
 
-        public PurchaseEditModel(string pstCode, int? ireadonly, int? idoapproval) : this()
+        public PurchaseEditModel(long Id, int? idoapproval) : this()
         {
-            Get(0, pstCode, ireadonly, idoapproval);
+            Get(Id, idoapproval);
         }
-        public PurchaseEditModel(long Id, string status = "", int? ireadonly = 0, int? idoapproval = 1, bool forprint = false) : this()
+        public PurchaseEditModel(long Id, string status = "", int? idoapproval = 1, bool forprint = false) : this()
         {
-            Get(Id, null, ireadonly, idoapproval, status, forprint);
+            Get(Id, idoapproval, status, forprint);
         }
+       
 
-        public void Get(long Id = 0, string pstCode = null, int? ireadonly = 0, int? idoapproval = 1, string status = "", bool forprint = false)
+        public void Get(long Id = 0, int? idoapproval = 1, string status = "", bool forprint = false)
         {
             bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
             using var context = new MMDbContext();
@@ -152,11 +154,10 @@ namespace MMLib.Models.Purchase
 
             DateTime dateTime = DateTime.Now;
 
-            if (Id > 0 || !string.IsNullOrEmpty(pstCode))
+            if (Id > 0)
             {
-                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id, code = pstCode });
-
-                Readonly = ireadonly == 1;
+                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
+              
                 DoApproval = idoapproval == 1;
 
                 if (forprint)
@@ -226,7 +227,7 @@ namespace MMLib.Models.Purchase
             Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
             Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
 
-            Purchase.Mode = ireadonly == 1 ? "readonly" : "";
+            Purchase.Mode = idoapproval == 1 ? "readonly" : "";
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
 
             void getDicSupInfoes(List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes)
