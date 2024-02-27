@@ -105,7 +105,7 @@ namespace MMLib.Helpers
                 }
             }
         }
-       
+
 
 
 
@@ -143,8 +143,8 @@ namespace MMLib.Helpers
                     MyobSupplier msupplier = new MyobSupplier();
                     msupplier.supFirstName = supplier.supFirstName;
                     msupplier.supId = supplier.supId;
-                    msupplier.supIsIndividual = supplier.supIsIndividual==null?false:(bool)supplier.supIsIndividual;
-                    msupplier.supIsActive = supplier.supIsActive == null?true: (bool)supplier.supIsActive;
+                    msupplier.supIsIndividual = supplier.supIsIndividual == null ? false : (bool)supplier.supIsIndividual;
+                    msupplier.supIsActive = supplier.supIsActive == null ? true : (bool)supplier.supIsActive;
                     msupplier.supCode = supplier.supCode.StartsWith("*") ? supplier.supCardRecordID.ToString() : supplier.supCode;
                     //msupplier.supName = GetForeignCurrencyCardName(supplier.supCode, supplier.supName);
                     msupplier.supName = supplier.supName;
@@ -254,7 +254,7 @@ namespace MMLib.Helpers
         {
             int reId = 0;
             Receipt = (from r in context.Receipts
-                       where                        
+                       where
                        r.AccountProfileId == ComInfo.AccountProfileId
                        select new ReceiptViewModel { Id = r.Id, CompanyName = r.CompanyName + ":" + r.CompanyNameCN + ":" + r.CompanyNameEng, CompanyAddress = r.CompanyAddress + ":" + r.CompanyAddressCN + ":" + r.CompanyAddressEng, CompanyAddress1 = r.CompanyAddress1 + ":" + r.CompanyAddress1CN + ":" + r.CompanyAddress1Eng, CompanyPhone = r.CompanyPhone, CompanyWebSite = r.CompanyWebSite }
                           ).FirstOrDefault();
@@ -364,9 +364,9 @@ namespace MMLib.Helpers
         public static int GetAccountProfileId(MMDbContext context)
         {
             return GetCurrentSession(context).AccountProfileId;
-        }       
+        }
 
-       
+
         public static List<UserModel> GetStaffList(MMDbContext context, SessUser sessUser)
         {
             List<UserModel> stafflist = new List<UserModel>();
@@ -440,7 +440,7 @@ namespace MMLib.Helpers
                                       {
                                           supId = c.supId,
                                           supFirstName = c.supFirstName,
-                                          supIsOrganization = c.supIsIndividual==null?false:!(bool)c.supIsIndividual,
+                                          supIsOrganization = c.supIsIndividual == null ? false : !(bool)c.supIsIndividual,
                                           supAddrPhone1 = c.supAddrPhone1,
                                           supAddrPhone2 = c.supAddrPhone2,
                                           supAddrPhone3 = c.supAddrPhone3,
@@ -560,7 +560,7 @@ namespace MMLib.Helpers
             return DateTime.MinValue;
         }
 
-    
+
 
 
         public static int GetCurrentCulture(MMDbContext context = null)
@@ -654,7 +654,7 @@ namespace MMLib.Helpers
             Session currsess = GetCurrentSession(context);
 
             ReceiptViewModel receipt = (from r in context.Receipts
-                                        where 
+                                        where
                         r.AccountProfileId == ComInfo.AccountProfileId
                                         select new ReceiptViewModel
                                         {
@@ -838,7 +838,7 @@ namespace MMLib.Helpers
             if (HttpContext.Current.Session["Session"] == null) //the worst case...the following code is just for Contingency measures
             {
                 DateTime frmDate = DateTime.Now.Date;
-                
+
                 if (string.IsNullOrEmpty(usercode))
                 {
                     Session session = (from s in context.Sessions
@@ -889,7 +889,7 @@ namespace MMLib.Helpers
         {
             return context.AccountProfiles.FirstOrDefault(x => x.Id == accountprofileId).DsnName;
         }
-        
+
         public static void WriteLog(MMDbContext context, string message, string type)
         {
             DebugLog debugLog = new DebugLog();
@@ -997,9 +997,9 @@ namespace MMLib.Helpers
             };
             return abssConn;
         }
-   
 
-        public static bool SendNotificationEmail(string pstCode, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
+
+        public static bool SendNotificationEmail(string pstCode, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
         {
             int okcount = 0;
             int ngcount = 0;
@@ -1015,10 +1015,7 @@ namespace MMLib.Helpers
             {
                 From = frm
             };
-            if (addbc)
-            {
-                message.Bcc.Add(addressBCC);
-            }
+            if (addbc) message.Bcc.Add(addressBCC);
 
             var ccname = ConfigurationManager.AppSettings["CCEmailAddress"].ToString().Split(',')[0];
             var ccmail = ConfigurationManager.AppSettings["CCEmailAddress"].ToString().Split(',')[1];
@@ -1087,9 +1084,9 @@ namespace MMLib.Helpers
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
-                    
+
                     if (reactType == ReactType.ApprovedByMuseumDirector)
-                    {                        
+                    {
                         message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
 
                         foreach (var inferior in inferiors)
@@ -1180,7 +1177,7 @@ namespace MMLib.Helpers
                 return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
             }
         }
-       
+
         public static Dictionary<string, double> GetDicCurrencyExRate(MMDbContext context)
         {
             var DicCurrencyExRate = new Dictionary<string, double>();
@@ -1221,7 +1218,7 @@ namespace MMLib.Helpers
         {
             if (!string.IsNullOrEmpty(filepath))
             {
-                var filelnk = type=="line"? Path.Combine(apId.ToString(), invoiceId, lineId.ToString(), filepath): Path.Combine(apId.ToString(), invoiceId, payId.ToString(), filepath);
+                var filelnk = type == "line" ? Path.Combine(apId.ToString(), invoiceId, lineId.ToString(), filepath) : Path.Combine(apId.ToString(), invoiceId, payId.ToString(), filepath);
                 if (CommonHelper.ImageExtensions.Contains(Path.GetExtension(filepath).ToUpperInvariant()))
                 {
                     filelnk = $"<a class='imglnk' href='#' data-lnk='{filelnk}'><img src='{UriHelper.GetBaseUrl()}/{filelnk}'/></a>";
@@ -1404,7 +1401,7 @@ namespace MMLib.Helpers
         public string ImgPath { get; set; }
         public long FileId { get; set; }
     }
-    
+
     public class FileData()
     {
         public long Id { get; set; }

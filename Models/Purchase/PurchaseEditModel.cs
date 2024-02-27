@@ -348,7 +348,7 @@ namespace MMLib.Models.Purchase
                         ReactType reactType = ReactType.RequestingByStaff;
                         if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
                         if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-                        if (ModelHelper.SendNotificationEmail(model.pstCode, DicReviewUrl, reactType, model.pstDesc))
+                        if (ModelHelper.SendNotificationEmail(model.pstCode, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
                         {
                             var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
                             purchase.pstSendNotification = true;
