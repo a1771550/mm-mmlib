@@ -143,8 +143,8 @@ namespace MMLib.Helpers
                     MyobSupplier msupplier = new MyobSupplier();
                     msupplier.supFirstName = supplier.supFirstName;
                     msupplier.supId = supplier.supId;
-                    msupplier.supIsIndividual = supplier.supIsIndividual;
-                    msupplier.supIsActive = supplier.supIsActive;
+                    msupplier.supIsIndividual = supplier.supIsIndividual==null?false:(bool)supplier.supIsIndividual;
+                    msupplier.supIsActive = supplier.supIsActive == null?true: (bool)supplier.supIsActive;
                     msupplier.supCode = supplier.supCode.StartsWith("*") ? supplier.supCardRecordID.ToString() : supplier.supCode;
                     //msupplier.supName = GetForeignCurrencyCardName(supplier.supCode, supplier.supName);
                     msupplier.supName = supplier.supName;
@@ -440,7 +440,7 @@ namespace MMLib.Helpers
                                       {
                                           supId = c.supId,
                                           supFirstName = c.supFirstName,
-                                          supIsOrganization = !c.supIsIndividual,
+                                          supIsOrganization = c.supIsIndividual==null?false:!(bool)c.supIsIndividual,
                                           supAddrPhone1 = c.supAddrPhone1,
                                           supAddrPhone2 = c.supAddrPhone2,
                                           supAddrPhone3 = c.supAddrPhone3,
