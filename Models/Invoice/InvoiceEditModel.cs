@@ -40,6 +40,7 @@ namespace MMLib.Models.Invoice
         public List<MyobJobModel> JobList { get; set; }
         public string JsonJobList { get { return JobList == null ? "" : JsonSerializer.Serialize(JobList); } }
         public Dictionary<string, List<AccountModel>> DicAcAccounts { get; set; }
+        public Dictionary<string, List<AccountModel>> DicAcAccounts4Pay { get; set; }
         //public List<InvoicePayModel> InvoicePays { get; set; }
 
         public bool Readonly { get; set; }
@@ -272,6 +273,7 @@ namespace MMLib.Models.Invoice
             JobList = connection.Query<MyobJobModel>(@"EXEC dbo.GetJobList @apId=@apId", new { apId }).ToList();
 
             DicAcAccounts = ModelHelper.GetDicAcAccounts(connection);
+            DicAcAccounts4Pay = ModelHelper.GetDicAcAccounts(connection, "GetAccountList4PayBills");
 
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
 
@@ -552,6 +554,17 @@ namespace MMLib.Models.Invoice
             return sqllist;
         }
 
+        public static void SaveAccId(string InvoiceId, int accId)
+        {
+            using var context = new MMDbContext();
+            MMDAL.Invoice invoice = context.Invoices.Find(InvoiceId);
+            if (invoice != null) {
+                invoice.AccountID = accId;
+                invoice.ModifyBy = user.UserCode;
+                invoice.ModifyTime = DateTime.Now;
+                context.SaveChanges();
+            }
+        }
     }
 
 }

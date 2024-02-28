@@ -1243,7 +1243,7 @@ namespace MMLib.Helpers
                 }
             }
         }
-        public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection)
+        public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection, string spname= "GetAccountList")
         {
             var DicAcAccounts = new Dictionary<string, List<AccountModel>>();
             var acIdList = connection.Query<string>(@"EXEC dbo.GetAccountClassificationIDList @apId=@apId", new { apId }).ToList();
@@ -1251,7 +1251,7 @@ namespace MMLib.Helpers
             {
                 DicAcAccounts[ac] = new List<AccountModel>();
             }
-            List<AccountModel> AccountList = connection.Query<AccountModel>(@"EXEC dbo.GetAccountList @apId=@apId", new { apId }).ToList();
+            List<AccountModel> AccountList = connection.Query<AccountModel>($"EXEC dbo.{spname} @apId=@apId", new { apId }).ToList();
             foreach (var key in DicAcAccounts.Keys)
             {
                 foreach (var account in AccountList)
