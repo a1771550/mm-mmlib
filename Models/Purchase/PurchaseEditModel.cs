@@ -116,7 +116,7 @@ namespace MMLib.Models.Purchase
         public string PrintMode { get; set; }
         public PoSettings PoSettings { get; set; }
         public static List<Superior> SuperiorList { get; set; }
-        public List<SupplierModel> Suppliers { get; private set; }
+        public List<SupplierModel> Vendors { get; private set; }
 
         public PurchaseEditModel()
         {
@@ -128,8 +128,6 @@ namespace MMLib.Models.Purchase
             PoQtyAmtList = [];
             SupplierList = new List<SupplierModel>();
         }
-
-
 
         public PurchaseEditModel(long Id, int? idoapproval) : this()
         {
@@ -212,7 +210,7 @@ namespace MMLib.Models.Purchase
                 else addNewPurchase(context, apId, pstcode, status, false, pqstatus);
             }
 
-            Suppliers = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
+            Vendors = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
             var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
             if (myobcurrencylist != null && myobcurrencylist.Count > 0)
@@ -251,48 +249,6 @@ namespace MMLib.Models.Purchase
                     }
                 }
             }
-        }
-
-       
-        private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, bool isThreshold, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
-        {
-            DateTime dateTime = DateTime.Now;
-
-            MMDAL.Purchase ps = new()
-            {
-                pstCode = pstcode,
-                pstRefCode = oldpstCode,
-                pstPurchaseDate = dateTime.Date,
-                pstPurchaseTime = dateTime,
-                pstPromisedDate = dateTime.AddDays(1),
-                pstStatus = status,
-                IsThreshold = isThreshold,
-                AccountProfileId = apId,
-                CreateTime = dateTime,
-                CreateBy = user.UserCode,
-                pstCheckout = false,
-                pstIsPartial = false,
-                pqStatus = pqstatus,
-            };
-            ps = context.Purchases.Add(ps);
-            context.SaveChanges();
-
-            if (addNewModel) PopulatePurchaseModel(pstcode, status, pqstatus, ps.Id);
-
-            return ps.Id;
-        }
-
-        private void PopulatePurchaseModel(string pstcode, string status, string pqstatus, long Id)
-        {
-            Purchase = new PurchaseModel
-            {
-                Id = Id,
-                IsEditMode = false,
-                pstCode = pstcode,
-                pstStatus = status,
-                pqStatus = pqstatus,
-                CreateBy = user.UserName,
-            };
         }
 
         public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList)
@@ -348,7 +304,7 @@ namespace MMLib.Models.Purchase
                         ReactType reactType = ReactType.RequestingByStaff;
                         if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
                         if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-                        if (ModelHelper.SendNotificationEmail(model.pstCode, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
+                        if (ModelHelper.SendNotificationEmail(model.pstCode, user.UserName, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
                         {
                             var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
                             purchase.pstSendNotification = true;
@@ -361,6 +317,48 @@ namespace MMLib.Models.Purchase
             }
             return msglist;
         }
+        private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, bool isThreshold, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
+        {
+            DateTime dateTime = DateTime.Now;
+
+            MMDAL.Purchase ps = new()
+            {
+                pstCode = pstcode,
+                pstRefCode = oldpstCode,
+                pstPurchaseDate = dateTime.Date,
+                pstPurchaseTime = dateTime,
+                pstPromisedDate = dateTime.AddDays(1),
+                pstStatus = status,
+                IsThreshold = isThreshold,
+                AccountProfileId = apId,
+                CreateTime = dateTime,
+                CreateBy = user.UserCode,
+                pstCheckout = false,
+                pstIsPartial = false,
+                pqStatus = pqstatus,
+            };
+            ps = context.Purchases.Add(ps);
+            context.SaveChanges();
+
+            if (addNewModel) PopulatePurchaseModel(pstcode, status, pqstatus, ps.Id);
+
+            return ps.Id;
+        }
+
+        private void PopulatePurchaseModel(string pstcode, string status, string pqstatus, long Id)
+        {
+            Purchase = new PurchaseModel
+            {
+                Id = Id,
+                IsEditMode = false,
+                pstCode = pstcode,
+                pstStatus = status,
+                pqStatus = pqstatus,
+                CreateBy = user.UserName,
+            };
+        }
+
+       
 
         private static void GenReturnMsgList(PurchaseModel model, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
         {

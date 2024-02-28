@@ -999,7 +999,7 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
+        public static bool SendNotificationEmail(string pstCode, string creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
         {
             int okcount = 0;
             int ngcount = 0;
@@ -1032,25 +1032,23 @@ namespace MMLib.Helpers
                 if (ngcount >= mailsettings.emMaxEmailsFailed || okcount > 0) break;
 
                 string mailbody = string.Empty;
-                string orderlnk;
                 string strorder = string.Concat("<strong>", string.Format(Resource.RequestFormat, Resource.Purchase), "</strong>");
                 string orderdesc = getOrderDesc(desc, pstCode);
 
+                if (SqlConnection.State == ConnectionState.Closed) SqlConnection.Open();
+
                 if (isThreshold == 1)
                 {
-                    if (SqlConnection.State == ConnectionState.Closed) SqlConnection.Open();
-
                     if (reactType == ReactType.PassedToMuseumDirector)
                     {
                         var mdInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
                         foreach (var md in mdInfo)
-                        {
-                            var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], pstCode, 0, md.surUID);
-                            orderlnk = getOrderLnk(reviewurl, pstCode);
-                            mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, md.UserName, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
+                        {                            
+                            mailbody = string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
                             mailbody = string.Concat(mailbody, orderdesc);
+                            mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
 
@@ -1063,14 +1061,13 @@ namespace MMLib.Helpers
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
                         foreach (var db in dbInfo)
-                        {
-                            var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], pstCode, 0, db.surUID);
-                            orderlnk = getOrderLnk(reviewurl, pstCode);
+                        {                        
                             /*
                              * <h3>Hi {0}</h3><p>The following <strong>{1}</strong> is pending for your review:</p>{2}<h4>{3}</h4><p>{4}</p>
                              */
                             mailbody = string.Format(Resource.MsgToDBHtmlFormat, db.UserName, strorder, orderdesc, string.Concat(rejectonholdreasonremarktxt, " ", rejectonholdreasonremark));
                             mailbody = string.Concat(mailbody, $"<p><strong>{string.Format(Resource.SelectedFormat, Resource.Vendor)}:</strong>", " ", selectedSupplier.supName, "</p>");
+                            mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
@@ -1081,6 +1078,7 @@ namespace MMLib.Helpers
                         foreach (var md in mdInfo)
                         {
                             mailbody = string.Concat("<h3>Hi ", md.UserName, "</h3>", string.Format(Resource.ApprovedByDBPoMsgFormat, strorder, string.Concat("<strong>", pstCode, "</strong>"), string.Concat("<strong>", selectedSupplier.supName, "</strong>")));
+                            mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
@@ -1092,35 +1090,34 @@ namespace MMLib.Helpers
                         foreach (var inferior in inferiors)
                         {
                             mailbody = string.Concat("<h3>Hi ", inferior.UserName, "</h3>", string.Format(Resource.ApprovedByDBPoMsgFormat, strorder, string.Concat("<strong>", pstCode, "</strong>"), string.Concat("<strong>", selectedSupplier.supName, "</strong>")));
+                            mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
                 }
                 else
                 {
-                    foreach (var item in DicReviewUrl)
+                    foreach(var superior in SuperiorList)
                     {
-                        var arr = item.Key.Split(':');
-                        var name = arr[0];
-                        var email = arr[1];
-                        var ordercode = arr[2];
-                        orderlnk = getOrderLnk(item.Value, ordercode);
+                        var name = superior.UserName;
+                        var email = superior.Email;
+                        var ordercode = pstCode;                     
                         orderdesc = getOrderDesc(desc, ordercode);
                         message.To.Add(new MailAddress(email, name));
 
                         if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
                         {
-                            mailbody = EnableReviewUrl ? string.Format(Resource.RequestWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
+                            mailbody = string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
                         }
 
                         if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept)
                         {
-                            mailbody = EnableReviewUrl ? string.Format(Resource.RespondWLinkHtmlFormat, name, strorder, approvaltxt, orderlnk) : string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
+                            mailbody = string.Format(Resource.RespondHtmlFormat, name, strorder, approvaltxt);
                         }
                         if (reactType == ReactType.Approved || reactType == ReactType.ApprovedByMuseumDirector || reactType == ReactType.PassedToDirectorBoard)
                         {
                             message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
-                            mailbody = EnableReviewUrl ? string.Format(Resource.ApprovedPoMsgWLnkFormat, strorder, suppernames, orderlnk) : string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
+                            mailbody = string.Format(Resource.ApprovedPoMsgFormat, strorder, suppernames);
                             mailbody = string.Concat(mailbody, $"<p><strong>{string.Format(Resource.SelectedFormat, Resource.Vendor)}:</strong>", " ", selectedSupplier.supName, "</p>");
                         }
                         if (reactType == ReactType.Rejected || reactType == ReactType.RejectedByDeptHead || reactType == ReactType.RejectedByFinanceDept)
@@ -1137,6 +1134,8 @@ namespace MMLib.Helpers
                         }
 
                         mailbody = string.Concat(mailbody, orderdesc);
+
+                        mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedBy}:</strong> {creator}</p>");
 
                         sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                     }
@@ -1165,12 +1164,7 @@ namespace MMLib.Helpers
                         ngcount++;
                     }
                 }
-            }
-
-            static string getOrderLnk(string lnk, string ordercode)
-            {
-                return $"<a href='{lnk}' target='_blank'>{ordercode}</a>";
-            }
+            }         
 
             static string getOrderDesc(string desc, string ordercode)
             {
