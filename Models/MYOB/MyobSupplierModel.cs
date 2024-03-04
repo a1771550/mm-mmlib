@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace MMLib.Models.POS.MYOB
 {
-    public class MyobSupplierModel:MMDAL.Supplier
+    public class MyobSupplierModel:MMDAL.MyobSupplier
     {
         public List<AddressModel> AddressList { get; set; }
         public MyobTerms Terms { get; set; }

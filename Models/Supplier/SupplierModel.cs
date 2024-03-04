@@ -10,7 +10,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Models.Supplier
 {	
-	public class SupplierModel : MMDAL.Supplier
+	public class SupplierModel : MMDAL.MyobSupplier
     {
         public long Id { get; set; }
         public decimal? Payment { get; set; } = null;
@@ -37,6 +37,7 @@ namespace MMLib.Models.Supplier
 		public HashSet<string> UploadFileList { get; set; } = new HashSet<string>();
         public List<string> ImgList;
         public List<string> FileList;
+        //public string supAccount { get; set; }
 
         public string Remark { get; set; }
         

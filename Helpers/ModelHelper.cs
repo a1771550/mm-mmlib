@@ -143,8 +143,8 @@ namespace MMLib.Helpers
                     MyobSupplier msupplier = new MyobSupplier();
                     msupplier.supFirstName = supplier.supFirstName;
                     msupplier.supId = supplier.supId;
-                    msupplier.supIsIndividual = supplier.supIsIndividual == null ? false : (bool)supplier.supIsIndividual;
-                    msupplier.supIsActive = supplier.supIsActive == null ? true : (bool)supplier.supIsActive;
+                    msupplier.supIsIndividual = supplier.supIsIndividual;
+                    msupplier.supIsActive = supplier.supIsActive;
                     msupplier.supCode = supplier.supCode.StartsWith("*") ? supplier.supCardRecordID.ToString() : supplier.supCode;
                     //msupplier.supName = GetForeignCurrencyCardName(supplier.supCode, supplier.supName);
                     msupplier.supName = supplier.supName;
@@ -220,10 +220,10 @@ namespace MMLib.Helpers
                 context.SaveChanges();
             }
         }
-
-        private static void UpdateSupplierCheckouts(HashSet<string> abssSupCodes, MMDbContext context)
+        public static void UpdateSupplierCheckouts(HashSet<string> abssSupCodes, MMDbContext context)
         {
-            var suppliers = context.Suppliers.Where(x => x.AccountProfileId == apId).ToList();
+            if (context.MyobSuppliers == null) return;
+            var suppliers =  context.MyobSuppliers.Where(x => x.AccountProfileId == apId).ToList();
             if (suppliers != null && suppliers.Count > 0)
             {
                 foreach (var supplier in suppliers)
@@ -434,13 +434,13 @@ namespace MMLib.Helpers
 
             if (checkOutType == CheckOutType.Suppliers)
             {
-                model.Supplierlist = (from c in context.Suppliers
+                model.Supplierlist = (from c in context.MyobSuppliers
                                       where c.supCheckout == false && c.AccountProfileId == apId
                                       select new SupplierModel
                                       {
                                           supId = c.supId,
                                           supFirstName = c.supFirstName,
-                                          supIsOrganization = c.supIsIndividual == null ? false : !(bool)c.supIsIndividual,
+                                          supIsOrganization = !c.supIsIndividual,
                                           supAddrPhone1 = c.supAddrPhone1,
                                           supAddrPhone2 = c.supAddrPhone2,
                                           supAddrPhone3 = c.supAddrPhone3,
@@ -1045,7 +1045,7 @@ namespace MMLib.Helpers
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
                         foreach (var md in mdInfo)
-                        {                            
+                        {
                             mailbody = string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
                             mailbody = string.Concat(mailbody, orderdesc);
                             mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
@@ -1061,7 +1061,7 @@ namespace MMLib.Helpers
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
                         foreach (var db in dbInfo)
-                        {                        
+                        {
                             /*
                              * <h3>Hi {0}</h3><p>The following <strong>{1}</strong> is pending for your review:</p>{2}<h4>{3}</h4><p>{4}</p>
                              */
@@ -1097,11 +1097,11 @@ namespace MMLib.Helpers
                 }
                 else
                 {
-                    foreach(var superior in SuperiorList)
+                    foreach (var superior in SuperiorList)
                     {
                         var name = superior.UserName;
                         var email = superior.Email;
-                        var ordercode = pstCode;                     
+                        var ordercode = pstCode;
                         orderdesc = getOrderDesc(desc, ordercode);
                         message.To.Add(new MailAddress(email, name));
 
@@ -1164,7 +1164,7 @@ namespace MMLib.Helpers
                         ngcount++;
                     }
                 }
-            }         
+            }
 
             static string getOrderDesc(string desc, string ordercode)
             {
@@ -1203,9 +1203,9 @@ namespace MMLib.Helpers
 
 
 
-        public static string GetAbssConnectionString(MMDbContext context, string accesstype, int apId)
+        public static string GetAbssConnectionString(string accesstype)
         {
-            return MYOBHelper.GetConnectionString(context, accesstype, apId);
+            return MYOBHelper.GetConnectionString(accesstype);
         }
 
         public static void HandleViewFile(string filepath, int apId, string invoiceId, string type, long? lineId, long? payId, ref List<string> ImgList, ref InvoiceFileData filedata)
@@ -1243,7 +1243,7 @@ namespace MMLib.Helpers
                 }
             }
         }
-        public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection, string spname= "GetAccountList")
+        public static Dictionary<string, List<AccountModel>> GetDicAcAccounts(SqlConnection connection, string spname = "GetAccountList")
         {
             var DicAcAccounts = new Dictionary<string, List<AccountModel>>();
             var acIdList = connection.Query<string>(@"EXEC dbo.GetAccountClassificationIDList @apId=@apId", new { apId }).ToList();

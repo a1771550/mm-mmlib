@@ -238,7 +238,7 @@ namespace MMLib.Helpers
 			return customerlist;
 		}
 
-		private static void GetAbssAddressList(string connectionstring, out List<AddressModel> addresslist)
+		public static void GetAbssAddressList(string connectionstring, out List<AddressModel> addresslist)
 		{
 			var sql = MyobHelper.AddressListSql;
 			Repository rs = new Repository();
@@ -475,6 +475,21 @@ namespace MMLib.Helpers
 					 ).ToList();
 			return taxlist;
 		}
+
+		public static string GetConnectionString(string accessType)
+		{
+            AbssConn conn = new AbssConn
+            {
+                Driver = ConfigurationManager.AppSettings["MYOBDriver"],
+                UserId = ConfigurationManager.AppSettings["MYOBUID"],
+                Password = ConfigurationManager.AppSettings["MYOBPass"],
+                Database = ConfigurationManager.AppSettings["MYOBDb"],
+                KeyLocation = ConfigurationManager.AppSettings["MYOBKey"],
+                ExeLocation = ConfigurationManager.AppSettings["MYOBExe"],
+            };
+            string ConnectionString = string.Format(@"Driver={0};TYPE=MYOB;UID={1};PWD={2};DATABASE={3};HOST_EXE_PATH={4};NETWORK_PROTOCOL=NONET;DRIVER_COMPLETION=DRIVER_NOPROMPT;KEY={5};ACCESS_TYPE={6};", conn.Driver, conn.UserId, conn.Password, conn.Database, conn.ExeLocation, conn.KeyLocation, accessType.ToUpper());
+            return ConnectionString;
+        }
 
 		public static string GetConnectionString(MMDbContext context, string accessType, int apId)
 		{

@@ -89,9 +89,9 @@ namespace MMLib.Models.Supplier
             using var context = new MMDbContext();
             DateTime dateTime = DateTime.Now;
 
-            var supId = context.Suppliers.Count() == 0 ? 1 : context.Suppliers.Max(x => x.supId) + 1;
+            var supId = context.MyobSuppliers.Count() == 0 ? 1 : context.MyobSuppliers.Max(x => x.supId) + 1;
             int codelength = int.Parse(ConfigurationManager.AppSettings["MaxSupplierCodeLength"]);
-            MMDAL.Supplier supplier = new()
+            MMDAL.MyobSupplier supplier = new()
             {
                 supId = supId,
                 supName = supName,
@@ -100,10 +100,10 @@ namespace MMLib.Models.Supplier
                 AccountProfileId = comInfo.AccountProfileId,
                 supIsActive = true,
                 supCheckout = false,
-                CreateTime = dateTime,
+                CreateTime = dateTime,                
                 CreateBy = user.UserCode
             };
-            supplier = context.Suppliers.Add(supplier);
+            supplier = context.MyobSuppliers.Add(supplier);
             context.SaveChanges();
 
             return new SupplierModel
@@ -120,9 +120,9 @@ namespace MMLib.Models.Supplier
             DateTime dateTime = DateTime.Now;
             if (model.supId == 0)
             {
-                model.supId = context.Suppliers.Count() == 0 ? 1 : context.Suppliers.Max(x => x.supId) + 1;
+                model.supId = context.MyobSuppliers.Count() == 0 ? 1 : context.MyobSuppliers.Max(x => x.supId) + 1;
                 int codelength = int.Parse(ConfigurationManager.AppSettings["MaxSupplierCodeLength"]);
-                MMDAL.Supplier ps = new()
+                MMDAL.MyobSupplier ps = new()
                 {
                     supId = model.supId,
                     supName = model.supName,
@@ -149,12 +149,12 @@ namespace MMLib.Models.Supplier
                     CreateTime = dateTime,
                     ModifyTime = dateTime,
                 };
-                context.Suppliers.Add(ps);
+                context.MyobSuppliers.Add(ps);
                 context.SaveChanges();
             }
             else
             {
-                MMDAL.Supplier ps = context.Suppliers.FirstOrDefault(x => x.supId == model.supId);
+                MMDAL.MyobSupplier ps = context.MyobSuppliers.FirstOrDefault(x => x.supId == model.supId);
                 ps.supName = model.supName;
                 ps.supAccount = model.supAccount;
                 ps.ModifyTime = dateTime;
@@ -179,8 +179,8 @@ namespace MMLib.Models.Supplier
         public static void Delete(int id)
         {
             using var context = new MMDbContext();
-            var ps = context.Suppliers.FirstOrDefault(x => x.supId == id);
-            context.Suppliers.Remove(ps);
+            var ps = context.MyobSuppliers.FirstOrDefault(x => x.supId == id);
+            context.MyobSuppliers.Remove(ps);
             context.SaveChanges();
         }
     }
