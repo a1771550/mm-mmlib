@@ -14,7 +14,7 @@ namespace MMLib.Models.Supplier
     public class SupplierEditModel : PagingBaseModel
     {
         public HashSet<string> SupplierNameList { get; set; }
-        public string IpCountry { get; set; }
+        public string IpCountry { get { return "Hong Kong SAR"; } }
         public List<Country> MyobCountries { get; set; }
         public List<string> Countries { get; set; }
         public SupplierModel Supplier { get; set; }
@@ -22,8 +22,8 @@ namespace MMLib.Models.Supplier
         {
             var helper = new CountryData.Standard.CountryHelper();
             Countries = helper.GetCountries().ToList();
-            var region = CultureHelper.GetCountryByIP();
-            IpCountry = region.EnglishName;
+           // var region = CultureHelper.GetCountryByIP();
+            //IpCountry = region.EnglishName;
         }
         public SupplierEditModel(string supCode) : this()
         {
