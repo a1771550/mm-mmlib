@@ -103,7 +103,7 @@ namespace MMLib.Helpers
 			return commentlist;
 		}
 
-		public static List<MYOBCustomerModel> GetCustomerList(string connectionstring, string sql = "")
+		public static List<MYOBSupplierModel> GetCustomerList(string connectionstring, string sql = "")
 		{
 			/* "c.CustomerID", "c.CardRecordID", "c.CardIdentification", "c.Name", "c.LastName", "c.FirstName", "c.IsIndividual", "c.IsInactive", "c.CurrencyID", "c.Picture", "c.Notes", "c.IdentifierID", "c.CustomList1ID", "c.CustomList2ID", "c.CustomList3ID", "c.CustomField1", "c.CustomField2", "c.CustomField3", "c.TermsID", "c.PriceLevelID", "c.TaxIDNumber", "c.TaxCodeID", "c.FreightIsTaxed", "c.CreditLimit", "c.VolumeDiscount", "c.CurrentBalance", "c.TotalDeposits", "c.CustomerSince", "c.LastSaleDate", "c.LastPaymentDate", "c.TotalReceivableDays", "c.TotalPaidInvoices", "c.HighestInvoiceAmount", "c.HighestReceivableAmount", "c.MethodOfPaymentID", "c.PaymentCardNumber", "c.PaymentNameOnCard", "c.PaymentExpiryDate", "c.PaymentNotes", "c.HourlyBillingRate", "c.SaleLayoutID", "c.PrintedForm", "c.IncomeAccountID", "c.SalespersonID", "c.SaleCommentID", "c.DeliveryMethodID", "c.ReceiptMemo", "c.ChangeControl", "c.OnHold", "c.InvoiceDeliveryID", "c.PaymentDeliveryID", "t.LatePaymentChargePercent", "t.EarlyPaymentDiscountPercent", "t.TermsOfPaymentID", "t.DiscountDays", "t.BalanceDueDays", "t.ImportPaymentIsDue", "t.DiscountDate", "t.BalanceDueDate", "p.Description", "cm.Comment", "cu.CurrencyCode"
 			 */
@@ -112,12 +112,12 @@ namespace MMLib.Helpers
 				//sql = MyobHelper.CustomerListSql_NoJoin;//Don't join!!! Chances are that customer will be empty if he has no phone record!!!!
 				sql = MyobHelper.CustomerListSql;
 			}
-			List<MYOBCustomerModel> customerlist = new List<MYOBCustomerModel>();
+			List<MYOBSupplierModel> customerlist = new List<MYOBSupplierModel>();
 			Repository rs = new Repository();
 			DataSet ds = rs.Query(connectionstring, sql);
 			DataTable dt = ds.Tables[0];
 			customerlist = (from DataRow dr in dt.Rows
-							select new MYOBCustomerModel()
+							select new MYOBSupplierModel()
 							{
 								CustomerID = dr[0] == DBNull.Value ? 0 : Convert.ToInt32(dr[0]),
 								CardRecordID = dr[1] == DBNull.Value ? 0 : Convert.ToInt32(dr[1]),
@@ -419,11 +419,12 @@ namespace MMLib.Helpers
 			foreach (var supplier in supplierlist)
 			{
 				supplier.AddressList = new List<AddressModel>();
+				var defaultAddress = addresslist.FirstOrDefault(x=>x.CardRecordID==supplier.supCardRecordID);
 				foreach (var address in addresslist)
 				{
 					AddressModel addressModel = new AddressModel();
 					if (supplier.supCardRecordID == address.CardRecordID)
-					{
+					{						
 						addressModel.CardRecordID = address.CardRecordID;
 						addressModel.Location = address.Location;
 						addressModel.StreetLine1 = address.StreetLine1;
@@ -444,6 +445,24 @@ namespace MMLib.Helpers
 						addressModel.WWW = address.WWW;
 						supplier.AddressList.Add(addressModel);
 					}
+					if (defaultAddress != null)
+					{   
+                        supplier.supAddrStreetLine1 = defaultAddress.StreetLine1;
+                        supplier.supAddrStreetLine2 = defaultAddress.StreetLine2;
+                        supplier.supAddrStreetLine3 = defaultAddress.StreetLine3;
+                        supplier.supAddrStreetLine4 = defaultAddress.StreetLine4;
+                        supplier.supAddrCity = defaultAddress.City;
+                        supplier.supAddrState = defaultAddress.State;
+                        supplier.supAddrPostcode = defaultAddress.Postcode;
+                        supplier.supAddrCountry = defaultAddress.Country;
+                        supplier.supAddrPhone1 = defaultAddress.Phone1;
+                        supplier.supAddrPhone2 = defaultAddress.Phone2;
+                        supplier.supAddrPhone3 = defaultAddress.Phone3;
+                        supplier.supAddrFax = defaultAddress.Fax;
+                        supplier.supEmail = defaultAddress.Email;                        
+                        supplier.supContact = defaultAddress.ContactName;
+                        supplier.supAddrWeb = defaultAddress.WWW;
+                    }
 				}
 			}
 

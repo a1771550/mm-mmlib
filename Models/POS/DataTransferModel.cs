@@ -1,4 +1,5 @@
-﻿using MMLib.Models.Purchase;
+﻿using MMLib.Models.POS.MYOB;
+using MMLib.Models.Purchase;
 using MMLib.Models.Supplier;
 using System;
 using System.Collections.Generic;
@@ -18,12 +19,12 @@ namespace MMLib.Models
         public List<PurchaseModel> PurchaseModels { get; set; }
         public bool includeUploaded { get; set; }
       
-        public List<SupplierModel> Supplierlist { get; set; }
+        public List<MyobSupplierModel> Supplierlist { get; set; }
       
 		public DataTransferModel()
         {         
             CheckOutIds_Supplier = new List<long>();
-            Supplierlist = new List<SupplierModel>();
+            Supplierlist = new List<MyobSupplierModel>();
             CheckOutIds_InvoiceLine = new HashSet<long>();
             CheckOutIds_PayLine = new HashSet<long>();
         }

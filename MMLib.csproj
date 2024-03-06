@@ -231,6 +231,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helpers\AccountHelper.cs" />
+    <Compile Include="Helpers\JobHelper.cs" />
     <Compile Include="Helpers\JsonHelper.cs" />
     <Compile Include="Helpers\MenuHelper.cs" />
     <Compile Include="Helpers\ModelHelper.cs" />
@@ -241,6 +243,9 @@
     <Compile Include="Models\Account\AccountProfileView.cs" />
     <Compile Include="Models\Account\LoginUserModel.cs" />
     <Compile Include="Models\BaseModel.cs" />
+    <Compile Include="Models\ComInfoEditModel.cs" />
+    <Compile Include="Models\ComInfoModel.cs" />
+    <Compile Include="Models\Currency\CurrencyHelper.cs" />
     <Compile Include="Models\DayEndsItem.cs" />
     <Compile Include="Models\DayEndsModel.cs" />
     <Compile Include="Models\EmailEditModel.cs" />

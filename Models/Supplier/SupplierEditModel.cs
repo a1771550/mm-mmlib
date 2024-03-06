@@ -5,9 +5,9 @@ using CommonLib.Helpers;
 using MMCommonLib.BaseModels;
 using MMDAL;
 using Dapper;
-using System.Runtime.Remoting.Contexts;
-using System.Web;
 using System.Configuration;
+using MMLib.Models.POS.MYOB;
+using MyobSupplier = MMDAL.MyobSupplier;
 
 namespace MMLib.Models.Supplier
 {
@@ -17,7 +17,7 @@ namespace MMLib.Models.Supplier
         public string IpCountry { get { return "Hong Kong SAR"; } }
         public List<Country> MyobCountries { get; set; }
         public List<string> Countries { get; set; }
-        public SupplierModel Supplier { get; set; }
+        public MyobSupplierModel MyobSupplier { get; set; }
         public SupplierEditModel()
         {
             var helper = new CountryData.Standard.CountryHelper();
@@ -35,14 +35,14 @@ namespace MMLib.Models.Supplier
         }
         public void Get(string supCode)
         {
-            Supplier = GetSupplierByCode(apId, supCode);
+            MyobSupplier = GetSupplierByCode(apId, supCode);
         }
 
-        public static SupplierModel GetSupplierByCode(int apId, string supCode)
+        public static MyobSupplierModel GetSupplierByCode(int apId, string supCode)
         {
             using var connection = new Microsoft.Data.SqlClient.SqlConnection(defaultConnection);
             connection.Open();
-            return connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierInfo6 @apId=@apId,@supCode=@supCode", new { apId, supCode });
+            return connection.QueryFirstOrDefault<MyobSupplierModel>(@"EXEC dbo.GetSupplierInfo6 @apId=@apId,@supCode=@supCode", new { apId, supCode });
         }
 
         public void Get(int supId = 0, string supCode = null)
@@ -50,17 +50,17 @@ namespace MMLib.Models.Supplier
             using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
             if (connection.State == System.Data.ConnectionState.Closed) connection.Open();
 
-            if (supId == 0 && supCode == null) Supplier = new SupplierModel();
+            if (supId == 0 && supCode == null) MyobSupplier = new MyobSupplierModel();
             else
             {
-                Supplier = connection.QueryFirstOrDefault<SupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId, supId, supCode });
-                if (Supplier != null)
+                MyobSupplier = connection.QueryFirstOrDefault<MyobSupplierModel>(@"EXEC dbo.GetSupplierByIdCode @apId=@apId,@supId=@supId,@supCode=@supCode", new { apId, supId, supCode });
+                if (MyobSupplier != null)
                 {
-                    Supplier.StreetLines[0] = Supplier.supAddrStreetLine1;
-                    Supplier.StreetLines[1] = Supplier.supAddrStreetLine2;
-                    Supplier.StreetLines[2] = Supplier.supAddrStreetLine3;
-                    Supplier.StreetLines[3] = Supplier.supAddrStreetLine4;
-                    Supplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supCodes=@supCodes", new { apId, supCodes = Supplier.supCode }).ToHashSet();
+                    MyobSupplier.StreetLines[0] = MyobSupplier.supAddrStreetLine1;
+                    MyobSupplier.StreetLines[1] = MyobSupplier.supAddrStreetLine2;
+                    MyobSupplier.StreetLines[2] = MyobSupplier.supAddrStreetLine3;
+                    MyobSupplier.StreetLines[3] = MyobSupplier.supAddrStreetLine4;
+                    MyobSupplier.UploadFileList = connection.Query<string>(@"EXEC dbo.GetSupplierFileList @apId=@apId,@supCodes=@supCodes", new { apId, supCodes = MyobSupplier.supCode }).ToHashSet();
                 }
             }
             //GetSupplierNameList
@@ -68,12 +68,12 @@ namespace MMLib.Models.Supplier
 
             MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
             #region Handle View File
-            Helpers.ModelHelper.HandleViewFileList(Supplier.UploadFileList, AccountProfileId, Supplier.supId, ref Supplier.ImgList, ref Supplier.FileList);
+            Helpers.ModelHelper.HandleViewFileList(MyobSupplier.UploadFileList, AccountProfileId, MyobSupplier.supId, ref MyobSupplier.ImgList, ref MyobSupplier.FileList);
             #endregion
         }
 
-        public List<SupplierModel> SupplierList { get; set; }
-        public PagedList.IPagedList<SupplierModel> PagingSupplierList { get; set; }
+        public List<MyobSupplierModel> SupplierList { get; set; }
+        public PagedList.IPagedList<MyobSupplierModel> PagingSupplierList { get; set; }
         public void GetList()
         {
             using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
@@ -81,10 +81,10 @@ namespace MMLib.Models.Supplier
             {
                 connection.Open();
             }
-            SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();
+            SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();
         }
 
-        public static SupplierModel QuickAdd(string supName)
+        public static MyobSupplierModel QuickAdd(string supName)
         {
             using var context = new MMDbContext();
             DateTime dateTime = DateTime.Now;
@@ -106,7 +106,7 @@ namespace MMLib.Models.Supplier
             supplier = context.MyobSuppliers.Add(supplier);
             context.SaveChanges();
 
-            return new SupplierModel
+            return new MyobSupplierModel
             {
                 supId=supplier.supId,
                 supName=supplier.supName,
@@ -114,7 +114,7 @@ namespace MMLib.Models.Supplier
             };
         }
 
-        public static void Edit(SupplierModel model)
+        public static void Edit(MyobSupplierModel model)
         {
             using var context = new MMDbContext();
             DateTime dateTime = DateTime.Now;
@@ -182,6 +182,117 @@ namespace MMLib.Models.Supplier
             var ps = context.MyobSuppliers.FirstOrDefault(x => x.supId == id);
             context.MyobSuppliers.Remove(ps);
             context.SaveChanges();
+        }
+
+        public static IEnumerable<MyobSupplier> ConvertModel(List<MyobSupplierModel> selectedSuppliers, int apId)
+        {
+            DateTime dateTime = DateTime.Now;
+
+            Dictionary<string, int> DicTermsOfPayments = new Dictionary<string, int>();
+            using var context = new MMDbContext();
+            var termsofpayments = context.MyobTermsOfPayments.ToList();
+            foreach (var term in termsofpayments)
+            {
+                DicTermsOfPayments[term.TermsOfPaymentID.Trim()] = term.MyobID;
+            }
+
+            List<MyobSupplier> suppliers = new List<MyobSupplier>();
+            foreach (var supplier in selectedSuppliers)
+            {
+                string supcode;
+                supcode = supplier.supCode;
+                //var salecomment = supplier.SaleComment;
+                MyobSupplier msupplier = new MyobSupplier();
+                msupplier.supId = supplier.supId;
+                msupplier.supFirstName = supplier.supFirstName;
+                msupplier.supIsActive = supplier.supIsActive;
+                msupplier.supCode = supcode;
+             
+                msupplier.supPhone = (supplier.AddressList != null && supplier.AddressList.Count > 0) ? supplier.AddressList[0].Phone1 : supcode;
+                msupplier.supName = supplier.supName;
+
+                msupplier.CreateTime = dateTime;
+                msupplier.ModifyTime = dateTime;
+                                                      
+                msupplier.LatePaymentChargePercent = supplier.Terms.LatePaymentChargePercent == null ? 0 : Convert.ToDecimal(supplier.Terms.LatePaymentChargePercent);
+                msupplier.EarlyPaymentDiscountPercent = supplier.Terms.EarlyPaymentDiscountPercent == null ? 0 : Convert.ToDecimal(supplier.Terms.EarlyPaymentDiscountPercent);
+                msupplier.TermsOfPaymentID = supplier.Terms.TermsOfPaymentID == null ? null : supplier.Terms.TermsOfPaymentID.Trim();
+
+                if (DicTermsOfPayments.ContainsKey(msupplier.TermsOfPaymentID))
+                    msupplier.PaymentIsDue = DicTermsOfPayments[msupplier.TermsOfPaymentID];
+
+                msupplier.DiscountDays = supplier.Terms.DiscountDays == null ? 0 : supplier.Terms.DiscountDays;
+                msupplier.BalanceDueDays = supplier.Terms.BalanceDueDays == null ? 0 : supplier.Terms.BalanceDueDays;
+                msupplier.ImportPaymentIsDue = supplier.Terms.ImportPaymentIsDue == null ? 0 : supplier.Terms.ImportPaymentIsDue;
+                msupplier.DiscountDate = supplier.Terms.DiscountDate == null ? null : supplier.Terms.DiscountDate;
+                msupplier.BalanceDueDate = supplier.Terms.BalanceDueDate == null ? null : supplier.Terms.BalanceDueDate;
+                msupplier.PaymentTermsDesc = supplier.PaymentTermsDesc == null ? null : supplier.PaymentTermsDesc;
+
+                msupplier.AbssSalesID = supplier.AbssSalesID;
+
+                msupplier.AccountProfileId = apId;
+                msupplier.CurrencyID = supplier.CurrencyID;
+                msupplier.TaxIDNumber = supplier.TaxIDNumber;
+                msupplier.TaxCodeID = supplier.TaxCodeID;
+
+                if (supplier.AddressList.Count > 0)
+                {
+                    msupplier.supAddrLocation = supplier.AddressList[0].Location;
+                    msupplier.supContact = supplier.AddressList[0].ContactName;
+                    msupplier.supAddrPhone1 = supplier.AddressList[0].Phone1;
+                    msupplier.supAddrPhone2 = supplier.AddressList[0].Phone2;
+                    msupplier.supAddrPhone3 = supplier.AddressList[0].Phone3;
+                    msupplier.supEmail = supplier.AddressList[0].Email;
+                    msupplier.supAddrWeb = supplier.AddressList[0].WWW;
+                    msupplier.supAddrCity = supplier.AddressList[0].City;
+                    msupplier.supAddrCountry = supplier.AddressList[0].Country;
+                    msupplier.supAddrStreetLine1 = supplier.AddressList[0].Street;
+                    msupplier.supAddrStreetLine2 = supplier.AddressList[0].StreetLine1;
+                    msupplier.supAddrStreetLine3 = supplier.AddressList[0].StreetLine2;
+                    msupplier.supAddrStreetLine4 = supplier.AddressList[0].StreetLine3;
+                }
+                msupplier.supCheckout = true;
+                suppliers.Add(msupplier);
+            }
+            return suppliers;
+        }
+
+        public static List<SupplierInfo4Abss> ConvertSupInfoModel(List<MyobSupplierModel> selectedSuppliers, int apId)
+        {
+            List<SupplierInfo4Abss> supplierInfo = new List<SupplierInfo4Abss>();
+            foreach (var supplier in selectedSuppliers)
+            {
+                if (supplier.AddressList.Count > 0)
+                {
+                    foreach (var addr in supplier.AddressList)
+                    {
+                        supplierInfo.Add(new SupplierInfo4Abss
+                        {
+                            SupCode = supplier.supCode,
+                            AccountProfileId = apId,
+                            SupAddrLocation = addr.Location,
+                            StreetLine1 = addr.StreetLine1,
+                            StreetLine2 = addr.StreetLine2,
+                            StreetLine3 = addr.StreetLine3,
+                            StreetLine4 = addr.StreetLine4,
+                            City = addr.City,
+                            State = addr.State,
+                            Postcode = addr.Postcode,
+                            Country = addr.Country,
+                            Phone1 = addr.Phone1,
+                            Phone2 = addr.Phone2,
+                            Phone3 = addr.Phone3,
+                            Fax = addr.Fax,
+                            Email = addr.Email,
+                            Salutation = addr.Salutation,
+                            ContactName = addr.ContactName,
+                            WWW = addr.WWW,
+                            CreateTime = DateTime.Now,
+                        });
+                    }
+                }
+            }
+            return supplierInfo;
         }
     }
 

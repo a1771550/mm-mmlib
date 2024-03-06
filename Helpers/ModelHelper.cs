@@ -13,8 +13,6 @@ using System.Web;
 using System.Data.Entity.Validation;
 using System.Text;
 using MMLib.Models.POS.MYOB;
-using MMLib.Models.Supplier;
-using MMCommonLib.Models;
 using MMCommonLib.CommonModels;
 using CommonLib.Models.MYOB;
 using TaxType = CommonLib.Models.TaxType;
@@ -28,7 +26,7 @@ using MMLib.Models.User;
 using CommonLib.BaseModels;
 using CommonLib.App_GlobalResources;
 using MMLib.Models.Account;
-using System.Runtime.Versioning;
+using MMLib.Models.Supplier;
 
 namespace MMLib.Helpers
 {
@@ -49,15 +47,9 @@ namespace MMLib.Helpers
         private static SqlConnection SqlConnection { get { return new SqlConnection(DefaultConnection); } }
         private static ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfo; } }
         //private static List<string> Shops;
-        private static int AccountProfileId { get { return ComInfo.AccountProfileId; } }
+        private static int AccountProfileId { get { return ComInfo == null ? int.Parse(ConfigurationManager.AppSettings["apId"]): ComInfo.AccountProfileId; } }
         private static int apId { get { return AccountProfileId; } }
         private static int CompanyId { get { return 1; } }
-        private static bool NonABSS { get { return ComInfo.DefaultCheckoutPortal == "nonabss"; } }
-        private static bool ApprovalMode { get { return (bool)ComInfo.ApprovalMode; } }
-
-        static bool EnableReviewUrl { get { return int.Parse(ConfigurationManager.AppSettings["EnableReviewUrl"]) == 1; } }
-
-        public static List<string> ShopNames;
 
         public static List<Country> PopulateDefaultCountries()
         {
@@ -410,37 +402,18 @@ namespace MMLib.Helpers
 
 
 
-        public static void GetDataTransferData(MMDbContext context, int apId, CheckOutType checkOutType, ref DataTransferModel model, string connectionString = null)
-        {
-            //if (checkOutType == CheckOutType.Purchase)
-            //{
-            //	DateTime frmdate = model.FrmToDate;
-            //	DateTime todate = model.ToDate;
-            //	string location = model.SelectedLocation;
-
-            //	if (!model.includeUploaded && model.Purchase!=null)
-            //	{
-            //		model.Purchase = model.Purchase.pstCheckout==false?model.Purchase:null;
-            //	}
-
-            //	model.CheckOutIds_Purchase = new HashSet<long>();
-
-            //	if (model.Purchase!=null)
-            //	{
-            //		model.CheckOutIds_Purchase.Add(model.Purchase.Id);
-            //	}
-
-            //}
+        public static void GetDataTransferData(MMDbContext context, int apId, CheckOutType checkOutType, ref DataTransferModel model)
+        {            
 
             if (checkOutType == CheckOutType.Suppliers)
             {
                 model.Supplierlist = (from c in context.MyobSuppliers
                                       where c.supCheckout == false && c.AccountProfileId == apId
-                                      select new SupplierModel
+                                      select new MyobSupplierModel
                                       {
                                           supId = c.supId,
                                           supFirstName = c.supFirstName,
-                                          supIsOrganization = !c.supIsIndividual,
+                                          supIsIndividual = c.supIsIndividual,
                                           supAddrPhone1 = c.supAddrPhone1,
                                           supAddrPhone2 = c.supAddrPhone2,
                                           supAddrPhone3 = c.supAddrPhone3,
@@ -469,44 +442,6 @@ namespace MMLib.Helpers
                 }
             }
         }
-
-
-        private static List<DeviceModel> GetDeviceList4Export(MMDbContext context, int accountProfileId)
-        {
-            List<DeviceModel> DeviceList = new List<DeviceModel>();
-            var devices = context.Devices.Where(x => x.dvcIsActive == true && x.AccountProfileId == accountProfileId).ToList();
-            foreach (var d in devices)
-            {
-                var _device = new DeviceModel();
-                _device.dvcIsActive = d.dvcIsActive;
-                _device.dvcCode = d.dvcCode;
-                //_device.dvcName = d.dvcName;
-                _device.dvcNextRtlSalesNo = d.dvcNextRtlSalesNo;
-                _device.dvcNextRefundNo = d.dvcNextRefundNo;
-                _device.dvcNextDepositNo = d.dvcNextDepositNo;
-                _device.dvcShop = d.dvcShop;
-                DeviceList.Add(_device);
-            }
-            return DeviceList;
-        }
-
-
-        public static int GetLatestCustomerID(MMDbContext context)
-        {
-            var apId = GetAccountProfileId(context);
-            int pgId = 0;
-            int mcId = 0;
-            string sql;
-
-            if (!NonABSS)
-            {
-                sql = $"Select Max(cusCustomerID) From MyobCustomer Where AccountProfileId={apId}";
-                mcId = context.Database.SqlQuery<int>(sql).FirstOrDefault();
-            }
-
-            return pgId > mcId ? pgId : mcId;
-        }
-
 
         public static string GetAccountNumber(MMDbContext context, int accountId, int accountProfileId)
         {
@@ -999,7 +934,7 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, string creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, SupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
+        public static bool SendNotificationEmail(string pstCode, string creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
         {
             int okcount = 0;
             int ngcount = 0;
@@ -1263,6 +1198,12 @@ namespace MMLib.Helpers
                 }
             }
             return DicAcAccounts;
+        }
+       
+
+        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection)
+        {
+            return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
         }
     }
 

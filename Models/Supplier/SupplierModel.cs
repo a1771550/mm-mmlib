@@ -1,16 +1,11 @@
 ﻿using CommonLib.Helpers;
-using MMCommonLib.BaseModels;
 using MMDAL;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Models.Supplier
-{	
-	public class SupplierModel : MMDAL.MyobSupplier
+{
+    public class SupplierModel : MyobSupplier
     {
         public long Id { get; set; }
         public decimal? Payment { get; set; } = null;
