@@ -1201,9 +1201,9 @@ namespace MMLib.Helpers
         }
        
 
-        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection)
+        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool checkout=false)
         {
-            return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
+            return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId,checkout }).ToList();
         }
     }
 

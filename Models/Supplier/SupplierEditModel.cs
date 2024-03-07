@@ -8,6 +8,8 @@ using Dapper;
 using System.Configuration;
 using MMLib.Models.POS.MYOB;
 using MyobSupplier = MMDAL.MyobSupplier;
+using CommonLib.Models.MYOB;
+using System.Data.Odbc;
 
 namespace MMLib.Models.Supplier
 {
@@ -22,7 +24,7 @@ namespace MMLib.Models.Supplier
         {
             var helper = new CountryData.Standard.CountryHelper();
             Countries = helper.GetCountries().ToList();
-           // var region = CultureHelper.GetCountryByIP();
+            // var region = CultureHelper.GetCountryByIP();
             //IpCountry = region.EnglishName;
         }
         public SupplierEditModel(string supCode) : this()
@@ -96,11 +98,11 @@ namespace MMLib.Models.Supplier
                 supId = supId,
                 supName = supName,
                 supCode = CommonHelper.GenerateNonce(codelength, false),
-                supAbss = false,               
+                supAbss = false,
                 AccountProfileId = comInfo.AccountProfileId,
                 supIsActive = true,
                 supCheckout = false,
-                CreateTime = dateTime,                
+                CreateTime = dateTime,
                 CreateBy = user.UserCode
             };
             supplier = context.MyobSuppliers.Add(supplier);
@@ -108,9 +110,9 @@ namespace MMLib.Models.Supplier
 
             return new MyobSupplierModel
             {
-                supId=supplier.supId,
-                supName=supplier.supName,
-                supCode=supplier.supCode,
+                supId = supplier.supId,
+                supName = supplier.supName,
+                supCode = supplier.supCode,
             };
         }
 
@@ -207,13 +209,13 @@ namespace MMLib.Models.Supplier
                 msupplier.supFirstName = supplier.supFirstName;
                 msupplier.supIsActive = supplier.supIsActive;
                 msupplier.supCode = supcode;
-             
+
                 msupplier.supPhone = (supplier.AddressList != null && supplier.AddressList.Count > 0) ? supplier.AddressList[0].Phone1 : supcode;
                 msupplier.supName = supplier.supName;
 
                 msupplier.CreateTime = dateTime;
                 msupplier.ModifyTime = dateTime;
-                                                      
+
                 msupplier.LatePaymentChargePercent = supplier.Terms.LatePaymentChargePercent == null ? 0 : Convert.ToDecimal(supplier.Terms.LatePaymentChargePercent);
                 msupplier.EarlyPaymentDiscountPercent = supplier.Terms.EarlyPaymentDiscountPercent == null ? 0 : Convert.ToDecimal(supplier.Terms.EarlyPaymentDiscountPercent);
                 msupplier.TermsOfPaymentID = supplier.Terms.TermsOfPaymentID == null ? null : supplier.Terms.TermsOfPaymentID.Trim();
@@ -294,6 +296,48 @@ namespace MMLib.Models.Supplier
             }
             return supplierInfo;
         }
+
+        public static List<string> GetImportAbssValues(List<MYOBSupplierModel> AbssSupplierList)
+        {
+            List<string> columns = new List<string>(); 
+            int colcount = MyobHelper.ImportSupplierColCount;
+            for (int j = 0; j < colcount; j++)
+            {
+                columns.Add("'{" + j + "}'");
+            }
+            string strcolumn = string.Join(",", columns);
+
+            List<string> values = new List<string>();
+
+            foreach (var supplier in AbssSupplierList)
+            {
+                string value = "";
+                string cardstatus = supplier.CardStatus;
+                /*
+				 * CoLastName,CardID,CardStatus,Address1Phone1,Address1Email,PaymentIsDue,DiscountDays,BalanceDueDays,Address1ContactName,Address1AddressLine1,Address1AddressLine2,Address1AddressLine3,Address1AddressLine4,Address1Phone2,Address1Phone3,Address1City,Address1Country,Address1Website,FirstName
+				 */
+
+                //string address = StringHandleAddress(string.Concat(supplier.supAddrStreetLine1, supplier.supAddrStreetLine2, supplier.supAddrStreetLine3, supplier.supAddrStreetLine4));
+                supplier.Address1AddressLine1 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine1);
+                supplier.Address1AddressLine2 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine2);
+                supplier.Address1AddressLine3 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine3);
+                supplier.Address1AddressLine4 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine4);
+
+                value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(supplier.CoLastName), StringHandlingForSQL(supplier.CardID), cardstatus, StringHandlingForSQL(supplier.Address1Phone1), "", StringHandlingForSQL(supplier.Address1Email), "", "", "", "", supplier.Address1AddressLine1, supplier.Address1AddressLine2, supplier.Address1AddressLine3, supplier.Address1AddressLine4, StringHandlingForSQL(supplier.Address1Phone2), StringHandlingForSQL(supplier.Address1Phone3), StringHandlingForSQL(supplier.Address1City), StringHandlingForSQL(supplier.Address1Country), StringHandlingForSQL(supplier.Address1Website), StringHandlingForSQL(supplier.FirstName));
+
+                values.Add(value);
+            }
+
+            return values;
+        }
+
+        private static string StringHandlingForSQL(string str)
+        {
+            str ??= "";
+            return CommonHelper.StringHandlingForSQL(str);
+        }
+
+        
     }
 
     public class SupCodeName
