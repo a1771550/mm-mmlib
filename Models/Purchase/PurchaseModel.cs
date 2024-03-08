@@ -9,6 +9,7 @@ using System.Text.Json;
 using MMDAL;
 using MMLib.Models.Supplier;
 using CommonLib.App_GlobalResources;
+using CsvHelper.Configuration.Attributes;
 
 namespace MMLib.Models.Purchase
 {
@@ -101,7 +102,10 @@ namespace MMLib.Models.Purchase
 
 		public bool IsEditMode { get; set; }
 		public string dateformat { get; set; }
-		public string PurchaseDate4ABSS { get { return pstPurchaseDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPurchaseDate, dateformat) : string.Empty; } }
+       
+        public new string pstCode { get; set; }
+      
+        public string PurchaseDate4ABSS { get { return pstPurchaseDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPurchaseDate, dateformat) : string.Empty; } }
 		public string PromisedDate4ABSS { get { return pstPromisedDate != null ? CommonHelper.FormatDate4ABSS((DateTime)pstPromisedDate, dateformat) : string.Empty; } }
 
 		public string SupplierName { get; set; }
@@ -111,7 +115,7 @@ namespace MMLib.Models.Purchase
 
 		public bool IsSupplierABSS { get; set; }
 
-
+		
 		public PurchaseModel() { }
 		
 	}

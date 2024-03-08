@@ -501,8 +501,10 @@ namespace MMLib.Models.Invoice
                 {
                     foreach (var line in ilList)
                     {
+                        line.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
                         //INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-                        value = string.Format("(" + strcolumn + ")", purchase.pstCode, purchase.PurchaseDate4ABSS, line.InvoiceId, "A", comInfo.comAccountNo, StringHandlingForSQL(line.SupplierName), purchase.Amount4Abss, purchase.Amount4Abss, StringHandlingForSQL(purchase.pstDesc));
+                        line.DeliveryStatus = "A";                        
+                        value = string.Format("(" + strcolumn + ")", line.pstCode, line.PurchaseDate4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
                         values.Add(value);
                     }
                 }

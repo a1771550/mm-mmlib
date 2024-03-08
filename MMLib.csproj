@@ -43,6 +43,9 @@
     <Reference Include="CountryData.Standard, Version=1.3.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\CountryData.Standard.1.3.0\lib\netstandard2.0\CountryData.Standard.dll</HintPath>
     </Reference>
+    <Reference Include="CsvHelper, Version=31.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsvHelper.31.0.2\lib\net48\CsvHelper.dll</HintPath>
+    </Reference>
     <Reference Include="Dapper, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Dapper.2.1.35\lib\net461\Dapper.dll</HintPath>
     </Reference>
@@ -54,6 +57,9 @@
     </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Data.SqlClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Data.SqlClient.5.2.0\lib\net462\Microsoft.Data.SqlClient.dll</HintPath>
@@ -254,6 +260,8 @@
     <Compile Include="Models\EmailEditModel.cs" />
     <Compile Include="Models\EmailModel.cs" />
     <Compile Include="Models\ForEx\ForExModel.cs" />
+    <Compile Include="Models\Invoice\AbssInvoiceLine.cs" />
+    <Compile Include="Models\Invoice\AbssPayLine.cs" />
     <Compile Include="Models\Invoice\InvoiceLineInfoModel.cs" />
     <Compile Include="Models\Invoice\InvoiceLineModel.cs" />
     <Compile Include="Models\Invoice\InvoicePayInfoModel.cs" />
