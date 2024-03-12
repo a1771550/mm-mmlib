@@ -467,7 +467,11 @@ namespace MMLib.Models.Invoice
             return CommonHelper.StringHandlingForSQL(str);
         }
         public static List<string> GetUploadServiceSqlList(long Id, ref DataTransferModel dmodel, MMDbContext context)
-        {
+        {           
+            var comInfo = context.ComInfoes.AsNoTracking().FirstOrDefault();
+
+            string ConnectionString = ModelHelper.GetAbssConnectionString("READ_WRITE");
+
             var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId == apId).appVal;
 
             dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
@@ -479,21 +483,21 @@ namespace MMLib.Models.Invoice
             string strcolumn = "", value = "";
             List<string> sqllist = [];
 
+            List<AbssInvoiceLine> ilList = [];
+
             if (dmodel.Purchase != null)
             {
                 sqlConnection.Open();
 
-                List<InvoiceLineModel> ilList = sqlConnection.Query<InvoiceLineModel>("EXEC dbo.GetInvoiceLinesByPstId @apId=@apId,@pstId=@pstId", new { apId, pstId = Id }).ToList();
+                ilList = sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstId @apId=@apId,@pstId=@pstId,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstId = Id, dateformat = comInfo.DateFormat, supplierCheckout = true }).ToList();
 
-                dmodel.CheckOutIds_InvoiceLine = ilList.Select(x => x.Id).ToHashSet();
+                dmodel.CheckOutIds_InvoiceLine = ilList.Select(x => x.ilId).ToHashSet();
 
                 sql = MyobHelper.InsertImportServicePurchasesSql;
                 sql = sql.Replace("0", "{0}");
 
-                for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++)
-                {
-                    columns.Add("'{" + j + "}'");
-                }
+                for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++) columns.Add("'{" + j + "}'");
+
                 strcolumn = string.Join(",", columns);
                 value = "";
 
@@ -501,56 +505,46 @@ namespace MMLib.Models.Invoice
                 {
                     foreach (var line in ilList)
                     {
-                        line.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
-                        //INSERT INTO Import_Service_Purchases (PurchaseNumber,PurchaseDate,SuppliersNumber,DeliveryStatus,AccountNumber,CoLastName,ExTaxAmount,IncTaxAmount,PurchaseStatus) VALUES ('00001797','04/12/2023','SP100022','A','{account}','A1 DIGITAL','4000','4000')
-                        line.DeliveryStatus = "A";                        
-                        value = string.Format("(" + strcolumn + ")", line.pstCode, line.PurchaseDate4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
+                        //line.type = PSType.forLine;
+                        value = string.Format("(" + strcolumn + ")", line.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
                         values.Add(value);
                     }
                 }
-
 
                 sql = string.Format(sql, string.Join(",", values));
                 sqllist.Add(sql);
             }
 
+
             #region Instalment Payments:
 
-            //List<SupplierPaymentModel> supplierpayments = sqlConnection.Query<SupplierPaymentModel>(@"EXEC dbo.GetSupplierPaymentsByCode @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout", new { apId, purchase.pstCode, purchase.supCode, checkout = false }).ToList();
+            List<AbssPayLine> payments = sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePaysByCode @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, purchase.pstCode, purchase.supCode, checkout = false, dateformat = comInfo.DateFormat }).ToList();
 
-            //if (supplierpayments.Count > 0)
-            //{
-            //    sql = MyobHelper.InsertImportPayBillsSql;
-            //    sql = sql.Replace("0", "{0}");
-            //    values = [];
-            //    columns = [];
-            //    strcolumn = "";
+            if (payments.Count > 0)
+            {
+                sql = MyobHelper.InsertImportPayBillsSql;
+                sql = sql.Replace("0", "{0}");
+                values = [];
+                columns = [];
+                strcolumn = "";
 
-            //    for (int j = 0; j < MyobHelper.ImportPayBillsColCount; j++)
-            //    {
-            //        columns.Add("'{" + j + "}'");
-            //    }
-            //    strcolumn = string.Join(",", columns);
-            //    value = "";
+                for (int j = 0; j < MyobHelper.ImportPayBillsColCount; j++) columns.Add("'{" + j + "}'");
 
-            //    //string payac = comInfo.comPayAccountNo.Replace("-", "");
+                strcolumn = string.Join(",", columns);
+                value = "";
 
-            //    dmodel.CheckOutIds_SupPayLn = new HashSet<long>();
+                dmodel.CheckOutIds_PayLine = payments.Select(x => x.payId).ToHashSet();
 
-            //    //todo:
-            //    //foreach (var sp in supplierpayments)
-            //    //{
-            //    //    dmodel.CheckOutIds_SupPayLn.Add(sp.Id);
-            //    //    sp.dateformat = purchase.dateformat;
-            //    //    string payac = sp.supAccount.Replace("-", "");
-            //    //    //INSERT INTO Import_Pay_Bills (CoLastName,PaymentAccount,PurchaseNumber,SuppliersNumber,AmountApplied,PaymentDate,ChequeNumber) VALUES ('{supname}','{payac}','{pono}','{supno}','500','{date}','897852')
-            //    //    value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), payac, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.Amount), sp.PayDate4ABSS, StringHandlingForSQL(sp.spChequeNo));
-            //    //    values.Add(value);
-            //    //}
+                foreach (var sp in payments)
+                {
+                    sp.dateformat = purchase.dateformat;
+                    value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), sp.ChequeAccountNo, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.AmtPaid), sp.Date4ABSS, StringHandlingForSQL(sp.sipChequeNo));
+                    values.Add(value);
+                }
 
-            //    sql = string.Format(sql, string.Join(",", values));
-            //    sqllist.Add(sql);
-            //}
+                sql = string.Format(sql, string.Join(",", values));
+                sqllist.Add(sql);
+            }
             #endregion
 
             return sqllist;

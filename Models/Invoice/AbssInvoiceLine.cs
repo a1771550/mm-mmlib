@@ -37,7 +37,7 @@ namespace MMLib.Models.Invoice
 
         [Name("Purchase #")]
         [Index(7)]
-        public string pstCode { get; set; }
+        public string pstCode => string.Empty;
 
         [Name("Date")]
         [Index(8)]
@@ -171,7 +171,7 @@ namespace MMLib.Models.Invoice
 
         [Name("Card ID")]
         [Index(39)]
-        public string CardID { get; set; }
+        public string CardID => string.Empty;
 
         [Name("Record ID")]
         [Index(40)]

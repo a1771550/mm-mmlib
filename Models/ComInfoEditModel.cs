@@ -15,7 +15,7 @@ namespace MMLib.Models
         {
             DateTime dtnow = await CommonHelper.GetCachedDateTimeAsync();           
             int apId = int.Parse(ConfigurationManager.AppSettings["apId"]);
-            using (var context = new MMDbContext())
+            using (var context = new ProxyDbContext())
             {
                 ComInfo comInfo = context.ComInfoes.FirstOrDefault(x => x.AccountProfileId == apId);
                 if (comInfo == null) return false;               

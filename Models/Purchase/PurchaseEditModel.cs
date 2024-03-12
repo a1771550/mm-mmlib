@@ -21,14 +21,15 @@ using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
 using MMLib.Models.Invoice;
+using MMLib.Models.POS.MYOB;
 
 namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
     {
-        public Dictionary<string, List<SupplierModel>> DicSupInfoes { get; set; }
+        public Dictionary<string, List<MyobSupplierModel>> DicSupInfoes { get; set; }
         public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
-        public List<SupplierModel> SupplierList { get; set; }
+        public List<MyobSupplierModel> SupplierList { get; set; }
         public List<SelectListItem> Reasons4ChoosingSupplier
         {
             get
@@ -116,7 +117,7 @@ namespace MMLib.Models.Purchase
         public string PrintMode { get; set; }
         public PoSettings PoSettings { get; set; }
         public static List<Superior> SuperiorList { get; set; }
-        public List<SupplierModel> Vendors { get; private set; }
+        public List<MyobSupplierModel> Vendors { get; private set; }
 
         public PurchaseEditModel()
         {
@@ -124,9 +125,9 @@ namespace MMLib.Models.Purchase
             DicLocation = new Dictionary<string, string>();
             ImgList = new List<string>();
             FileList = new List<string>();
-            DicSupInfoes = new Dictionary<string, List<SupplierModel>>();
+            DicSupInfoes = new Dictionary<string, List<MyobSupplierModel>>();
             PoQtyAmtList = [];
-            SupplierList = new List<SupplierModel>();
+            SupplierList = new List<MyobSupplierModel>();
         }
 
         public PurchaseEditModel(long Id, int? idoapproval) : this()
@@ -167,9 +168,9 @@ namespace MMLib.Models.Purchase
                     ModelHelper.GetReady4Print(context, ref Receipt, ref DisclaimerList, ref PaymentTermsList);
                 }
 
-                var suppurchaseInfoes = connection.Query<SupplierModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+                var suppurchaseInfoes = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
-                List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes = new List<IGrouping<string, SupplierModel>>();
+                List<IGrouping<string, MyobSupplierModel>> groupedsupPurchaseInfoes = new List<IGrouping<string, MyobSupplierModel>>();
                 if (suppurchaseInfoes != null && suppurchaseInfoes.Count > 0)
                 {
                     groupedsupPurchaseInfoes = suppurchaseInfoes.GroupBy(x => x.supCode).ToList();
@@ -177,14 +178,14 @@ namespace MMLib.Models.Purchase
 
                 Purchase.IsEditMode = true;
 
-                SupplierList = connection.Query<SupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
 
                 DicSupCodeName = new Dictionary<string, string>();
                 foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
 
                 if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
                 {
-                    SelectedSupplier = SupplierList.Single(x => x.Selected);
+                    SelectedSupplier = SupplierList.FirstOrDefault(x => x.Selected);
 
                     groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
                 }
@@ -210,7 +211,7 @@ namespace MMLib.Models.Purchase
                 else addNewPurchase(context, apId, pstcode, status, false, pqstatus);
             }
 
-            Vendors = connection.Query<SupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
+            Vendors = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
             var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
             if (myobcurrencylist != null && myobcurrencylist.Count > 0)
@@ -229,12 +230,12 @@ namespace MMLib.Models.Purchase
             Purchase.Mode = idoapproval == 1 ? "readonly" : "";
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
 
-            void getDicSupInfoes(List<IGrouping<string, SupplierModel>> groupedsupPurchaseInfoes)
+            void getDicSupInfoes(List<IGrouping<string, MyobSupplierModel>> groupedsupPurchaseInfoes)
             {
                 foreach (var group in groupedsupPurchaseInfoes)
                 {
                     var g = group.FirstOrDefault();
-                    if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<SupplierModel>();
+                    if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<MyobSupplierModel>();
                 }
                 foreach (var group in groupedsupPurchaseInfoes)
                 {

@@ -1,4 +1,5 @@
-﻿using MMLib.Models.Purchase;
+﻿using MMLib.Models.POS.MYOB;
+using MMLib.Models.Purchase;
 using MMLib.Models.Supplier;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,7 @@ namespace MMLib.Models
         public List<string> ImgList;
         public List<string> FileList;
 
-        public SupplierModel SelectedSupplier { get; set; }
+        public MyobSupplierModel SelectedSupplier { get; set; }
         public List<PoQtyAmtModel> PoQtyAmtList { get; set; }
         public Dictionary<string, double> DicCurrencyExRate { get; set; }
         public string JsonDicCurrencyExRate { get { return JsonSerializer.Serialize(DicCurrencyExRate); } }

@@ -26,7 +26,8 @@ using MMLib.Models.User;
 using CommonLib.BaseModels;
 using CommonLib.App_GlobalResources;
 using MMLib.Models.Account;
-using MMLib.Models.Supplier;
+using MMLib.Models.Invoice;
+using MMLib.Models.Purchase;
 
 namespace MMLib.Helpers
 {
@@ -1204,6 +1205,37 @@ namespace MMLib.Helpers
         public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool checkout=false)
         {
             return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId,checkout }).ToList();
+        }
+
+        public static List<string> GetPurchaseCodes(SqlConnection connection, bool checkout=false)
+        {
+            return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@checkout=@checkout", new { apId,checkout }).ToList();
+        }
+
+        public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool checkout=false)
+        {
+            return connection.Query<InvoiceModel>(@"EXEC dbo.GetInvoicesByPstCode @apId=@apId,@pstCode=@pstCode,@checkout=@checkout", new { apId, pstCode, checkout }).ToList();
+        }
+
+        public static PurchaseModel GetPurchaseById(SqlConnection connection, long Id)
+        {
+            //if (SqlConnection.State == ConnectionState.Closed) SqlConnection.Open();
+            return connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
+        }
+
+        public static PurchaseModel GetPurchaseByCode(SqlConnection sqlConnection, string pstCode)
+        {
+            return sqlConnection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@pstCode=@pstCode", new { apId, pstCode });
+        }
+
+        public static List<AbssInvoiceLine> GetInvoiceLinesByPstCode(SqlConnection sqlConnection, string pstCode)
+        {
+           return sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstIdCode @apId=@apId,@pstCode=@pstCode,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstCode, dateformat = ComInfo.DateFormat, supplierCheckout = true }).ToList();
+        }
+
+        public static List<AbssPayLine> GetInvoicePays(SqlConnection sqlConnection, string pstCode, string supCode)
+        {
+            return sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, pstCode, supCode, checkout = false, dateformat = ComInfo.DateFormat }).ToList();
         }
     }
 

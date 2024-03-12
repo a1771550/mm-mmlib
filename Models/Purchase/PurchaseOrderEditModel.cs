@@ -70,7 +70,7 @@ namespace MMLib.Models.Purchase
 				else filteredOrderList = orderlist;
 
 				var pstCodes = string.Join(",", orderlist.Select(x => x.pstCode).Distinct().ToHashSet());
-				var invoicePaymentList = SqlConnection.Query<InvoicePayModel>(@"EXEC dbo.GetInvoicePaysByCodes @apId=@apId,@pstCodes=@pstCodes", new { apId, pstCodes }).ToList();
+				var invoicePaymentList = SqlConnection.Query<InvoicePayModel>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCodes=@pstCodes", new { apId, pstCodes }).ToList();
 
 				var groupedorderlist = filteredOrderList.GroupBy(x => x.pstCode).ToList();
 				foreach (var group in groupedorderlist)
