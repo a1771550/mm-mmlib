@@ -125,7 +125,7 @@ namespace MMLib.Models.Invoice
         [Ignore]
         public DateTime payTime { get; set; }
         [Ignore]
-        public string dateformat { get; set; }
+        public char dateformat { get; set; }
 
         [Ignore]
         public decimal? sipAmt { get; set; }

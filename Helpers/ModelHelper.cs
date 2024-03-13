@@ -48,7 +48,7 @@ namespace MMLib.Helpers
         private static SqlConnection SqlConnection { get { return new SqlConnection(DefaultConnection); } }
         private static ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfo; } }
         //private static List<string> Shops;
-        private static int AccountProfileId { get { return ComInfo == null ? int.Parse(ConfigurationManager.AppSettings["apId"]): ComInfo.AccountProfileId; } }
+        private static int AccountProfileId { get { return ComInfo == null ? int.Parse(ConfigurationManager.AppSettings["apId"]) : ComInfo.AccountProfileId; } }
         private static int apId { get { return AccountProfileId; } }
         private static int CompanyId { get { return 1; } }
 
@@ -216,7 +216,7 @@ namespace MMLib.Helpers
         public static void UpdateSupplierCheckouts(HashSet<string> abssSupCodes, MMDbContext context)
         {
             if (context.MyobSuppliers == null) return;
-            var suppliers =  context.MyobSuppliers.Where(x => x.AccountProfileId == apId).ToList();
+            var suppliers = context.MyobSuppliers.Where(x => x.AccountProfileId == apId).ToList();
             if (suppliers != null && suppliers.Count > 0)
             {
                 foreach (var supplier in suppliers)
@@ -404,7 +404,7 @@ namespace MMLib.Helpers
 
 
         public static void GetDataTransferData(MMDbContext context, int apId, CheckOutType checkOutType, ref DataTransferModel model)
-        {            
+        {
 
             if (checkOutType == CheckOutType.Suppliers)
             {
@@ -832,11 +832,13 @@ namespace MMLib.Helpers
             writelog(message, type, ref debugLog);
             context.DebugLogs.Add(debugLog);
         }
+
+        
         private static void writelog(string message, string type, ref DebugLog debugLog)
         {
             debugLog.Message = message;
             debugLog.LogType = type;
-            debugLog.CreateTime = CommonHelper.GetLocalTime();
+            debugLog.CreateTime = DateTime.Now;
         }
 
         public static Dictionary<string, DeviceModel> GetDicDeviceInfo(MMDbContext context)
@@ -1200,19 +1202,19 @@ namespace MMLib.Helpers
             }
             return DicAcAccounts;
         }
-       
 
-        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool checkout=false)
+
+        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool checkout = false)
         {
-            return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId,checkout }).ToList();
+            return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId, checkout }).ToList();
         }
 
-        public static List<string> GetPurchaseCodes(SqlConnection connection, bool checkout=false)
+        public static List<string> GetPurchaseCodes(SqlConnection connection, bool checkout = false)
         {
-            return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@checkout=@checkout", new { apId,checkout }).ToList();
+            return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@checkout=@checkout", new { apId, checkout }).ToList();
         }
 
-        public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool checkout=false)
+        public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool checkout = false)
         {
             return connection.Query<InvoiceModel>(@"EXEC dbo.GetInvoicesByPstCode @apId=@apId,@pstCode=@pstCode,@checkout=@checkout", new { apId, pstCode, checkout }).ToList();
         }
@@ -1228,14 +1230,16 @@ namespace MMLib.Helpers
             return sqlConnection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@pstCode=@pstCode", new { apId, pstCode });
         }
 
-        public static List<AbssInvoiceLine> GetInvoiceLinesByPstCode(SqlConnection sqlConnection, string pstCode)
+        public static List<AbssInvoiceLine> GetInvoiceLinesByPstCode(SqlConnection sqlConnection, string pstCode, string _dateformat)
         {
-           return sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstIdCode @apId=@apId,@pstCode=@pstCode,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstCode, dateformat = ComInfo.DateFormat, supplierCheckout = true }).ToList();
+            char dateformat = Convert.ToChar(_dateformat);
+            return sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstIdCode @apId=@apId,@pstCode=@pstCode,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstCode, dateformat, supplierCheckout = true }).ToList();
         }
 
-        public static List<AbssPayLine> GetInvoicePays(SqlConnection sqlConnection, string pstCode, string supCode)
+        public static List<AbssPayLine> GetInvoicePays(SqlConnection sqlConnection, string pstCode, string supCode, string _dateformat)
         {
-            return sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, pstCode, supCode, checkout = false, dateformat = ComInfo.DateFormat }).ToList();
+            char dateformat = Convert.ToChar(_dateformat);
+            return sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, pstCode, supCode, checkout = false, dateformat }).ToList();
         }
     }
 

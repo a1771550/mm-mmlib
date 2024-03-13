@@ -184,7 +184,7 @@ namespace MMLib.Models.Invoice
         [Ignore]
         public DateTime? pstPurchaseDate { get; set; }
         [Ignore]
-        public string dateformat { get; set; }
+        public char dateformat { get; set; }
         [Ignore]
         public decimal? ilAmt { get; set; }
 

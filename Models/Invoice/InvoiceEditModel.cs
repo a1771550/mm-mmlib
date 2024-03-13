@@ -17,6 +17,7 @@ using MMLib.Models.Purchase;
 using System.Configuration;
 using System.IO;
 using System.Web.UI;
+using System.IdentityModel.Tokens;
 
 namespace MMLib.Models.Invoice
 {
@@ -340,9 +341,9 @@ namespace MMLib.Models.Invoice
             return DicInvPayFileList;
         }
 
-        private static HashSet<long?> handleDicInvPayFileList(List<InvoicePayInfoModel> payinfoes, Dictionary<string, List<InvoicePayInfoModel>> DicInvPayFileList, HashSet<long?> payIds=null)
+        private static HashSet<long?> handleDicInvPayFileList(List<InvoicePayInfoModel> payinfoes, Dictionary<string, List<InvoicePayInfoModel>> DicInvPayFileList, HashSet<long?> payIds = null)
         {
-            if(payIds==null) payIds = new HashSet<long?>();
+            if (payIds == null) payIds = new HashSet<long?>();
             // init DicInvPayFileList
             if (payinfoes != null && payinfoes.Count > 0)
             {
@@ -467,12 +468,13 @@ namespace MMLib.Models.Invoice
             return CommonHelper.StringHandlingForSQL(str);
         }
         public static List<string> GetUploadServiceSqlList(long Id, ref DataTransferModel dmodel, MMDbContext context)
-        {           
+        {
             var comInfo = context.ComInfoes.AsNoTracking().FirstOrDefault();
+            int apId = comInfo.AccountProfileId;
 
             string ConnectionString = ModelHelper.GetAbssConnectionString("READ_WRITE");
 
-            var dateformatcode = context.AppParams.FirstOrDefault(x => x.appParam == "DateFormat" && x.AccountProfileId == apId).appVal;
+            var dateformatcode = ConfigurationManager.AppSettings["MyobDateFormat"];
 
             dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
             var purchase = dmodel.Purchase; //for later use
@@ -483,47 +485,97 @@ namespace MMLib.Models.Invoice
             string strcolumn = "", value = "";
             List<string> sqllist = [];
 
+            char dateformat = Convert.ToChar(dateformatcode);
+
             List<AbssInvoiceLine> ilList = [];
 
             if (dmodel.Purchase != null)
             {
                 sqlConnection.Open();
 
-                ilList = sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstId @apId=@apId,@pstId=@pstId,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstId = Id, dateformat = comInfo.DateFormat, supplierCheckout = true }).ToList();
-
-                dmodel.CheckOutIds_InvoiceLine = ilList.Select(x => x.ilId).ToHashSet();
-
-                sql = MyobHelper.InsertImportServicePurchasesSql;
-                sql = sql.Replace("0", "{0}");
-
-                for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++) columns.Add("'{" + j + "}'");
-
-                strcolumn = string.Join(",", columns);
-                value = "";
+                ilList = sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstIdCode @apId=@apId,@pstId=@pstId,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstId = Id, dateformat, supplierCheckout = true }).ToList();
 
                 if (ilList.Count > 0)
                 {
-                    foreach (var line in ilList)
+                    HashSet<string> invoiceIds = ilList.Select(x => x.InvoiceId).ToHashSet();
+                    Dictionary<string, List<AbssInvoiceLine>> DicInvLns = new Dictionary<string, List<AbssInvoiceLine>>();
+                    ilList = ilList.OrderBy(x => x.InvoiceId).ToList();
+                    HashSet<long> LineIds = [];
+
+                    foreach (var InvoiceId in invoiceIds) if (!DicInvLns.ContainsKey(InvoiceId)) DicInvLns[InvoiceId] = new List<AbssInvoiceLine>();
+
+                    foreach (var invline in ilList)
                     {
-                        //line.type = PSType.forLine;
-                        value = string.Format("(" + strcolumn + ")", line.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
-                        values.Add(value);
+                        if (DicInvLns.ContainsKey(invline.InvoiceId)) DicInvLns[invline.InvoiceId].Add(invline);
+                        LineIds.Add(invline.ilId);
+                    }
+
+                    dmodel.CheckOutIds_InvoiceLine = ilList.Select(x => x.ilId).ToHashSet();
+
+                    for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++) columns.Add("'{" + j + "}'");
+                    strcolumn = string.Join(",", columns);
+                    //sqllist = [];
+                    foreach (var key in DicInvLns.Keys)
+                    {
+                        var illist = DicInvLns[key];
+                        
+                        if (illist.Count > 0)
+                        {
+                            //sqllist = [];
+                            sql = MyobHelper.InsertImportServicePurchasesSql;
+                            sql = sql.Replace("0", "{0}");
+                            
+                            values = [];
+                            foreach (var line in illist)
+                            {
+                                value = string.Format("(" + strcolumn + ")", purchase.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
+                                values.Add(value);
+                            }
+                            sql = string.Format(sql, string.Join(",", values));
+                            sqllist.Add(sql);
+                        }                       
                     }
                 }
-
-                sql = string.Format(sql, string.Join(",", values));
-                sqllist.Add(sql);
             }
 
+            dmodel.sqlList = sqllist;
+            return sqllist;
+        }
+
+        public static List<string> GetUploadPayBillsSqlList(long Id, ref DataTransferModel dmodel, MMDbContext context)
+        {
+            var comInfo = context.ComInfoes.AsNoTracking().FirstOrDefault();
+            int apId = comInfo.AccountProfileId;
+
+            string ConnectionString = ModelHelper.GetAbssConnectionString("READ_WRITE");
+
+            var dateformatcode = ConfigurationManager.AppSettings["MyobDateFormat"];
+
+            dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
+            var purchase = dmodel.Purchase; //for later use
+
+            char dateformat = Convert.ToChar(dateformatcode);
+
+            string sql = "";
+            List<string> values = [];
+            List<string> columns = [];
+            string strcolumn = "", value = "";
+            List<string> sqllist = [];
+
+            List<InvoiceModel> InvoiceList = ModelHelper.GetInvoiceList(sqlConnection, purchase.pstCode);
 
             #region Instalment Payments:
 
-            List<AbssPayLine> payments = sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePaysByCode @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, purchase.pstCode, purchase.supCode, checkout = false, dateformat = comInfo.DateFormat }).ToList();
+            List<AbssPayLine> payments = sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, purchase.pstCode, purchase.supCode, checkout = false, dateformat }).ToList();
+
+            HashSet<string> InvoiceIds = new HashSet<string>();
+            Dictionary<string, List<AbssPayLine>> DicPayLns = new Dictionary<string, List<AbssPayLine>>();
+            Dictionary<string, decimal> DicInvAmt = new Dictionary<string, decimal>();
 
             if (payments.Count > 0)
             {
-                sql = MyobHelper.InsertImportPayBillsSql;
-                sql = sql.Replace("0", "{0}");
+                payments = payments.OrderBy(x => x.InvoiceId).ToList();
+
                 values = [];
                 columns = [];
                 strcolumn = "";
@@ -535,18 +587,45 @@ namespace MMLib.Models.Invoice
 
                 dmodel.CheckOutIds_PayLine = payments.Select(x => x.payId).ToHashSet();
 
-                foreach (var sp in payments)
+                HashSet<string> invoiceIds = payments.Select(x => x.InvoiceId).ToHashSet();
+
+                foreach (var InvoiceId in invoiceIds) if (!DicPayLns.ContainsKey(InvoiceId)) DicPayLns[InvoiceId] = new List<AbssPayLine>();
+
+                foreach (var Invoice in InvoiceList) if (!DicInvAmt.ContainsKey(Invoice.Id)) DicInvAmt[Invoice.Id] = Invoice.siAmt ?? 0;
+
+                foreach (var payment in payments)
                 {
-                    sp.dateformat = purchase.dateformat;
-                    value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), sp.ChequeAccountNo, sp.pstCode, StringHandlingForSQL(purchase.pstSupplierInvoice), Convert.ToDouble(sp.AmtPaid), sp.Date4ABSS, StringHandlingForSQL(sp.sipChequeNo));
-                    values.Add(value);
+                    if (DicPayLns.ContainsKey(payment.InvoiceId)) DicPayLns[payment.InvoiceId].Add(payment);
+                    //PayIds.Add(payment.payId);
                 }
 
-                sql = string.Format(sql, string.Join(",", values));
-                sqllist.Add(sql);
+                foreach (var key in invoiceIds)
+                {
+                    List<AbssPayLine> paylines = new List<AbssPayLine>();
+                    var paylist = DicPayLns[key];
+                    var payline = paylist.First();
+                    payline.sipAmt = paylist.Sum(x => x.sipAmt);
+                    if (payline.sipAmt >= DicInvAmt[key]) paylines.Add(payline);
+                   
+                    if(paylines.Count>0)
+                    {
+                        sql = MyobHelper.InsertImportPayBillsSql;
+                        sql = sql.Replace("0", "{0}");
+                        values = [];
+                        foreach (var sp in paylines)
+                        {
+                            sp.dateformat = dateformat;
+                            value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(sp.SupplierName), sp.ChequeAccountNo, purchase.pstCode, StringHandlingForSQL(sp.InvoiceId), sp.AmtPaid, sp.Date4ABSS, StringHandlingForSQL(sp.sipChequeNo));
+                            values.Add(value);
+                        }
+                        sql = string.Format(sql, string.Join(",", values));
+                        sqllist.Add(sql);
+                    }
+                }
             }
             #endregion
 
+            dmodel.sqlList = sqllist;
             return sqllist;
         }
 
@@ -554,7 +633,8 @@ namespace MMLib.Models.Invoice
         {
             using var context = new MMDbContext();
             MMDAL.Invoice invoice = context.Invoices.Find(InvoiceId);
-            if (invoice != null) {
+            if (invoice != null)
+            {
                 invoice.AccountID = accId;
                 invoice.ModifyBy = user.UserCode;
                 invoice.ModifyTime = DateTime.Now;

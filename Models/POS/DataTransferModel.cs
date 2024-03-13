@@ -20,13 +20,15 @@ namespace MMLib.Models
         public bool includeUploaded { get; set; }
       
         public List<MyobSupplierModel> Supplierlist { get; set; }
-      
-		public DataTransferModel()
+        public List<string> sqlList { get; set; }
+
+        public DataTransferModel()
         {         
             CheckOutIds_Supplier = new List<long>();
             Supplierlist = new List<MyobSupplierModel>();
             CheckOutIds_InvoiceLine = new HashSet<long>();
             CheckOutIds_PayLine = new HashSet<long>();
+            sqlList = new List<string>();
         }
     }
 }
