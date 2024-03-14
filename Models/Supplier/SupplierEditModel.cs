@@ -191,7 +191,7 @@ namespace MMLib.Models.Supplier
             DateTime dateTime = DateTime.Now;
 
             Dictionary<string, int> DicTermsOfPayments = new Dictionary<string, int>();
-            using var context = new MMDbContext();
+            using var context = new ProxyDbContext();
             var termsofpayments = context.MyobTermsOfPayments.ToList();
             foreach (var term in termsofpayments)
             {
