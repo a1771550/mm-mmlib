@@ -18,7 +18,7 @@ namespace MMLib.Helpers
         public static List<RoleType> GetUserRoles(SysUser user)
         {
             var userrolecodes = user.UserRole.Split(',').ToList();
-            List<RoleType> roletypes = [];
+            List<RoleType> roletypes = new();
             foreach (var rolecode in userrolecodes)
             {
                 Enum.TryParse(rolecode, out RoleType roletype);

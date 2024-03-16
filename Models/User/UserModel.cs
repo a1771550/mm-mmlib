@@ -73,8 +73,8 @@ namespace MMLib.Models.User
 
         public UserModel()
         {
-            AccessRights = [];
-            SuperiorIdList = [];
+            AccessRights = new();
+            SuperiorIdList = new();
         }
 
     }

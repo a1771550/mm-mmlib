@@ -9,7 +9,7 @@ namespace MMLib.Models.Currency
     {
         public static IEnumerable<MyobCurrency> ConvertModel(List<MyobCurrencyModel> selectedCurrencies, int apId)
         {
-            List<MyobCurrency> newcurrencies = [];
+            List<MyobCurrency> newcurrencies = new();
             foreach (var currency in selectedCurrencies)
             {
                 newcurrencies.Add(new MyobCurrency

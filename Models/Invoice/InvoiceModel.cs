@@ -43,8 +43,8 @@ namespace MMLib.Models.Invoice
 		public string filePath { get; set; }
 		public string Files { get; set; }
 
-		public List<InvoiceLineModel> Lines { get; set; } = [];
-        public List<InvoicePayModel> Pays { get; set; } = [];
+		public List<InvoiceLineModel> Lines { get; set; } = new();
+        public List<InvoicePayModel> Pays { get; set; } = new();
 
 		public InvoiceModel()
 		{

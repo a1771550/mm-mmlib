@@ -1362,7 +1362,7 @@ namespace MMLib.Helpers
         public List<string> vtlist { get; set; }
     }
 
-    public class InvoiceFileData()
+    public class InvoiceFileData
     {
         public long? lineId { get; set; }
         public long? payId { get; set; }
@@ -1373,7 +1373,7 @@ namespace MMLib.Helpers
         public long FileId { get; set; }
     }
 
-    public class FileData()
+    public class FileData
     {
         public long Id { get; set; }
         public string Name { get; set; }

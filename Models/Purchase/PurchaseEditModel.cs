@@ -126,7 +126,7 @@ namespace MMLib.Models.Purchase
             ImgList = new List<string>();
             FileList = new List<string>();
             DicSupInfoes = new Dictionary<string, List<MyobSupplierModel>>();
-            PoQtyAmtList = [];
+            PoQtyAmtList = new();
             SupplierList = new List<MyobSupplierModel>();
         }
 
@@ -254,7 +254,7 @@ namespace MMLib.Models.Purchase
 
         public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList)
         {
-            List<PurchaseReturnMsg> msglist = [];
+            List<PurchaseReturnMsg> msglist = new();
             string status = "";
             string msg = string.Format(Resources.Resource.SavedFormat, Resources.Resource.PurchaseOrder);
             string purchasestatus = string.Empty;

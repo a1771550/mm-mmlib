@@ -43,13 +43,13 @@ namespace MMLib.Models.Purchase
             ComInfo ComInfo = context.ComInfoes.Find(comInfo.comCode);
             ComInfo.PoThreshold = poSettings.poThreshold;         
 
-            List<PoQtyAmt> Items = [];
+            List<PoQtyAmt> Items = new();
 
             //remove current records first
             context.Database.ExecuteSqlCommand("TRUNCATE TABLE PoQtyAmt");            
             context.SaveChanges();
 
-            Items = [];
+            Items = new();
             //add records:
             foreach (var item in poSettings.poSettingItems)
             {

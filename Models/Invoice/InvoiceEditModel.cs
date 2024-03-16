@@ -54,7 +54,7 @@ namespace MMLib.Models.Invoice
             JobList = new List<MyobJobModel>();
             ImgList = new List<string>();
             FileList = new List<string>();
-            PoQtyAmtList = [];
+            PoQtyAmtList = new();
         }
         public static void SaveInvoice(InvoiceModel Invoice)
         {
@@ -480,14 +480,14 @@ namespace MMLib.Models.Invoice
             var purchase = dmodel.Purchase; //for later use
 
             string sql = "";
-            List<string> values = [];
-            List<string> columns = [];
+            List<string> values = new();
+            List<string> columns = new();
             string strcolumn = "", value = "";
-            List<string> sqllist = [];
+            List<string> sqllist = new();
 
             char dateformat = Convert.ToChar(dateformatcode);
 
-            List<AbssInvoiceLine> ilList = [];
+            List<AbssInvoiceLine> ilList = new();
 
             if (dmodel.Purchase != null)
             {
@@ -500,7 +500,7 @@ namespace MMLib.Models.Invoice
                     HashSet<string> invoiceIds = ilList.Select(x => x.InvoiceId).ToHashSet();
                     Dictionary<string, List<AbssInvoiceLine>> DicInvLns = new Dictionary<string, List<AbssInvoiceLine>>();
                     ilList = ilList.OrderBy(x => x.InvoiceId).ToList();
-                    HashSet<long> LineIds = [];
+                    HashSet<long> LineIds = new();
 
                     foreach (var InvoiceId in invoiceIds) if (!DicInvLns.ContainsKey(InvoiceId)) DicInvLns[InvoiceId] = new List<AbssInvoiceLine>();
 
@@ -525,7 +525,7 @@ namespace MMLib.Models.Invoice
                             sql = MyobHelper.InsertImportServicePurchasesSql;
                             sql = sql.Replace("0", "{0}");
                             
-                            values = [];
+                            values = new();
                             foreach (var line in illist)
                             {
                                 value = string.Format("(" + strcolumn + ")", purchase.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
@@ -557,10 +557,10 @@ namespace MMLib.Models.Invoice
             char dateformat = Convert.ToChar(dateformatcode);
 
             string sql = "";
-            List<string> values = [];
-            List<string> columns = [];
+            List<string> values = new();
+            List<string> columns = new();
             string strcolumn = "", value = "";
-            List<string> sqllist = [];
+            List<string> sqllist = new();
 
             List<InvoiceModel> InvoiceList = ModelHelper.GetInvoiceList(sqlConnection, purchase.pstCode);
 
@@ -576,8 +576,8 @@ namespace MMLib.Models.Invoice
             {
                 payments = payments.OrderBy(x => x.InvoiceId).ToList();
 
-                values = [];
-                columns = [];
+                values = new();
+                columns = new();
                 strcolumn = "";
 
                 for (int j = 0; j < MyobHelper.ImportPayBillsColCount; j++) columns.Add("'{" + j + "}'");
@@ -611,7 +611,7 @@ namespace MMLib.Models.Invoice
                     {
                         sql = MyobHelper.InsertImportPayBillsSql;
                         sql = sql.Replace("0", "{0}");
-                        values = [];
+                        values = new();
                         foreach (var sp in paylines)
                         {
                             sp.dateformat = dateformat;
