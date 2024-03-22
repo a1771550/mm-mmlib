@@ -32,6 +32,7 @@ namespace MMLib.Models
                     comInfo.MYOBDriver = model.MYOBDriver;
                     comInfo.PrimaryLocation = model.PrimaryLocation;
                     comInfo.ModifyTime = dtnow;
+                    comInfo.VMUrl = model.VMUrl;
                     await context.SaveChangesAsync();
                     return true;
                 }

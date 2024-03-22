@@ -254,6 +254,7 @@ namespace MMLib.Models.Supplier
                     msupplier.supAddrStreetLine4 = supplier.AddressList[0].StreetLine3;
                 }
                 msupplier.supCheckout = true;
+                msupplier.CreateTime = DateTime.Now;
                 suppliers.Add(msupplier);
             }
             return suppliers;
