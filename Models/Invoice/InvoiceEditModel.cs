@@ -132,7 +132,7 @@ namespace MMLib.Models.Invoice
             var connection = new SqlConnection(defaultConnection);
             connection.Open();
 
-            Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@code=@code", new { apId, Id = 0, code = pstCode });
+            Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@pstCode=@pstCode", new { apId, Id = 0, pstCode });
 
             Invoice = new InvoiceModel();
             Device device = null;
