@@ -15,6 +15,8 @@ namespace MMLib.Models.Purchase
 {
     public class PurchaseModel : MMDAL.Purchase
 	{		
+		public decimal InvoiceAmt { get; set; }
+		public decimal PayAmt { get; set; }
 		public string Mode { get; set; }
 		public string JsPurchaseDate { get; set; }
 		public string JsPromisedDate { get; set; }

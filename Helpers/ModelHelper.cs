@@ -1209,9 +1209,9 @@ namespace MMLib.Helpers
             return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId, checkout }).ToList();
         }
 
-        public static List<string> GetPurchaseCodes(SqlConnection connection, bool checkout = false)
+        public static List<string> GetPurchaseCodes(SqlConnection connection, bool fullyPaid = false)
         {
-            return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@checkout=@checkout", new { apId, checkout }).ToList();
+            return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@fullyPaid=@fullyPaid", new { apId, fullyPaid }).ToList();
         }
 
         public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool checkout = false)

@@ -178,7 +178,8 @@ namespace MMLib.Models.Purchase
 
                 Purchase.IsEditMode = true;
 
-                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
+                string baseUrl = UriHelper.GetBaseUrl();
+                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode,baseUrl }).ToList();
 
                 DicSupCodeName = new Dictionary<string, string>();
                 foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;

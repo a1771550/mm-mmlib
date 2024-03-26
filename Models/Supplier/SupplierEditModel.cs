@@ -124,7 +124,7 @@ namespace MMLib.Models.Supplier
             {
                 model.supId = context.MyobSuppliers.Count() == 0 ? 1 : context.MyobSuppliers.Max(x => x.supId) + 1;
                 int codelength = int.Parse(ConfigurationManager.AppSettings["MaxSupplierCodeLength"]);
-                MMDAL.MyobSupplier ps = new()
+                MyobSupplier ps = new()
                 {
                     supId = model.supId,
                     supName = model.supName,
