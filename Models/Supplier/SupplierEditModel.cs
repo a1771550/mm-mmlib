@@ -10,6 +10,7 @@ using MMLib.Models.POS.MYOB;
 using MyobSupplier = MMDAL.MyobSupplier;
 using CommonLib.Models.MYOB;
 using System.Data.Odbc;
+using MMLib.Models.MYOB;
 
 namespace MMLib.Models.Supplier
 {
@@ -18,6 +19,7 @@ namespace MMLib.Models.Supplier
         public HashSet<string> SupplierNameList { get; set; }
         public string IpCountry { get { return "Hong Kong SAR"; } }
         public List<Country> MyobCountries { get; set; }
+        public Dictionary<string, List<AccountModel>> DicAcAccounts { get; set; }
         public List<string> Countries { get; set; }
         public MyobSupplierModel MyobSupplier { get; set; }
         public SupplierEditModel()
@@ -69,6 +71,9 @@ namespace MMLib.Models.Supplier
             SupplierNameList = connection.Query<string>(@"EXEC dbo.GetSupplierNameList @apId=@apId,@active=@active", new { apId, active = true }).ToHashSet();
 
             MyobCountries = Helpers.ModelHelper.PopulateDefaultCountries();
+
+            DicAcAccounts = Helpers.ModelHelper.GetDicAcAccounts(connection);
+
             #region Handle View File
             Helpers.ModelHelper.HandleViewFileList(MyobSupplier.UploadFileList, AccountProfileId, MyobSupplier.supId, ref MyobSupplier.ImgList, ref MyobSupplier.FileList);
             #endregion
@@ -311,8 +316,7 @@ namespace MMLib.Models.Supplier
             List<string> values = new List<string>();
 
             foreach (var supplier in AbssSupplierList)
-            {
-                string value = "";
+            {                
                 string cardstatus = supplier.CardStatus;
                 /*
 				 * CoLastName,CardID,CardStatus,Address1Phone1,Address1Email,PaymentIsDue,DiscountDays,BalanceDueDays,Address1ContactName,Address1AddressLine1,Address1AddressLine2,Address1AddressLine3,Address1AddressLine4,Address1Phone2,Address1Phone3,Address1City,Address1Country,Address1Website,FirstName
@@ -324,7 +328,7 @@ namespace MMLib.Models.Supplier
                 supplier.Address1AddressLine3 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine3);
                 supplier.Address1AddressLine4 = CommonHelper.StringHandleAddress(supplier.Address1AddressLine4);
 
-                value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(supplier.CoLastName), StringHandlingForSQL(supplier.CardID), cardstatus, StringHandlingForSQL(supplier.Address1Phone1), "", StringHandlingForSQL(supplier.Address1Email), "", "", "", "", supplier.Address1AddressLine1, supplier.Address1AddressLine2, supplier.Address1AddressLine3, supplier.Address1AddressLine4, StringHandlingForSQL(supplier.Address1Phone2), StringHandlingForSQL(supplier.Address1Phone3), StringHandlingForSQL(supplier.Address1City), StringHandlingForSQL(supplier.Address1Country), StringHandlingForSQL(supplier.Address1Website), StringHandlingForSQL(supplier.FirstName));
+                string value = string.Format("(" + strcolumn + ")", StringHandlingForSQL(supplier.CoLastName), StringHandlingForSQL(supplier.CardID), cardstatus, StringHandlingForSQL(supplier.Address1Phone1), StringHandlingForSQL(supplier.Address1Email), "", "", "", "", supplier.Address1AddressLine1, supplier.Address1AddressLine2, supplier.Address1AddressLine3, supplier.Address1AddressLine4, StringHandlingForSQL(supplier.Address1Phone2), StringHandlingForSQL(supplier.Address1Phone3), StringHandlingForSQL(supplier.Address1City), StringHandlingForSQL(supplier.Address1Country), StringHandlingForSQL(supplier.Address1Website), StringHandlingForSQL(supplier.FirstName));
 
                 values.Add(value);
             }
