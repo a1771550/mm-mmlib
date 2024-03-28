@@ -641,6 +641,19 @@ namespace MMLib.Models.Invoice
                 context.SaveChanges();
             }
         }
+
+        public static void SaveAccId4Line(long lineId, int accId)
+        {
+            using var context = new MMDbContext();
+            InvoiceLine line = context.InvoiceLines.Find(lineId);
+            if (line != null)
+            {
+                line.AccountID = accId;
+                line.ModifyBy = user.UserCode;
+                line.ModifyTime = DateTime.Now;
+                context.SaveChanges();
+            }
+        }
     }
 
 }
