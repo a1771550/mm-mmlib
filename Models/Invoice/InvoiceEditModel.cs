@@ -472,22 +472,20 @@ namespace MMLib.Models.Invoice
             var comInfo = context.ComInfoes.AsNoTracking().FirstOrDefault();
             int apId = comInfo.AccountProfileId;
 
-            string ConnectionString = ModelHelper.GetAbssConnectionString("READ_WRITE");
-
             var dateformatcode = ConfigurationManager.AppSettings["MyobDateFormat"];
 
             dmodel.Purchase.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
             var purchase = dmodel.Purchase; //for later use
 
-            string sql = "";
+            string sql;
             List<string> values = new();
             List<string> columns = new();
-            string strcolumn = "", value = "";
+            string strcolumn, value;
             List<string> sqllist = new();
 
             char dateformat = Convert.ToChar(dateformatcode);
 
-            List<AbssInvoiceLine> ilList = new();
+            List<AbssInvoiceLine> ilList;
 
             if (dmodel.Purchase != null)
             {
@@ -495,47 +493,24 @@ namespace MMLib.Models.Invoice
 
                 ilList = sqlConnection.Query<AbssInvoiceLine>("EXEC dbo.GetInvoiceLinesByPstIdCode @apId=@apId,@pstId=@pstId,@dateformat=@dateformat,@supplierCheckout=@supplierCheckout", new { apId, pstId = Id, dateformat, supplierCheckout = true }).ToList();
 
+                sql = MyobHelper.InsertImportServicePurchasesSql;
+                sql = sql.Replace("0", "{0}");
+
+                for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++) columns.Add("'{" + j + "}'");
+
+                strcolumn = string.Join(",", columns);
+
                 if (ilList.Count > 0)
                 {
-                    HashSet<string> invoiceIds = ilList.Select(x => x.InvoiceId).ToHashSet();
-                    Dictionary<string, List<AbssInvoiceLine>> DicInvLns = new Dictionary<string, List<AbssInvoiceLine>>();
-                    ilList = ilList.OrderBy(x => x.InvoiceId).ToList();
-                    HashSet<long> LineIds = new();
-
-                    foreach (var InvoiceId in invoiceIds) if (!DicInvLns.ContainsKey(InvoiceId)) DicInvLns[InvoiceId] = new List<AbssInvoiceLine>();
-
-                    foreach (var invline in ilList)
+                    foreach (var line in ilList)
                     {
-                        if (DicInvLns.ContainsKey(invline.InvoiceId)) DicInvLns[invline.InvoiceId].Add(invline);
-                        LineIds.Add(invline.ilId);
-                    }
-
-                    dmodel.CheckOutIds_InvoiceLine = ilList.Select(x => x.ilId).ToHashSet();
-
-                    for (int j = 0; j < MyobHelper.ImportServicePurchasesColCount; j++) columns.Add("'{" + j + "}'");
-                    strcolumn = string.Join(",", columns);
-                    //sqllist = [];
-                    foreach (var key in DicInvLns.Keys)
-                    {
-                        var illist = DicInvLns[key];
-                        
-                        if (illist.Count > 0)
-                        {
-                            //sqllist = [];
-                            sql = MyobHelper.InsertImportServicePurchasesSql;
-                            sql = sql.Replace("0", "{0}");
-                            
-                            values = new();
-                            foreach (var line in illist)
-                            {
-                                value = string.Format("(" + strcolumn + ")", purchase.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
-                                values.Add(value);
-                            }
-                            sql = string.Format(sql, string.Join(",", values));
-                            sqllist.Add(sql);
-                        }                       
+                        //line.type = PSType.forLine;
+                        value = string.Format("(" + strcolumn + ")", purchase.pstCode, line.Date4ABSS, line.InvoiceId, line.DeliveryStatus, line.AccountNumber, StringHandlingForSQL(line.SupplierName), line.Amount4Abss, line.Amount4Abss, StringHandlingForSQL(line.ilDesc));
+                        values.Add(value);
                     }
                 }
+                sql = string.Format(sql, string.Join(",", values));
+                sqllist.Add(sql);
             }
 
             dmodel.sqlList = sqllist;
