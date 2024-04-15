@@ -517,7 +517,7 @@ namespace MMLib.Models.Invoice
             return sqllist;
         }
 
-        public static List<string> GetUploadPayBillsSqlList(long Id, ref DataTransferModel dmodel, MMDbContext context)
+        public static List<string> GetUploadPayBillsSqlList(ref DataTransferModel dmodel, MMDbContext context)
         {
             var comInfo = context.ComInfoes.AsNoTracking().FirstOrDefault();
             int apId = comInfo.AccountProfileId;
