@@ -31,21 +31,12 @@ namespace MMLib.Helpers
             var Roles = GetUserRoles(user);
             return Roles.Any(x => x == RoleType.SystemAdmin);
         }
-        public static bool CheckIfApprover(List<RoleType> Roles)
-        {
-            return Roles.Any(x => x != RoleType.Staff && x != RoleType.DeptHead);
-        }
-        public static bool CheckIfApprover(SessUser user)
-        {
-            var Roles = GetUserRoles(user);
-            return Roles.Any(x => x != RoleType.Staff && x != RoleType.DeptHead);
-        }
-        public static bool CheckIfApprover(SysUser user)
-        {
-            var Roles = GetUserRoles(user);
-            return Roles.Any(x => x != RoleType.Staff && x != RoleType.DeptHead);
-        }
 
+        public static bool CheckIfFinDept(SessUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.FinanceDept);
+        }
         public static bool CheckIfDeptHead(SessUser user)
         {
             var Roles = GetUserRoles(user);
@@ -71,6 +62,16 @@ namespace MMLib.Helpers
         {
             var Roles = GetUserRoles(user);
             return Roles.Any(x => x == RoleType.MuseumDirector);
+        }
+        public static bool CheckIfDirector(SysUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.MuseumDirector||x==RoleType.DirectorBoard);
+        }
+        public static bool CheckIfDirector(SessUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.MuseumDirector || x == RoleType.DirectorBoard);
         }
     }
 }

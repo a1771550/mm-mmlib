@@ -58,16 +58,18 @@ namespace MMLib.Models.Purchase
 
 			if (orderlist.Count > 0)
 			{
-				if(IsUserRole.isfinancedept)
-				{
-					var InferiorList = HttpContext.Current.Session["InferiorList"] as List<Inferior>;
-					if (InferiorList != null)
-					{
-						var inferiorCodes = InferiorList.Select(x => x.UserCode).ToHashSet();
-						foreach (var order in orderlist) if (inferiorCodes.Contains(order.CreateBy)) filteredOrderList.Add(order);					
-					}
-				}
-				else filteredOrderList = orderlist;
+				//if(IsUserRole.isfinancedept)
+				//{
+				//	var InferiorList = HttpContext.Current.Session["InferiorList"] as List<Inferior>;
+				//	if (InferiorList != null)
+				//	{
+				//		var inferiorCodes = InferiorList.Select(x => x.UserCode).ToHashSet();
+				//		foreach (var order in orderlist) if (inferiorCodes.Contains(order.CreateBy)) filteredOrderList.Add(order);					
+				//	}
+				//}
+				//else 
+					
+				filteredOrderList = orderlist;
 
 				var pstCodes = string.Join(",", orderlist.Select(x => x.pstCode).Distinct().ToHashSet());
 				var invoicePaymentList = SqlConnection.Query<InvoicePayModel>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCodes=@pstCodes", new { apId, pstCodes }).ToList();

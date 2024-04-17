@@ -92,16 +92,17 @@ namespace MMLib.Models.Purchase
         public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
         public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
         public bool IsDB { get { return IsUserRole.isdirectorboard; } }
+        public bool IsFin { get { return IsUserRole.isfinancedept; } }
         public string ProcurementPersonName { get; set; }
 
         public PurchaseOrderReviewModel PurchaseOrderReview { get; set; }
 
-        public Dictionary<string, string> DicLocation { get; set; }       
+        public Dictionary<string, string> DicLocation { get; set; }
         public string JsonDicLocation { get { return DicLocation == null ? "" : JsonSerializer.Serialize(DicLocation); } }
 
         public List<SelectListItem> LocationList { get; set; }
 
-       
+
         public bool DoApproval { get; set; }
         static string PurchaseType = "PS";
         public PurchaseStatus ListMode { get; set; }
@@ -110,7 +111,7 @@ namespace MMLib.Models.Purchase
         public ReceiptViewModel Receipt;
         public List<string> DisclaimerList;
         public List<string> PaymentTermsList;
-    
+
 
         public List<PurchaseModel> PSList { get; set; }
         public IPagedList<PurchaseModel> PagingPSList { get; set; }
@@ -138,16 +139,16 @@ namespace MMLib.Models.Purchase
         {
             Get(Id, idoapproval, status, forprint);
         }
-       
+
 
         public void Get(long Id = 0, int? idoapproval = 1, string status = "", bool forprint = false)
         {
-            bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
+            bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
             using var context = new MMDbContext();
 
             Purchase = new PurchaseModel();
             Device device = null;
-            if (!isapprover) device = context.Devices.First();
+            if (!isDirector) device = context.Devices.First();
 
             var connection = new SqlConnection(defaultConnection);
             connection.Open();
@@ -157,7 +158,7 @@ namespace MMLib.Models.Purchase
             if (Id > 0)
             {
                 Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
-              
+
                 DoApproval = idoapproval == 1;
 
                 if (forprint)
@@ -179,7 +180,7 @@ namespace MMLib.Models.Purchase
                 Purchase.IsEditMode = true;
 
                 string baseUrl = UriHelper.GetBaseUrl();
-                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode,baseUrl }).ToList();
+                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
 
                 DicSupCodeName = new Dictionary<string, string>();
                 foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
@@ -199,7 +200,11 @@ namespace MMLib.Models.Purchase
                 var purchaseno = $"{device.dvcNextPurchaseRequestNo:000000}";
                 device.dvcNextPurchaseRequestNo++;
                 device.dvcModifyTime = dateTime;
+
                 string pqstatus = RequestStatus.requestingByStaff.ToString();
+                //if (IsUserRole.isdepthead) pqstatus = RequestStatus.requestingByDeptHead.ToString();
+                //if (IsUserRole.isfinancedept) pqstatus = RequestStatus.requestingByFinanceDept.ToString();
+
                 string pstcode = string.Concat(purchaseinitcode, purchaseno);
 
                 status = PurchaseStatus.requesting.ToString();
@@ -304,7 +309,9 @@ namespace MMLib.Models.Purchase
                     if ((bool)comInfo.enableEmailNotification)
                     {
                         ReactType reactType = ReactType.RequestingByStaff;
+                        if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
                         if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
+
                         if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
                         if (ModelHelper.SendNotificationEmail(model.pstCode, user.UserName, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
                         {
@@ -360,7 +367,7 @@ namespace MMLib.Models.Purchase
             };
         }
 
-       
+
 
         private static void GenReturnMsgList(PurchaseModel model, string supnames, ref List<PurchaseReturnMsg> msglist, List<Superior> SuperiorList, string status, bool isdirectorboard, Dictionary<string, string> DicReviewUrl, bool ismuseumdirector, string msg = null)
         {
@@ -530,24 +537,14 @@ namespace MMLib.Models.Purchase
             context.SaveChanges();
         }
 
-        public static void Delete(int id)
-        {
-            //using var context = new MMDbContext();
-            //var ps = context.Purchases.FirstOrDefault(x => x.Id == id);
-            //var psilist = context.PurchaseServices.Where(x => x.AccountProfileId == ps.AccountProfileId && x.pstCode == ps.pstCode);
-            //context.PurchaseServices.RemoveRange(psilist);
-            //context.Purchases.Remove(ps);
-            //context.SaveChanges();
-        }
-
         private static string genMemo(string currencycode, double exchangerate, double paytypeamts, string pstRemark)
         {
             //return StringHandlingForSQL(string.Concat(currencycode, " ", paytypeamts, $"({exchangerate})", " ", pstRemark));
             return Helpers.ModelHelper.genMemo(currencycode, exchangerate, paytypeamts, pstRemark);
         }
-       
 
-       
+
+
         public static PurchaseModel getPurchaseModelById(long Id)
         {
             var connection = new SqlConnection(defaultConnection);
@@ -573,15 +570,15 @@ namespace MMLib.Models.Purchase
 
                     if (IsUserRole.ismuseumdirector)
                     {
-                        pqStatus =  purchase.pqStatus.ToLower()== RequestStatus.approvedByDirectorBoard.ToString().ToLower()? RequestStatus.approvedByMuseumDirector.ToString() : RequestStatus.requestingByMuseumDirector.ToString();
+                        pqStatus = purchase.pqStatus.ToLower() == RequestStatus.approvedByDirectorBoard.ToString().ToLower() ? RequestStatus.approvedByMuseumDirector.ToString() : RequestStatus.requestingByMuseumDirector.ToString();
 
                         if (purchase.pqStatus.ToLower() == RequestStatus.approvedByDirectorBoard.ToString().ToLower())
                         {
                             purchase.pstStatus = PurchaseStatus.order.ToString();
                             reactType = ReactType.ApprovedByMuseumDirector;
                         }
-                        else reactType = ReactType.PassedToDirectorBoard;                      
-                        
+                        else reactType = ReactType.PassedToDirectorBoard;
+
                         updatePurchase4MDApproval(purchase, SelectedSupCode, context);
                     }
 
@@ -689,7 +686,7 @@ namespace MMLib.Models.Purchase
 
             static void updatePurchase4MDApproval(MMDAL.Purchase purchase, string SelectedSupCode, MMDbContext context)
             {
-                PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.pstCode==purchase.pstCode && x.supCode == SelectedSupCode && x.AccountProfileId==apId);
+                PurchaseSupplier purchaseSupplier = context.PurchaseSuppliers.FirstOrDefault(x => x.pstCode == purchase.pstCode && x.supCode == SelectedSupCode && x.AccountProfileId == apId);
                 purchaseSupplier.Selected = true;
                 purchaseSupplier.ModifyTime = DateTime.Now;
                 purchase.supCode = SelectedSupCode;

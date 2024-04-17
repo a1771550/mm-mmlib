@@ -111,14 +111,14 @@ namespace MMLib.Models.Invoice
 
             if (filter == 1) SortOrder = SortOrder == "desc" ? "asc" : "desc";
 
-            string userCode = UserHelper.CheckIfApprover(User) ? null : user.UserCode;
+            string userCode = UserHelper.CheckIfDirector(User) ? null : user.UserCode;
 
             if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
 
             string baseUrl = UriHelper.GetBaseUrl();
 
             var objects = new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode, baseUrl, Keyword };
-            //var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
+            //var spname = IsUserRole.isDirector ? "GetProcurement4Approval" : "GetProcurements";
 
             InvoiceList = SqlConnection.Query<InvoiceModel>(@"EXEC dbo.GetInvoicesByCode @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode,@baseUrl=@baseUrl,@Keyword=@Keyword", objects).ToList();
 
@@ -127,7 +127,7 @@ namespace MMLib.Models.Invoice
 
         public void GetInvoice(string pstCode, string InvoiceId = "")
         {
-            bool isapprover = (bool)HttpContext.Current.Session["IsApprover"];
+            bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
             using var context = new MMDbContext();
             var connection = new SqlConnection(defaultConnection);
             connection.Open();
@@ -136,7 +136,7 @@ namespace MMLib.Models.Invoice
 
             Invoice = new InvoiceModel();
             Device device = null;
-            if (!isapprover) device = context.Devices.First();
+            if (!isDirector) device = context.Devices.First();
 
             DateTime dateTime = DateTime.Now;
 
