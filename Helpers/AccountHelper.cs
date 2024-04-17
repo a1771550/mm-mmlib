@@ -7,22 +7,32 @@ namespace MMLib.Helpers
 {
     public static class AccountHelper
     {
-        public static IEnumerable<Account> ConvertModel(List<AccountModel> selectedAccounts, int apId)
+        public static List<Account> ConvertModel(List<AccountModel> selectedAccounts, int apId)
         {
             List<Account> accounts = new List<Account>();
-            foreach (var account in selectedAccounts)
-            {
-                Account ac = new Account();
-                ac.AccountProfileId = apId;
-                ac.AccountName = account.AccountName;
-                ac.AccountNumber = account.AccountNumber;
-                ac.AccountID = account.AccountID;
-                ac.AccountClassificationID = account.AccountClassificationID;
-                ac.AccountTypeID = account.AccountTypeID;
-                ac.AccountLevel = account.AccountLevel;
-                ac.CreateTime = DateTime.Now;
-                accounts.Add(ac);
+            try
+            {                
+                DateTime dateTime = DateTime.Now;
+                foreach (var account in selectedAccounts)
+                {
+                    accounts.Add(new Account
+                    {
+                        AccountProfileId = apId,
+                        AccountName = account.AccountName ?? "",
+                        AccountNumber = account.AccountNumber ?? "",
+                        AccountID = account.AccountID,
+                        AccountClassificationID = account.AccountClassificationID ?? "",
+                        AccountTypeID = account.AccountTypeID ?? "",
+                        AccountLevel = account.AccountLevel,
+                        CreateTime = dateTime
+                    });
+                }
             }
+            catch (Exception)
+            {
+
+            }
+            
             return accounts;
         }
     }

@@ -204,102 +204,119 @@ namespace MMLib.Models.Supplier
             }
 
             List<MyobSupplier> suppliers = new List<MyobSupplier>();
-            foreach (var supplier in selectedSuppliers)
+
+            try
             {
-                string supcode;
-                supcode = supplier.supCode;
-                //var salecomment = supplier.SaleComment;
-                MyobSupplier msupplier = new MyobSupplier();
-                msupplier.supId = supplier.supId;
-                msupplier.supFirstName = supplier.supFirstName;
-                msupplier.supIsActive = supplier.supIsActive;
-                msupplier.supCode = supcode;
-
-                msupplier.supPhone = (supplier.AddressList != null && supplier.AddressList.Count > 0) ? supplier.AddressList[0].Phone1 : supcode;
-                msupplier.supName = supplier.supName;
-
-                msupplier.CreateTime = dateTime;
-                msupplier.ModifyTime = dateTime;
-
-                msupplier.LatePaymentChargePercent = supplier.Terms.LatePaymentChargePercent == null ? 0 : Convert.ToDecimal(supplier.Terms.LatePaymentChargePercent);
-                msupplier.EarlyPaymentDiscountPercent = supplier.Terms.EarlyPaymentDiscountPercent == null ? 0 : Convert.ToDecimal(supplier.Terms.EarlyPaymentDiscountPercent);
-                msupplier.TermsOfPaymentID = supplier.Terms.TermsOfPaymentID == null ? null : supplier.Terms.TermsOfPaymentID.Trim();
-
-                if (DicTermsOfPayments.ContainsKey(msupplier.TermsOfPaymentID))
-                    msupplier.PaymentIsDue = DicTermsOfPayments[msupplier.TermsOfPaymentID];
-
-                msupplier.DiscountDays = supplier.Terms.DiscountDays == null ? 0 : supplier.Terms.DiscountDays;
-                msupplier.BalanceDueDays = supplier.Terms.BalanceDueDays == null ? 0 : supplier.Terms.BalanceDueDays;
-                msupplier.ImportPaymentIsDue = supplier.Terms.ImportPaymentIsDue == null ? 0 : supplier.Terms.ImportPaymentIsDue;
-                msupplier.DiscountDate = supplier.Terms.DiscountDate == null ? null : supplier.Terms.DiscountDate;
-                msupplier.BalanceDueDate = supplier.Terms.BalanceDueDate == null ? null : supplier.Terms.BalanceDueDate;
-                msupplier.PaymentTermsDesc = supplier.PaymentTermsDesc == null ? null : supplier.PaymentTermsDesc;
-
-                msupplier.AbssSalesID = supplier.AbssSalesID;
-
-                msupplier.AccountProfileId = apId;
-                msupplier.CurrencyID = supplier.CurrencyID;
-                msupplier.TaxIDNumber = supplier.TaxIDNumber;
-                msupplier.TaxCodeID = supplier.TaxCodeID;
-
-                if (supplier.AddressList.Count > 0)
+                foreach (var supplier in selectedSuppliers)
                 {
-                    msupplier.supAddrLocation = supplier.AddressList[0].Location;
-                    msupplier.supContact = supplier.AddressList[0].ContactName;
-                    msupplier.supAddrPhone1 = supplier.AddressList[0].Phone1;
-                    msupplier.supAddrPhone2 = supplier.AddressList[0].Phone2;
-                    msupplier.supAddrPhone3 = supplier.AddressList[0].Phone3;
-                    msupplier.supEmail = supplier.AddressList[0].Email;
-                    msupplier.supAddrWeb = supplier.AddressList[0].WWW;
-                    msupplier.supAddrCity = supplier.AddressList[0].City;
-                    msupplier.supAddrCountry = supplier.AddressList[0].Country;
-                    msupplier.supAddrStreetLine1 = supplier.AddressList[0].Street;
-                    msupplier.supAddrStreetLine2 = supplier.AddressList[0].StreetLine1;
-                    msupplier.supAddrStreetLine3 = supplier.AddressList[0].StreetLine2;
-                    msupplier.supAddrStreetLine4 = supplier.AddressList[0].StreetLine3;
+                    string supcode;
+                    supcode = supplier.supCode;
+                    //var salecomment = supplier.SaleComment;
+                    MyobSupplier msupplier = new MyobSupplier();
+                    msupplier.supId = supplier.supId;
+                    msupplier.supFirstName = supplier.supFirstName;
+                    msupplier.supIsActive = supplier.supIsActive;
+                    msupplier.supCode = supcode;
+
+                    msupplier.supPhone = (supplier.AddressList != null && supplier.AddressList.Count > 0) ? supplier.AddressList[0].Phone1 : supcode;
+                    msupplier.supName = supplier.supName;
+
+                    msupplier.CreateTime = dateTime;
+                    msupplier.ModifyTime = dateTime;
+
+                    msupplier.LatePaymentChargePercent = supplier.Terms.LatePaymentChargePercent == null ? 0 : Convert.ToDecimal(supplier.Terms.LatePaymentChargePercent);
+                    msupplier.EarlyPaymentDiscountPercent = supplier.Terms.EarlyPaymentDiscountPercent == null ? 0 : Convert.ToDecimal(supplier.Terms.EarlyPaymentDiscountPercent);
+                    msupplier.TermsOfPaymentID = supplier.Terms.TermsOfPaymentID == null ? null : supplier.Terms.TermsOfPaymentID.Trim();
+
+                    if (DicTermsOfPayments.ContainsKey(msupplier.TermsOfPaymentID))
+                        msupplier.PaymentIsDue = DicTermsOfPayments[msupplier.TermsOfPaymentID];
+
+                    msupplier.DiscountDays = supplier.Terms.DiscountDays == null ? 0 : supplier.Terms.DiscountDays;
+                    msupplier.BalanceDueDays = supplier.Terms.BalanceDueDays == null ? 0 : supplier.Terms.BalanceDueDays;
+                    msupplier.ImportPaymentIsDue = supplier.Terms.ImportPaymentIsDue == null ? 0 : supplier.Terms.ImportPaymentIsDue;
+                    msupplier.DiscountDate = supplier.Terms.DiscountDate == null ? null : supplier.Terms.DiscountDate;
+                    msupplier.BalanceDueDate = supplier.Terms.BalanceDueDate == null ? null : supplier.Terms.BalanceDueDate;
+                    msupplier.PaymentTermsDesc = supplier.PaymentTermsDesc == null ? null : supplier.PaymentTermsDesc;
+
+                    msupplier.AbssSalesID = supplier.AbssSalesID;
+
+                    msupplier.AccountProfileId = apId;
+                    msupplier.CurrencyID = supplier.CurrencyID;
+                    msupplier.TaxIDNumber = supplier.TaxIDNumber;
+                    msupplier.TaxCodeID = supplier.TaxCodeID;
+
+                    if (supplier.AddressList.Count > 0)
+                    {
+                        msupplier.supAddrLocation = supplier.AddressList[0].Location;
+                        msupplier.supContact = supplier.AddressList[0].ContactName;
+                        msupplier.supAddrPhone1 = supplier.AddressList[0].Phone1;
+                        msupplier.supAddrPhone2 = supplier.AddressList[0].Phone2;
+                        msupplier.supAddrPhone3 = supplier.AddressList[0].Phone3;
+                        msupplier.supEmail = supplier.AddressList[0].Email;
+                        msupplier.supAddrWeb = supplier.AddressList[0].WWW;
+                        msupplier.supAddrCity = supplier.AddressList[0].City;
+                        msupplier.supAddrCountry = supplier.AddressList[0].Country;
+                        msupplier.supAddrStreetLine1 = supplier.AddressList[0].Street;
+                        msupplier.supAddrStreetLine2 = supplier.AddressList[0].StreetLine1;
+                        msupplier.supAddrStreetLine3 = supplier.AddressList[0].StreetLine2;
+                        msupplier.supAddrStreetLine4 = supplier.AddressList[0].StreetLine3;
+                    }
+                    msupplier.supCheckout = true;
+                    msupplier.CreateTime = DateTime.Now;
+                    suppliers.Add(msupplier);
                 }
-                msupplier.supCheckout = true;
-                msupplier.CreateTime = DateTime.Now;
-                suppliers.Add(msupplier);
             }
+            catch(Exception)
+            {
+
+            }
+          
             return suppliers;
         }
 
         public static List<SupplierInfo4Abss> ConvertSupInfoModel(List<MyobSupplierModel> selectedSuppliers, int apId)
         {
             List<SupplierInfo4Abss> supplierInfo = new List<SupplierInfo4Abss>();
-            foreach (var supplier in selectedSuppliers)
+            try
             {
-                if (supplier.AddressList.Count > 0)
+                foreach (var supplier in selectedSuppliers)
                 {
-                    foreach (var addr in supplier.AddressList)
+                    if (supplier.AddressList.Count > 0)
                     {
-                        supplierInfo.Add(new SupplierInfo4Abss
+                        foreach (var addr in supplier.AddressList)
                         {
-                            SupCode = supplier.supCode,
-                            AccountProfileId = apId,
-                            SupAddrLocation = addr.Location,
-                            StreetLine1 = addr.StreetLine1,
-                            StreetLine2 = addr.StreetLine2,
-                            StreetLine3 = addr.StreetLine3,
-                            StreetLine4 = addr.StreetLine4,
-                            City = addr.City,
-                            State = addr.State,
-                            Postcode = addr.Postcode,
-                            Country = addr.Country,
-                            Phone1 = addr.Phone1,
-                            Phone2 = addr.Phone2,
-                            Phone3 = addr.Phone3,
-                            Fax = addr.Fax,
-                            Email = addr.Email,
-                            Salutation = addr.Salutation,
-                            ContactName = addr.ContactName,
-                            WWW = addr.WWW,
-                            CreateTime = DateTime.Now,
-                        });
+                            supplierInfo.Add(new SupplierInfo4Abss
+                            {
+                                SupCode = supplier.supCode,
+                                AccountProfileId = apId,
+                                SupAddrLocation = addr.Location,
+                                StreetLine1 = addr.StreetLine1,
+                                StreetLine2 = addr.StreetLine2,
+                                StreetLine3 = addr.StreetLine3,
+                                StreetLine4 = addr.StreetLine4,
+                                City = addr.City,
+                                State = addr.State,
+                                Postcode = addr.Postcode,
+                                Country = addr.Country,
+                                Phone1 = addr.Phone1,
+                                Phone2 = addr.Phone2,
+                                Phone3 = addr.Phone3,
+                                Fax = addr.Fax,
+                                Email = addr.Email,
+                                Salutation = addr.Salutation,
+                                ContactName = addr.ContactName,
+                                WWW = addr.WWW,
+                                CreateTime = DateTime.Now,
+                            });
+                        }
                     }
                 }
             }
+            catch(Exception)
+            {
+
+            }
+         
             return supplierInfo;
         }
 
