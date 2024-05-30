@@ -2,7 +2,7 @@
 
 namespace MMLib.Models.User
 {
-	public class Superior:SysUser
+	public class Superior:UserModel
 	{
 	
 	}

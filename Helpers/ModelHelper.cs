@@ -942,6 +942,8 @@ namespace MMLib.Helpers
             int okcount = 0;
             int ngcount = 0;
 
+            bool enableReviewUrl = ConfigurationManager.AppSettings["EnableReviewUrl"] == "1";
+
             EmailEditModel model = new EmailEditModel();
             var mailsettings = model.Get();
 
@@ -987,6 +989,8 @@ namespace MMLib.Helpers
                             mailbody = string.Format(Resource.RequestHtmlFormat, md.UserName, strorder, approvaltxt);
                             mailbody = string.Concat(mailbody, orderdesc);
                             mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
+                            mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, md);
+
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
 
@@ -1006,6 +1010,8 @@ namespace MMLib.Helpers
                             mailbody = string.Format(Resource.MsgToDBHtmlFormat, db.UserName, strorder, orderdesc, string.Concat(rejectonholdreasonremarktxt, " ", rejectonholdreasonremark));
                             mailbody = string.Concat(mailbody, $"<p><strong>{string.Format(Resource.SelectedFormat, Resource.Vendor)}:</strong>", " ", selectedSupplier.supName, "</p>");
                             mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
+
+                            mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, db);
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
@@ -1046,6 +1052,7 @@ namespace MMLib.Helpers
                         if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
                         {
                             mailbody = string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
+                            mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, superior);
                         }
 
                         if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept)
@@ -1107,6 +1114,14 @@ namespace MMLib.Helpers
             static string getOrderDesc(string desc, string ordercode)
             {
                 return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
+            }
+
+            static string hanldeReviewUrl(string pstCode, Dictionary<string, string> DicReviewUrl, bool enableReviewUrl, string mailbody, UserModel senior)
+            {
+                var key = string.Concat(senior.UserName, ":", senior.Email, ":", pstCode);
+                var reviewUrl = DicReviewUrl.ContainsKey(key) ? DicReviewUrl[key] : "";
+                if (enableReviewUrl && !string.IsNullOrEmpty(reviewUrl)) mailbody = string.Concat(mailbody, $"<p>Here is the link: <a href='{reviewUrl}' target='_blank'>{pstCode}</a>");
+                return mailbody;
             }
         }
 

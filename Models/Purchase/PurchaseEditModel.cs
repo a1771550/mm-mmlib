@@ -133,15 +133,15 @@ namespace MMLib.Models.Purchase
 
         public PurchaseEditModel(long Id, int? idoapproval) : this()
         {
-            Get(Id, idoapproval);
+            Get(Id, "", idoapproval);
         }
         public PurchaseEditModel(long Id, string status = "", int? idoapproval = 1, bool forprint = false) : this()
         {
-            Get(Id, idoapproval, status, forprint);
+            Get(Id, "", idoapproval, status, forprint);
         }
 
 
-        public void Get(long Id = 0, int? idoapproval = 1, string status = "", bool forprint = false)
+        public void Get(long Id = 0, string pstCode = "", int? idoapproval = 1, string status = "", bool forprint = false)
         {
             bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
             using var context = new MMDbContext();
@@ -155,9 +155,9 @@ namespace MMLib.Models.Purchase
 
             DateTime dateTime = DateTime.Now;
 
-            if (Id > 0)
+            if (Id > 0 || !string.IsNullOrEmpty(pstCode))
             {
-                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
+                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@pstCode=@pstCode", new { apId, Id, pstCode });
 
                 DoApproval = idoapproval == 1;
 
