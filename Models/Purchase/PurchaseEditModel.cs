@@ -386,8 +386,7 @@ namespace MMLib.Models.Purchase
                     reviewurl = DicReviewUrl[key],
                     supnames = supnames,
                     superioremail = superior.Email,
-                    isdirectorboard = isdirectorboard,
-                    //remark = model.pstRemark
+                    isdirectorboard = isdirectorboard,                   
                 });
             }
         }
@@ -478,6 +477,9 @@ namespace MMLib.Models.Purchase
 
                 ps.IsThreshold = model.IsThreshold;
                 ps.ThresholdMsg = model.ThresholdMsg;
+
+                ps.pstNotEnoughQuotation = model.pstNotEnoughQuotation;
+                ps.pstRemark = model.pstRemark;
 
                 ps.CreateBy = ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
                 ps.ModifyTime = DateTime.Now;
