@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace MMLib.Models.POS.MYOB
 {
     public class MyobSupplierModel:MMDAL.MyobSupplier
-    {
+    {       
         public decimal? Payment { get; set; } = null;
         public bool Selected { get; set; }
         public string pstCode { get; set; }

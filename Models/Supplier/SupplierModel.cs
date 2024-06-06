@@ -7,6 +7,7 @@ namespace MMLib.Models.Supplier
 {
     public class SupplierModel : MyobSupplier
     {
+        public int TotalCount { get; set; } = 0;
         public long Id { get; set; }
         public decimal? Payment { get; set; } = null;
         public bool Selected { get; set; }

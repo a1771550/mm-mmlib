@@ -83,12 +83,11 @@ namespace MMLib.Models.Supplier
         public PagedList.IPagedList<MyobSupplierModel> PagingSupplierList { get; set; }
         public void GetList()
         {
-            using var connection = new Microsoft.Data.SqlClient.SqlConnection(DefaultConnection);
-            if (connection.State == System.Data.ConnectionState.Closed)
+            if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
+            using (SqlConnection)
             {
-                connection.Open();
-            }
-            SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();
+                SupplierList = SqlConnection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();
+            }            
         }
 
         public static MyobSupplierModel QuickAdd(string supName)
@@ -359,7 +358,21 @@ namespace MMLib.Models.Supplier
             return CommonHelper.StringHandlingForSQL(str);
         }
 
-        
+        public static List<SupplierModel> GetPagingListAjax(int startIndex, out int recordCount, string keyword)
+        {
+            if (sqlConnection.State == System.Data.ConnectionState.Closed) sqlConnection.Open();
+            using (sqlConnection)
+            {
+                var vendors = sqlConnection.Query<SupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@startIndex=@startIndex,@pageSize=@pageSize,@keyword=@keyword", new { apId, startIndex, pageSize = supplierPageSize, keyword }).ToList();
+                recordCount = vendors.FirstOrDefault().TotalCount;
+                return vendors;
+            }
+        }
+
+        public static List<SupplierModel> GetPagingListAjax(int startIndex, out object recordCount, string keyword)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class SupCodeName

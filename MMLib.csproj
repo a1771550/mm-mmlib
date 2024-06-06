@@ -272,10 +272,10 @@
     <Compile Include="Models\Invoice\PayEditModel.cs" />
     <Compile Include="Models\Invoice\InvoiceModel.cs" />
     <Compile Include="Models\Invoice\InvoicePayModel.cs" />
+    <Compile Include="Models\Supplier\SupplierAjaxModel.cs" />
     <Compile Include="Models\User\EmployeeModel.cs" />
     <Compile Include="Models\Job\JobEditModel.cs" />
     <Compile Include="Models\Job\JobModel.cs" />
-    <Compile Include="Models\JqueryDatatableParam.cs" />
     <Compile Include="Models\ManagerModel.cs" />
     <Compile Include="Models\MYOB\AccountClassificationModel.cs" />
     <Compile Include="Models\MYOB\AccountModel.cs" />
