@@ -833,7 +833,7 @@ namespace MMLib.Helpers
             context.DebugLogs.Add(debugLog);
         }
 
-        
+
         private static void writelog(string message, string type, ref DebugLog debugLog)
         {
             debugLog.Message = message;
@@ -937,7 +937,7 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, string creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> inferiors = null)
+        public static bool SendNotificationEmail(string pstCode, SessUser creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> Inferiors = null)
         {
             int okcount = 0;
             int ngcount = 0;
@@ -1031,7 +1031,7 @@ namespace MMLib.Helpers
                     {
                         message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
 
-                        foreach (var inferior in inferiors)
+                        foreach (var inferior in Inferiors)
                         {
                             mailbody = string.Concat("<h3>Hi ", inferior.UserName, "</h3>", string.Format(Resource.ApprovedByDBPoMsgFormat, strorder, string.Concat("<strong>", pstCode, "</strong>"), string.Concat("<strong>", selectedSupplier.supName, "</strong>")));
                             mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedByFormat}:</strong> <strong>{creator}</strong></p>");
@@ -1041,19 +1041,28 @@ namespace MMLib.Helpers
                 }
                 else
                 {
-                    foreach (var superior in SuperiorList)
+                    if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
                     {
-                        var name = superior.UserName;
-                        var email = superior.Email;
-                        var ordercode = pstCode;
-                        orderdesc = getOrderDesc(desc, ordercode);
-                        message.To.Add(new MailAddress(email, name));
-
-                        if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
+                        foreach (var superior in SuperiorList)
                         {
+                            var name = superior.UserName;
+                            var email = superior.Email;
+
+                            orderdesc = getOrderDesc(desc, pstCode);
+                            message.To.Add(new MailAddress(email, name));
+
                             mailbody = string.Format(Resource.RequestHtmlFormat, name, strorder, approvaltxt);
                             mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, superior);
+                            FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
                         }
+                    }
+                    else
+                    {
+                        var name = creator.UserName;
+                        var email = creator.Email;
+
+                        orderdesc = getOrderDesc(desc, pstCode);
+                        message.To.Add(new MailAddress(email, name));
 
                         if (reactType == ReactType.PassedByDeptHead || reactType == ReactType.PassedByFinanceDept)
                         {
@@ -1069,20 +1078,16 @@ namespace MMLib.Helpers
                         {
                             message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
                             var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.Reject) + ":";
-                            mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, ordercode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                            mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, pstCode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
                         }
                         if (reactType == ReactType.OnHoldByDirector || reactType == ReactType.OnHoldByFinanceDept)
                         {
                             message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
                             var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.OnHold) + ":";
-                            mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, ordercode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
+                            mailbody = string.Format(Resource.OnHoldHtmlFormat, name, strorder, pstCode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
                         }
 
-                        mailbody = string.Concat(mailbody, orderdesc);
-
-                        mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedBy}:</strong> {creator}</p>");
-
-                        sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
+                        FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
                     }
                 }
 
@@ -1122,6 +1127,13 @@ namespace MMLib.Helpers
                 var reviewUrl = DicReviewUrl.ContainsKey(key) ? DicReviewUrl[key] : "";
                 if (enableReviewUrl && !string.IsNullOrEmpty(reviewUrl)) mailbody = string.Concat(mailbody, $"<p>Here is the link: <a href='{reviewUrl}' target='_blank'>{pstCode}</a>");
                 return mailbody;
+            }
+
+            static void FinalTouch4SendMail(SessUser creator, ref int okcount, ref int ngcount, EmailModel mailsettings, MailMessage message, ref string mailbody, string orderdesc)
+            {
+                mailbody = string.Concat(mailbody, orderdesc);
+                mailbody = string.Concat(mailbody, $"<p><strong>{Resource.CreatedBy}:</strong> {creator.UserName}</p>");
+                sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
             }
         }
 
@@ -1256,6 +1268,8 @@ namespace MMLib.Helpers
             char dateformat = Convert.ToChar(_dateformat);
             return sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, pstCode, supCode, checkout = false, dateformat }).ToList();
         }
+
+      
     }
 
     public class VtTotalQty

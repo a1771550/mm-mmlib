@@ -45,30 +45,18 @@ namespace MMLib.Models.Purchase
 			
 			PurchaseOrderList = new List<PurchaseModel>();
 
-			string userCode = UserHelper.CheckIfStaff(User) ? user.UserCode : null;
-			
-			if(SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
-			var objects = new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode };
-			//var spname = IsUserRole.isapprover ? "GetProcurement4Approval" : "GetProcurements";
-
-            var orderlist = SqlConnection.Query<PurchaseModel>($"EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode", objects).ToList();
+			bool isMD = IsUserRole.ismuseumdirector;
+			bool isFin = IsUserRole.isfinancedept;
+            string userCode = (isMD||isFin) ? null: user.UserCode;
+			string sql = (isMD || isFin) ? "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder": "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode";
+            if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
+            var orderlist = SqlConnection.Query<PurchaseModel>(sql, (isMD || isFin) ? new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder } : new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
 
 			if (orderlist.Count > 0)
-			{
-				//if(IsUserRole.isfinancedept)
-				//{
-				//	var InferiorList = HttpContext.Current.Session["InferiorList"] as List<Inferior>;
-				//	if (InferiorList != null)
-				//	{
-				//		var inferiorCodes = InferiorList.Select(x => x.UserCode).ToHashSet();
-				//		foreach (var order in orderlist) if (inferiorCodes.Contains(order.CreateBy)) filteredOrderList.Add(order);					
-				//	}
-				//}
-				//else 
-					
+			{					
 				filteredOrderList = orderlist;
 
 				var pstCodes = string.Join(",", orderlist.Select(x => x.pstCode).Distinct().ToHashSet());
