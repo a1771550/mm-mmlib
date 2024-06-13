@@ -364,7 +364,7 @@ namespace MMLib.Models.Supplier
             using (sqlConnection)
             {
                 var vendors = sqlConnection.Query<SupplierModel>(@"EXEC dbo.GetSupplierPagingList @apId=@apId,@startIndex=@startIndex,@pageSize=@pageSize,@keyword=@keyword", new { apId, startIndex, pageSize = supplierPageSize, keyword }).ToList();
-                recordCount = vendors.FirstOrDefault().TotalCount;
+                recordCount = vendors!=null&&vendors.Count>0? vendors.FirstOrDefault().TotalCount:0;
                 return vendors;
             }
         }
