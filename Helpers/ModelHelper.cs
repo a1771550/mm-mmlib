@@ -153,7 +153,6 @@ namespace MMLib.Helpers
                     msupplier.CreateTime = dateTime;
                     msupplier.ModifyTime = dateTime;
                     msupplier.AccountProfileId = apId;
-                    msupplier.supAbss = true;
                     msupplier.supCheckout = true;
 
                     msupplier.LatePaymentChargePercent = supplier.Terms.LatePaymentChargePercent == null ? 0 : Convert.ToDecimal(supplier.Terms.LatePaymentChargePercent);

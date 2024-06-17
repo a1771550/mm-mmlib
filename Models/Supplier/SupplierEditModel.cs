@@ -101,8 +101,7 @@ namespace MMLib.Models.Supplier
             {
                 supId = supId,
                 supName = supName,
-                supCode = CommonHelper.GenerateNonce(codelength, false),
-                supAbss = false,
+                supCode = CommonHelper.GenerateNonce(codelength, false),                
                 AccountProfileId = comInfo.AccountProfileId,
                 supIsActive = true,
                 supCheckout = false,
@@ -133,7 +132,6 @@ namespace MMLib.Models.Supplier
                     supId = model.supId,
                     supName = model.supName,
                     supCode = CommonHelper.GenerateNonce(codelength, false),
-                    supAbss = false,
                     supAccount = model.supAccount,
                     AccountProfileId = comInfo.AccountProfileId,
                     supIsActive = true,
@@ -153,14 +151,13 @@ namespace MMLib.Models.Supplier
                     supAddrPhone3 = model.supAddrPhone3,
                     supCheckout = false,
                     CreateTime = dateTime,
-                    ModifyTime = dateTime,
                 };
                 context.MyobSuppliers.Add(ps);
                 context.SaveChanges();
             }
             else
             {
-                MMDAL.MyobSupplier ps = context.MyobSuppliers.FirstOrDefault(x => x.supId == model.supId);
+                MyobSupplier ps = context.MyobSuppliers.FirstOrDefault(x => x.supId == model.supId);
                 ps.supName = model.supName;
                 ps.supAccount = model.supAccount;
                 ps.ModifyTime = dateTime;

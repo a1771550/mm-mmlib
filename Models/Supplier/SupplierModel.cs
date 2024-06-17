@@ -7,8 +7,7 @@ namespace MMLib.Models.Supplier
 {
     public class SupplierModel : MyobSupplier
     {
-        public int TotalCount { get; set; } = 0;
-        public long Id { get; set; }
+        public int TotalCount { get; set; } = 0;      
         public decimal? Payment { get; set; } = null;
         public bool Selected { get; set; }
         public string pstCode { get; set; }
@@ -44,7 +43,7 @@ namespace MMLib.Models.Supplier
         public SupplierModel()
         {
             StreetLines = new string[4];
-            supAbss = false;
+            supCheckout = true;
             ImgList = new List<string>();
             FileList = new List<string>();
         }     

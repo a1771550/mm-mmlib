@@ -491,11 +491,13 @@ namespace MMLib.Models.Purchase
 
         private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
         {
-            var currentIds = context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode).Select(x => x.Id).ToList();
-            List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();
-            foreach (SupplierModel supplier in SupplierList)
+            var groupedSupList = SupplierList.GroupBy(x => x.supCode).ToList();
+            var currentRecords = context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode).Select(x => x.supCode.ToLower()).ToList();
+            List<PurchaseSupplier> pslist = new List<PurchaseSupplier>();            
+            foreach (var group in groupedSupList)
             {
-                if (!currentIds.Contains(supplier.Id))
+                var supplier = group.FirstOrDefault();
+                if (!currentRecords.Contains(supplier.supCode.ToLower()))
                 {
                     pslist.Add(new PurchaseSupplier
                     {
