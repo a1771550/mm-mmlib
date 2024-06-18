@@ -60,7 +60,6 @@ namespace MMLib.Models.Purchase
 		public TaxModel TaxModel { get; set; }
 		public bool UseForexAPI { get; set; }
 
-
 		public string StatusDisplay
 		{
 			get
