@@ -22,13 +22,12 @@ using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
 using MMLib.Models.Invoice;
 using MMLib.Models.POS.MYOB;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MMLib.Models.Purchase
 {
     public class PurchaseEditModel : PagingBaseModel
-    {
-        public Dictionary<string, List<MyobSupplierModel>> DicSupInfoes { get; set; }
-        public Dictionary<string, string> DicSupCodeName { get; set; } = new Dictionary<string, string>();
+    {       
         public List<MyobSupplierModel> SupplierList { get; set; }
         public List<SelectListItem> Reasons4ChoosingSupplier
         {
@@ -125,8 +124,7 @@ namespace MMLib.Models.Purchase
             DicCurrencyExRate = new Dictionary<string, double>();
             DicLocation = new Dictionary<string, string>();
             ImgList = new List<string>();
-            FileList = new List<string>();
-            DicSupInfoes = new Dictionary<string, List<MyobSupplierModel>>();
+            FileList = new List<string>();           
             PoQtyAmtList = new();
             SupplierList = new List<MyobSupplierModel>();
         }
@@ -169,30 +167,12 @@ namespace MMLib.Models.Purchase
                     ModelHelper.GetReady4Print(context, ref Receipt, ref DisclaimerList, ref PaymentTermsList);
                 }
 
-                var suppurchaseInfoes = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode", new { apId, Purchase.pstCode }).ToList();
-
-                List<IGrouping<string, MyobSupplierModel>> groupedsupPurchaseInfoes = new List<IGrouping<string, MyobSupplierModel>>();
-                if (suppurchaseInfoes != null && suppurchaseInfoes.Count > 0)
-                {
-                    groupedsupPurchaseInfoes = suppurchaseInfoes.GroupBy(x => x.supCode).ToList();
-                }
-
+                string baseUrl = UriHelper.GetBaseUrl();
+                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
+               
                 Purchase.IsEditMode = true;
 
-                string baseUrl = UriHelper.GetBaseUrl();
-                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
-
-                DicSupCodeName = new Dictionary<string, string>();
-                foreach (var supplier in SupplierList) if (!DicSupCodeName.ContainsKey(supplier.supCode)) DicSupCodeName[supplier.supCode] = supplier.supName;
-
-                if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString())
-                {
-                    SelectedSupplier = SupplierList.FirstOrDefault(x => x.Selected);
-
-                    groupedsupPurchaseInfoes = suppurchaseInfoes.Where(x => x.supCode == SelectedSupplier.supCode).GroupBy(x => x.supCode).ToList();
-                }
-
-                getDicSupInfoes(groupedsupPurchaseInfoes);
+                if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString()) SelectedSupplier = SupplierList.FirstOrDefault(x => x.Selected);
             }
             else
             {
@@ -235,27 +215,6 @@ namespace MMLib.Models.Purchase
 
             Purchase.Mode = idoapproval == 1 ? "readonly" : "";
             PoSettings = PoSettingsEditModel.GetPoSettings(connection);
-
-            void getDicSupInfoes(List<IGrouping<string, MyobSupplierModel>> groupedsupPurchaseInfoes)
-            {
-                foreach (var group in groupedsupPurchaseInfoes)
-                {
-                    var g = group.FirstOrDefault();
-                    if (!DicSupInfoes.ContainsKey(g.supCode)) DicSupInfoes[g.supCode] = new List<MyobSupplierModel>();
-                }
-                foreach (var group in groupedsupPurchaseInfoes)
-                {
-                    var g = group.FirstOrDefault();
-                    if (DicSupInfoes.ContainsKey(g.supCode))
-                    {
-                        foreach (var spi in group)
-                        {
-                            spi.filePath = ModelHelper.GetPDFLnk(Purchase.pstCode, g.supCode, spi.fileName);
-                            DicSupInfoes[g.supCode].Add(spi);
-                        }
-                    }
-                }
-            }
         }
 
         public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList)
