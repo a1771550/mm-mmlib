@@ -131,15 +131,15 @@ namespace MMLib.Models.Purchase
 
         public PurchaseEditModel(long Id, int? idoapproval) : this()
         {
-            Get(Id, "", idoapproval);
+            Get(Id, null, idoapproval);
         }
         public PurchaseEditModel(long Id, string status = "", int? idoapproval = 1, bool forprint = false) : this()
         {
-            Get(Id, "", idoapproval, status, forprint);
+            Get(Id, null, idoapproval, status, forprint);
         }
 
 
-        public void Get(long Id = 0, string pstCode = "", int? idoapproval = 1, string status = "", bool forprint = false)
+        public void Get(long Id = 0, string pstCode = null, int? idoapproval = 1, string status = "", bool forprint = false)
         {
             bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
             using var context = new MMDbContext();

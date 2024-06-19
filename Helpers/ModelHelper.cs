@@ -1230,7 +1230,7 @@ namespace MMLib.Helpers
         }
 
 
-        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool checkout = false)
+        public static List<MyobSupplierModel> GetSupplierList(SqlConnection connection, bool? checkout = null)
         {
             return connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@checkout=@checkout", new { apId, checkout }).ToList();
         }
@@ -1240,7 +1240,7 @@ namespace MMLib.Helpers
             return connection.Query<string>(@"EXEC dbo.GetPurchaseCodes @apId=@apId,@fullyPaid=@fullyPaid", new { apId, fullyPaid }).ToList();
         }
 
-        public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool checkout = false)
+        public static List<InvoiceModel> GetInvoiceList(SqlConnection connection, string pstCode, bool? checkout = null)
         {
             return connection.Query<InvoiceModel>(@"EXEC dbo.GetInvoicesByPstCode @apId=@apId,@pstCode=@pstCode,@checkout=@checkout", new { apId, pstCode, checkout }).ToList();
         }

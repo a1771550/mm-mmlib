@@ -167,7 +167,7 @@ namespace MMLib.Models.Invoice
 
         [Name("Category")]
         [Index(38)]
-        public string Category { get { return null; } }
+        public string Category { get { return "HKMM"; } }
 
         [Name("Card ID")]
         [Index(39)]
