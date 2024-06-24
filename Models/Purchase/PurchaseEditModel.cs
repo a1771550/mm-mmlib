@@ -240,7 +240,7 @@ namespace MMLib.Models.Purchase
             Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
 
             sqlConnection.Open();
-            SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId,@shopcode=@shopcode", new { apId, userId = user.surUID, shopcode = comInfo.Shop }).ToList();
+            SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId", new { apId, userId = user.surUID }).ToList();
 
             foreach (var superior in SuperiorList)
             {
@@ -267,7 +267,7 @@ namespace MMLib.Models.Purchase
                     {
                         ReactType reactType = ReactType.RequestingByStaff;
                         if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
-                        if (IsUserRole.isfinancedept) reactType = ReactType.PassedByFinanceDept;
+                        if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
 
                         if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
                         if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
