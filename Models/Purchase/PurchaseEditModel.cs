@@ -268,8 +268,9 @@ namespace MMLib.Models.Purchase
                         ReactType reactType = ReactType.RequestingByStaff;
                         if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
                         if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
-
+                        if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
                         if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+
                         if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
                         {
                             var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
@@ -520,8 +521,6 @@ namespace MMLib.Models.Purchase
             pqStatus = "";
             if (purchase.pstStatus == RequestStatus.approved.ToString())
             {
-                reactType = ReactType.PassedByDeptHead;
-
                 if (poThreshold == 1)
                 {
                     if (IsUserRole.isdirectorboard)
@@ -559,25 +558,33 @@ namespace MMLib.Models.Purchase
                 }
                 else
                 {
-                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
                     {
                         purchase.pstStatus = PurchaseStatus.order.ToString();
+                        //pqStatus = IsUserRole.isdirectorboard? RequestStatus.approvedByDirectorBoard.ToString():IsUserRole.ismuseumdirector? RequestStatus.approvedByMuseumDirector.ToString():IsUserRole.istransientmd?RequestStatus.approvedByTransientDirector.ToString(): RequestStatus.approvedByDirectorAssistant.ToString();
+                        //reactType = IsUserRole.isdirectorboard?ReactType.ApprovedByDirectorBoard:IsUserRole.ismuseumdirector? ReactType.ApprovedByMuseumDirector:IsUserRole.istransientmd?ReactType.ApprovedByTransientDirector: ReactType.ApprovedByDirectorAssistant;
                         pqStatus = RequestStatus.approvedByMuseumDirector.ToString();
-                        reactType = ReactType.ApprovedByMuseumDirector;
+                        reactType = ReactType.Approved;
+                        
                         updatePurchase4MDApproval(purchase, SelectedSupCode, context);
-                        //purchase.ModifyTime = DateTime.Now;                       
                     }
+
+                    //if (IsUserRole.isdirectorassistant)
+                    //{
+                    //    pqStatus = RequestStatus.requestingByDirectorAssistant.ToString();
+                    //    reactType = ReactType.passedby;
+                    //}
 
                     if (IsUserRole.isfinancedept)
                     {
                         pqStatus = RequestStatus.requestingByFinanceDept.ToString();
-                        reactType = ReactType.PassedByFinanceDept;
+                        reactType = ReactType.RequestingByFinanceDept;
                     }
 
                     if (IsUserRole.isdepthead)
                     {
                         pqStatus = RequestStatus.requestingByDeptHead.ToString();
-                        reactType = ReactType.PassedByDeptHead;
+                        reactType = ReactType.RequestingByDeptHead;
                     }
 
                     if (IsUserRole.isstaff)
@@ -591,10 +598,16 @@ namespace MMLib.Models.Purchase
             if (purchase.pstStatus == RequestStatus.rejected.ToString())
             {
                 reactType = ReactType.RejectedByDeptHead;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
                 {
                     pqStatus = RequestStatus.rejectedByMuseumDirector.ToString();
                     reactType = ReactType.Rejected;
+                }
+
+                if (IsUserRole.isfinancedept)
+                {
+                    pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
+                    reactType = ReactType.RejectedByFinanceDept;
                 }
 
                 if (IsUserRole.isdepthead)
@@ -603,20 +616,16 @@ namespace MMLib.Models.Purchase
                     reactType = ReactType.RejectedByDeptHead;
                 }
 
-                if (IsUserRole.isfinancedept)
-                {
-                    pqStatus = RequestStatus.rejectedByFinanceDept.ToString();
-                    reactType = ReactType.RejectedByFinanceDept;
-                }
+               
             }
 
             if (purchase.pstStatus == RequestStatus.onhold.ToString())
             {
                 reactType = ReactType.OnHoldByFinanceDept;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector)
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
                 {
                     pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
-                    reactType = ReactType.OnHoldByDirector;
+                    reactType = ReactType.OnHoldByMuseumDirector;
                 }
 
                 if (IsUserRole.isfinancedept)
@@ -626,6 +635,7 @@ namespace MMLib.Models.Purchase
                 }
             }
 
+            //todo: to be complemented...
             if (purchase.pstStatus == RequestStatus.voided.ToString())
             {
                 if (IsUserRole.isdepthead)

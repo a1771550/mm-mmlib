@@ -26,7 +26,6 @@ namespace MMLib.Models.User
 
         public bool checkpass { get; set; }
         public int icheckpass { get; set; }
-        //public int isActive { getPG; set; }
         public int MaxCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["MaxEmployeeCodeLength"]); } }
 
         public new UserModel User { get; set; }
@@ -51,11 +50,11 @@ namespace MMLib.Models.User
         {
             if (sqlConnection.State == System.Data.ConnectionState.Closed) sqlConnection.Open();
             bool active = (isactive == null) ? true : (int)isactive == 1;
-            return sqlConnection.Query<UserModel>(@"EXEC dbo.GetUsers @apId=@apId,@active=@active,@SortCol=@SortCol,@SortOrder=@SortOrder,@Keyword=@Keyword", new { apId, active,SortCol ,SortOrder, Keyword }).ToList();
+            return sqlConnection.Query<UserModel>(@"EXEC dbo.GetUsers @apId=@apId,@active=@active,@SortCol=@SortCol,@SortOrder=@SortOrder,@Keyword=@Keyword", new { apId, active, SortCol, SortOrder, Keyword }).ToList();
         }
-        public void GetUserList(int? isactive = 1,int PageNo=1, int SortCol = 0, string SortOrder = "desc", string Keyword = "")
+        public void GetUserList(int? isactive = 1, int PageNo = 1, int SortCol = 0, string SortOrder = "desc", string Keyword = "")
         {
-            if (Keyword == "") Keyword = null;          
+            if (Keyword == "") Keyword = null;
             this.SortCol = SortCol;
             this.Keyword = Keyword;
             this.PageNo = PageNo;
@@ -121,7 +120,8 @@ namespace MMLib.Models.User
                 isfinancedept = user.Roles.Contains(RoleType.FinanceDept),
                 ismuseumdirector = user.Roles.Contains(RoleType.MuseumDirector),
                 isdirectorboard = user.Roles.Contains(RoleType.DirectorBoard),
-                isapprover = user.Roles.Any(x => x != RoleType.Staff)
+                isapprover = user.Roles.Any(x => x != RoleType.Staff),
+                isdirectorassistant = user.Roles.Contains(RoleType.DirectorAssistant),
             };
         }
 
@@ -156,11 +156,6 @@ namespace MMLib.Models.User
         {
             if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
             List<SysFunc> funcs = new List<SysFunc>();
-
-            //GetAccessRights
-            DefaultAccessRights = SqlConnection.Query<AccessRightModel>(@"EXEC dbo.GetAccessRights @apId=@apId,@usercode=@usercode", new { apId, usercode = "staff03" }).ToList();
-            DicAR = ModelHelper.GetDicAR(DefaultAccessRights);
-
             GetUserList(apId);
             SuperiorList = UserList.Where(x => !x.UserRole.Contains(RoleType.Staff.ToString())).ToList();
             RoleList = SqlConnection.Query<SelectListItem>(@"EXEC dbo.GetRoleList @lang=@lang", new { lang = CultureHelper.CurrentCulture }).ToList();
@@ -172,20 +167,13 @@ namespace MMLib.Models.User
                 User = UserList.FirstOrDefault(x => x.surUID == userId);
                 if (User != null)
                 {
-                    var accessRights = SqlConnection.Query<AccessRightModel>(@"EXEC dbo.GetAccessRights @apId=@apId,@usercode=@usercode", new { apId, usercode = User.UserCode }).ToList();
-                    if (accessRights != null && accessRights.Count > 0) User.AccessRights = accessRights.Select(x => x.FuncCode).ToList();
-
                     User.RoleId = SqlConnection.QueryFirstOrDefault<int>(@"EXEC dbo.GetUserRole @apId=@apId,@userId=@userId", new { apId, userId = User.surUID });
                 }
-            }
-            else
-            {
-                User.AccessRights = DefaultAccessRights.Select(x => x.FuncCode).ToList();
-            }
+            }           
         }
 
         public void Edit(UserModel User)
-        {            
+        {
             using var context = new MMDbContext();
 
             SysUser user = null;
@@ -196,7 +184,7 @@ namespace MMLib.Models.User
             {
                 user = context.SysUsers.Find(User.surUID);
                 if (user != null)
-                {                    
+                {
                     user.UserName = User.UserName;
                     user.Email = User.Email;
 
@@ -237,9 +225,8 @@ namespace MMLib.Models.User
                 });
                 context.SaveChanges();
             }
-
-            UpdateAccessRights(User, context);
-            UpdateUserRole(User, context, user, editmode);
+            var rolecode = context.SysRoles.FirstOrDefault(x => x.Id == User.RoleId).rlCode;         
+            UpdateUserRole(User, rolecode, context, user, editmode);
 
             static string GetUserCode(UserModel User)
             {
@@ -258,7 +245,7 @@ namespace MMLib.Models.User
                 return string.Concat(role, resultString);
             }
 
-            static void UpdateUserRole(UserModel User, MMDbContext context, SysUser user, bool editmode)
+            static void UpdateUserRole(UserModel User, string rolecode, MMDbContext context, SysUser user, bool editmode)
             {
                 //remove current record first:
                 var userrole = context.UserRoles.FirstOrDefault(x => x.AccountProfileId == apId && x.UserId == User.surUID);
@@ -278,50 +265,12 @@ namespace MMLib.Models.User
 
                 context.UserRoles.Add(userRole);
 
-                var rolecode = context.SysRoles.FirstOrDefault(x => x.Id == User.RoleId).rlCode;
-
-                //for edit mode only
-                if (editmode) if (user.UserRole != rolecode) user.UserCode = GetUserCode(User);             
-
                 user.UserRole = rolecode;
                 user.surModifyTime = DateTime.Now;
                 context.SaveChanges();
             }
 
-            static void UpdateAccessRights(UserModel User, MMDbContext context)
-            {
-                if (User.AccessRights.Count > 0)
-                {
-                    //remove current accessright first before adding:
-                    removeAccessRights(User, context);
-
-                    List<AccessRight> ars = new List<AccessRight>();
-                    foreach (string code in User.AccessRights)
-                    {
-                        AccessRight ar = new AccessRight
-                        {
-                            UserCode = User.UserCode,
-                            FuncCode = code,
-                            AccountProfileId = apId,
-                            CreateTime = DateTime.Now,
-                        };
-                        ars.Add(ar);
-                    }
-                    context.AccessRights.AddRange(ars);
-                    context.SaveChanges();
-                }
-                else
-                {
-                    //the user is removed from all access rights
-                    removeAccessRights(User, context);
-                }
-
-                static void removeAccessRights(UserModel User, MMDbContext context)
-                {
-                    context.AccessRights.RemoveRange(context.AccessRights.Where(x => x.AccountProfileId == apId && x.UserCode == User.UserCode));
-                    context.SaveChanges();
-                }
-            }
+       
         }
     }
 }

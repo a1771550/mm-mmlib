@@ -4,13 +4,22 @@ using MMLib.Models.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MMLib.Helpers
 {
     public class UserHelper
     {
+        public static List<RoleType> GetUserRoles(UserModel user)
+        {
+            var userrolecodes = user.UserRole.Split(',').ToList();
+            List<RoleType> roletypes = new();
+            foreach (var rolecode in userrolecodes)
+            {
+                Enum.TryParse(rolecode, out RoleType roletype);
+                roletypes.Add(roletype);
+            }
+            return roletypes;
+        }
         public static List<RoleType> GetUserRoles(SessUser user)
         {
             return user.Roles;
@@ -63,6 +72,11 @@ namespace MMLib.Helpers
             var Roles = GetUserRoles(user);
             return Roles.Any(x => x == RoleType.MuseumDirector);
         }
+        public static bool CheckIfMD(UserModel user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.MuseumDirector);
+        }
         public static bool CheckIfDirector(SysUser user)
         {
             var Roles = GetUserRoles(user);
@@ -72,6 +86,21 @@ namespace MMLib.Helpers
         {
             var Roles = GetUserRoles(user);
             return Roles.Any(x => x == RoleType.MuseumDirector || x == RoleType.DirectorBoard);
+        }
+        public static bool CheckIfDA(SessUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.DirectorAssistant);
+        }
+        public static bool CheckIfTD(SessUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.TransientMD);
+        }
+        public static bool CheckIfDA(UserModel user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.DirectorAssistant);
         }
     }
 }

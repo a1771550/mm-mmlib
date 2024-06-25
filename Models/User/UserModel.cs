@@ -40,9 +40,6 @@ namespace MMLib.Models.User
         [Compare("Password")]
         public string ConfirmPassword { get; set; }
 
-        [Display(Name = "AccessRights", ResourceType = typeof(Resources.Resource))]
-        public List<string> AccessRights { get; set; }
-
         [Display(Name = "Status", ResourceType = typeof(Resources.Resource))]
         public bool surIsActive { get; set; }
         public bool checkpass { get; set; }
@@ -72,8 +69,7 @@ namespace MMLib.Models.User
         public int RoleId { get; set; }
 
         public UserModel()
-        {
-            AccessRights = new();
+        {          
             SuperiorIdList = new();
         }
 
@@ -96,6 +92,8 @@ namespace MMLib.Models.User
         DirectorBoard = 13,
 		Staff = 14,
         SystemAdmin = 15,
+        DirectorAssistant=16,
+        TransientMD=17,
 	}
 
     public class IsUserRole
@@ -106,5 +104,7 @@ namespace MMLib.Models.User
         public bool ismuseumdirector { get; set; }
         public bool isdirectorboard { get; set; }
 		public bool isapprover { get; set; }
+        public bool isdirectorassistant { get; set; }
+        public bool istransientmd { get; set; }
 	}
 }

@@ -1040,8 +1040,9 @@ namespace MMLib.Helpers
                 }
                 else
                 {
-                    if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept)
+                    if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || reactType == ReactType.RequestingByDirectorAssistant)
                     {
+
                         foreach (var superior in SuperiorList)
                         {
                             var name = superior.UserName;
@@ -1054,6 +1055,8 @@ namespace MMLib.Helpers
                             mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, superior);
                             FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
                         }
+
+
                     }
                     else
                     {
@@ -1079,7 +1082,7 @@ namespace MMLib.Helpers
                             var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.Reject) + ":";
                             mailbody = string.Format(Resource.RejectHtmlFormat, name, strorder, pstCode, rejectonholdreasonremarktxt, rejectonholdreasonremark);
                         }
-                        if (reactType == ReactType.OnHoldByDirector || reactType == ReactType.OnHoldByFinanceDept)
+                        if (reactType == ReactType.OnHoldByMuseumDirector || reactType == ReactType.OnHoldByFinanceDept)
                         {
                             message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
                             var rejectonholdreasonremarktxt = string.Format(Resource.ReasonForFormat, Resource.OnHold) + ":";
@@ -1268,7 +1271,7 @@ namespace MMLib.Helpers
             return sqlConnection.Query<AbssPayLine>(@"EXEC dbo.GetInvoicePays @apId=@apId,@pstCode=@pstCode,@supCode=@supCode,@checkout=@checkout,@dateformat=@dateformat", new { apId, pstCode, supCode, checkout = false, dateformat }).ToList();
         }
 
-      
+
     }
 
     public class VtTotalQty
