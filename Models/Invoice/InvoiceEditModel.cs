@@ -127,7 +127,8 @@ namespace MMLib.Models.Invoice
 
         public void GetInvoice(string pstCode, string InvoiceId = "")
         {
-            bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
+            bool isMD = UserHelper.CheckIfMD(User);
+            bool isDB = UserHelper.CheckIfDB(User);
             using var context = new MMDbContext();
             var connection = new SqlConnection(defaultConnection);
             connection.Open();
@@ -136,7 +137,7 @@ namespace MMLib.Models.Invoice
 
             Invoice = new InvoiceModel();
             Device device = null;
-            if (!isDirector) device = context.Devices.First();
+            if (!isMD&&!isDB) device = context.Devices.First();
 
             DateTime dateTime = DateTime.Now;
 

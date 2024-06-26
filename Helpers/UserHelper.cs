@@ -80,12 +80,17 @@ namespace MMLib.Helpers
         public static bool CheckIfDirector(SysUser user)
         {
             var Roles = GetUserRoles(user);
-            return Roles.Any(x => x == RoleType.MuseumDirector||x==RoleType.DirectorBoard);
+            return Roles.Any(x => x == RoleType.MuseumDirector || x == RoleType.DirectorBoard);
         }
         public static bool CheckIfDirector(SessUser user)
         {
             var Roles = GetUserRoles(user);
             return Roles.Any(x => x == RoleType.MuseumDirector || x == RoleType.DirectorBoard);
+        }
+        public static bool CheckIfDA(SysUser user)
+        {
+            var Roles = GetUserRoles(user);
+            return Roles.Any(x => x == RoleType.DirectorAssistant);
         }
         public static bool CheckIfDA(SessUser user)
         {

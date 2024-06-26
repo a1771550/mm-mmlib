@@ -4,7 +4,6 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using CommonLib.Helpers;
-using CommonLib.Models;
 using MMDAL;
 using Resources = CommonLib.App_GlobalResources;
 using Device = MMDAL.Device;
@@ -13,16 +12,14 @@ using System.Configuration;
 using MMLib.Models.POS.Settings;
 using Microsoft.Data.SqlClient;
 using Dapper;
-using MMLib.Models.MYOB;
 using MMLib.Models.User;
 using System.Text.Json;
 using CommonLib.BaseModels;
 using MMLib.Models.Supplier;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using PagedList;
-using MMLib.Models.Invoice;
 using MMLib.Models.POS.MYOB;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using MMLib.Helpers;
 
 namespace MMLib.Models.Purchase
 {
@@ -141,83 +138,87 @@ namespace MMLib.Models.Purchase
 
         public void Get(long Id = 0, string pstCode = null, int? idoapproval = 1, string status = "", bool forprint = false)
         {
-            bool isDirector = (bool)HttpContext.Current.Session["IsDirector"];
-            using var context = new MMDbContext();
+            bool isMD = UserHelper.CheckIfMD(User);
+            bool isDB = UserHelper.CheckIfDB(User);
 
+            using var context = new MMDbContext();
             Purchase = new PurchaseModel();
             Device device = null;
-            if (!isDirector) device = context.Devices.First();
+            if (!isMD && !isDB) device = context.Devices.First();
 
-            var connection = new SqlConnection(defaultConnection);
-            connection.Open();
-
-            DateTime dateTime = DateTime.Now;
-
-            if (Id > 0 || !string.IsNullOrEmpty(pstCode))
+            if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
+            using (SqlConnection)
             {
-                Purchase = connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@pstCode=@pstCode", new { apId, Id, pstCode });
+                DateTime dateTime = DateTime.Now;
 
-                DoApproval = idoapproval == 1;
-
-                if (forprint)
+                if (Id > 0 || !string.IsNullOrEmpty(pstCode))
                 {
-                    Receipt = new ReceiptViewModel();
-                    DisclaimerList = new List<string>();
-                    PaymentTermsList = new List<string>();
-                    ModelHelper.GetReady4Print(context, ref Receipt, ref DisclaimerList, ref PaymentTermsList);
+                    Purchase = SqlConnection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id,@pstCode=@pstCode", new { apId, Id, pstCode });
+
+                    DoApproval = idoapproval == 1;
+
+                    if (forprint)
+                    {
+                        Receipt = new ReceiptViewModel();
+                        DisclaimerList = new List<string>();
+                        PaymentTermsList = new List<string>();
+                        ModelHelper.GetReady4Print(context, ref Receipt, ref DisclaimerList, ref PaymentTermsList);
+                    }
+
+                    string baseUrl = UriHelper.GetBaseUrl();
+                    SupplierList = SqlConnection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
+
+                    Purchase.IsEditMode = true;
+
+                    if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString()) SelectedSupplier = SupplierList.FirstOrDefault(x => x.Selected);
+                }
+                else
+                {
+                    var purchaseinitcode = device.dvcPurchaseRequestPrefix;
+                    var purchaseno = $"{device.dvcNextPurchaseRequestNo:000000}";
+                    device.dvcNextPurchaseRequestNo++;
+                    device.dvcModifyTime = dateTime;
+
+                    string pqstatus = RequestStatus.requestingByStaff.ToString();
+                    //if (IsUserRole.isdepthead) pqstatus = RequestStatus.requestingByDeptHead.ToString();
+                    //if (IsUserRole.isfinancedept) pqstatus = RequestStatus.requestingByFinanceDept.ToString();
+
+                    string pstcode = string.Concat(purchaseinitcode, purchaseno);
+
+                    status = PurchaseStatus.requesting.ToString();
+                    var latestpurchase = context.Purchases.OrderByDescending(x => x.Id).FirstOrDefault();
+                    if (latestpurchase != null)
+                    {
+                        if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);
+                        else addNewPurchase(context, apId, pstcode, status, (bool)latestpurchase.IsThreshold, pqstatus);
+                    }
+                    else addNewPurchase(context, apId, pstcode, status, false, pqstatus);
+
+                    Purchase.CreateByDisplay = User.UserName;
                 }
 
-                string baseUrl = UriHelper.GetBaseUrl();
-                SupplierList = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetPurchaseSuppliersInfoesByCode @apId=@apId,@pstCode=@pstCode,@baseUrl=@baseUrl", new { apId, Purchase.pstCode, baseUrl }).ToList();
+                Vendors = SqlConnection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
 
-                Purchase.IsEditMode = true;
-
-                if (Purchase.pstStatus.ToLower() == PurchaseStatus.order.ToString()) SelectedSupplier = SupplierList.FirstOrDefault(x => x.Selected);
-            }
-            else
-            {
-                var purchaseinitcode = device.dvcPurchaseRequestPrefix;
-                var purchaseno = $"{device.dvcNextPurchaseRequestNo:000000}";
-                device.dvcNextPurchaseRequestNo++;
-                device.dvcModifyTime = dateTime;
-
-                string pqstatus = RequestStatus.requestingByStaff.ToString();
-                //if (IsUserRole.isdepthead) pqstatus = RequestStatus.requestingByDeptHead.ToString();
-                //if (IsUserRole.isfinancedept) pqstatus = RequestStatus.requestingByFinanceDept.ToString();
-
-                string pstcode = string.Concat(purchaseinitcode, purchaseno);
-
-                status = PurchaseStatus.requesting.ToString();
-                var latestpurchase = context.Purchases.OrderByDescending(x => x.Id).FirstOrDefault();
-                if (latestpurchase != null)
+                var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
+                if (myobcurrencylist != null && myobcurrencylist.Count > 0)
                 {
-                    if (string.IsNullOrEmpty(latestpurchase.pstType)) PopulatePurchaseModel(latestpurchase.pstCode, latestpurchase.pstStatus, RequestStatus.requestingByStaff.ToString(), latestpurchase.Id);
-                    else addNewPurchase(context, apId, pstcode, status, (bool)latestpurchase.IsThreshold, pqstatus);
+                    DicCurrencyExRate = new Dictionary<string, double>();
+                    foreach (var currency in myobcurrencylist)
+                    {
+                        DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
+                    }
                 }
-                else addNewPurchase(context, apId, pstcode, status, false, pqstatus);
-            }
 
-            Vendors = connection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId", new { apId }).ToList();
+                Purchase.pstPurchaseDate = DateTime.Now.Date;
+                Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
+                Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
 
-            var myobcurrencylist = context.MyobCurrencies.Where(x => x.AccountProfileId == ComInfo.AccountProfileId).ToList();
-            if (myobcurrencylist != null && myobcurrencylist.Count > 0)
-            {
-                DicCurrencyExRate = new Dictionary<string, double>();
-                foreach (var currency in myobcurrencylist)
-                {
-                    DicCurrencyExRate[currency.CurrencyCode] = currency.ExchangeRate ?? 1;
-                }
-            }
-
-            Purchase.pstPurchaseDate = DateTime.Now.Date;
-            Purchase.TaxModel = ModelHelper.GetTaxInfo(context);
-            Purchase.UseForexAPI = ExchangeRateEditModel.GetForexInfo(context);
-
-            Purchase.Mode = idoapproval == 1 ? "readonly" : "";
-            PoSettings = PoSettingsEditModel.GetPoSettings(connection);
+                Purchase.Mode = idoapproval == 1 ? "readonly" : "";
+                PoSettings = PoSettingsEditModel.GetPoSettings(SqlConnection);
+            }        
         }
 
-        public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList=null)
+        public static List<PurchaseReturnMsg> Edit(PurchaseModel model, List<SupplierModel> SupplierList = null)
         {
             IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
             List<PurchaseReturnMsg> msglist = new();
@@ -231,17 +232,73 @@ namespace MMLib.Models.Purchase
 
             DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
 
-            using var context = new MMDbContext();
-            DateTime dateTime = DateTime.Now;
+            using (var context = new MMDbContext())
+            {
+                MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 
-            List<string> reviewurls = new();
-            List<GetSuperior4Notification2_Result> superiors = new();
-            Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
-            Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
+                DateTime dateTime = DateTime.Now;
 
-            sqlConnection.Open();
-            SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId", new { apId, userId = user.surUID }).ToList();
+                List<string> reviewurls = new();
+                List<GetSuperior4Notification2_Result> superiors = new();
+                Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
+                Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
 
+                if (sqlConnection.State == System.Data.ConnectionState.Closed) sqlConnection.Open();
+                using (sqlConnection)
+                {
+                    SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId", new { apId, userId = user.surUID }).ToList();
+
+                    if (IsUserRole.isfinancedept)
+                    {
+                        decimal Threshold4DA = Convert.ToDecimal(ConfigurationManager.AppSettings["Threshold4DA"]);
+                        SuperiorList = (ps.pstAmount > Threshold4DA) ? SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList() : SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.DirectorAssistant.ToString().ToLower()).ToList();
+                    }                   
+
+                    GetReviewUrls(model, reviewurls, DicReviewUrl, SuperiorList);
+
+                    if (!model.IsEditMode && purchasestatus != PurchaseStatus.draft.ToString()) updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
+                    else processPurchase(model, ps, dev, context, purchasestatus, SupplierList);
+
+                    status = "purchaseordersaved";
+
+                    if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
+                    {
+                        HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
+
+                        if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
+                        {
+                            #region Send Notification Email   
+                            if ((bool)comInfo.enableEmailNotification)
+                            {
+                                var mailsettings = sqlConnection.QueryFirstOrDefault<EmailModel>("EXEC dbo.GetEmailSettings @apId=@apId", new {apId});
+
+                                ReactType reactType = ReactType.RequestingByStaff;
+                                if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
+                                if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
+                                if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
+                                if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+
+                                var mdInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
+                                var dbInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
+
+                                if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, mailsettings, model.pstDesc, null, null, null, 0, null, mdInfo, dbInfo))
+                                {
+                                    var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
+                                    purchase.pstSendNotification = true;
+                                    context.SaveChanges();
+                                }
+                            }
+                            #endregion
+                        }
+                        GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+                    }
+                    return msglist;
+                }
+            }
+        }
+
+        public static void GetReviewUrls(PurchaseModel model, List<string> reviewurls, Dictionary<string, string> DicReviewUrl, List<Superior> SuperiorList)
+        {
             foreach (var superior in SuperiorList)
             {
                 var reviewurl = UriHelper.GetReviewPurchaseOrderUrl(ConfigurationManager.AppSettings["ReviewPurchaseOrderBaseUrl"], model.pstCode, 0, superior.surUID);
@@ -250,40 +307,8 @@ namespace MMLib.Models.Purchase
                     DicReviewUrl[key] = reviewurl;
                 reviewurls.Add(reviewurl);
             }
-
-            if (!model.IsEditMode && purchasestatus != PurchaseStatus.draft.ToString()) updatePurchaseRequest(model, context, purchasestatus, SupplierList);
-            else processPurchase(model, dev, context, purchasestatus, SupplierList);
-
-            status = "purchaseordersaved";
-
-            if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
-            {
-                HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
-
-                if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
-                {
-                    #region Send Notification Email   
-                    if ((bool)comInfo.enableEmailNotification)
-                    {
-                        ReactType reactType = ReactType.RequestingByStaff;
-                        if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
-                        if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
-                        if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
-                        if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-
-                        if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, model.pstDesc))
-                        {
-                            var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
-                            purchase.pstSendNotification = true;
-                            context.SaveChanges();
-                        }
-                    }
-                    #endregion
-                }
-                GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
-            }
-            return msglist;
         }
+
         private long addNewPurchase(MMDbContext context, int apId, string pstcode, string status, bool isThreshold, string pqstatus = null, bool addNewModel = true, string oldpstCode = null)
         {
             DateTime dateTime = DateTime.Now;
@@ -349,9 +374,9 @@ namespace MMLib.Models.Purchase
             }
         }
 
-        private static void processPurchase(PurchaseModel model, DeviceModel dev, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList=null)
+        private static void processPurchase(PurchaseModel model, MMDAL.Purchase ps, DeviceModel dev, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList = null)
         {
-            MMDAL.Purchase ps = updatePurchaseRequest(model, context, purchasestatus, SupplierList);
+            ps = updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
 
             if (purchasestatus.ToLower() == PurchaseStatus.order.ToString())
             {
@@ -384,20 +409,19 @@ namespace MMLib.Models.Purchase
         }
 
 
-        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList=null)
+        private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, MMDAL.Purchase ps, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList = null)
         {
-            var supcodes = SupplierList!=null? string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList()):null;
-            MMDAL.Purchase ps = _updatePurchaseRequest(model, context, purchasestatus, supcodes);
+            var supcodes = SupplierList != null ? string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList()) : null;
+            ps = _updatePurchaseRequest(model, ps, context, purchasestatus, supcodes);
 
-            if(SupplierList != null)
+            if (SupplierList != null)
                 AddSelectedSuppliers(model.pstCode, SupplierList, context);
             return ps;
         }
 
-        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, MMDbContext context, string purchasestatus, string supcodes=null)
+        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, MMDAL.Purchase ps, MMDbContext context, string purchasestatus, string supcodes = null)
         {
             var pstTime = DateTime.Now;
-            MMDAL.Purchase ps = context.Purchases.Find(model.Id);
 
             var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString() ? RequestStatus.draftingByStaff.ToString() : model.pqStatus;
 
@@ -565,7 +589,7 @@ namespace MMLib.Models.Purchase
                         //reactType = IsUserRole.isdirectorboard?ReactType.ApprovedByDirectorBoard:IsUserRole.ismuseumdirector? ReactType.ApprovedByMuseumDirector:IsUserRole.istransientmd?ReactType.ApprovedByTransientDirector: ReactType.ApprovedByDirectorAssistant;
                         pqStatus = RequestStatus.approvedByMuseumDirector.ToString();
                         reactType = ReactType.Approved;
-                        
+
                         updatePurchase4MDApproval(purchase, SelectedSupCode, context);
                     }
 
@@ -616,7 +640,7 @@ namespace MMLib.Models.Purchase
                     reactType = ReactType.RejectedByDeptHead;
                 }
 
-               
+
             }
 
             if (purchase.pstStatus == RequestStatus.onhold.ToString())

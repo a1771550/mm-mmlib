@@ -28,6 +28,7 @@ using CommonLib.App_GlobalResources;
 using MMLib.Models.Account;
 using MMLib.Models.Invoice;
 using MMLib.Models.Purchase;
+using System.Net.Configuration;
 
 namespace MMLib.Helpers
 {
@@ -800,31 +801,6 @@ namespace MMLib.Helpers
         }
 
 
-        public static DeviceModel GetDeviceInfo(LoginUserModel model)
-        {
-            DeviceModel device = new DeviceModel();
-            string infotxt = MMCommonLib.CommonHelpers.FileHelper.Read(device.DeviceInfoFileName);
-            if (!string.IsNullOrEmpty(infotxt))
-            {
-                string[] deviceinfo = infotxt.Split(new string[] { ";;" }, StringSplitOptions.None);
-                string hashdevice = deviceinfo[0];
-                string hashshop = deviceinfo[1];
-
-                if (HashHelper.ComputeHash(model.SelectedDevice) == hashdevice && HashHelper.ComputeHash(model.SelectedShop) == hashshop)
-                {
-                    device.dvcShop = model.SelectedShop;
-                    device.dvcCode = model.SelectedDevice;
-                    return device;
-                }
-            }
-            return null;
-        }
-
-        public static string GetDSNByAccountProfileId(MMDbContext context, int accountprofileId)
-        {
-            return context.AccountProfiles.FirstOrDefault(x => x.Id == accountprofileId).DsnName;
-        }
-
         public static void WriteLog(MMDbContext context, string message, string type)
         {
             DebugLog debugLog = new DebugLog();
@@ -936,16 +912,13 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, SessUser creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> Inferiors = null)
+        public static bool SendNotificationEmail(string pstCode, SessUser creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType,EmailModel mailsettings, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> Inferiors = null, List<UserModel> mdInfo = null, List<UserModel> dbInfo = null)
         {
             int okcount = 0;
             int ngcount = 0;
 
             bool enableReviewUrl = ConfigurationManager.AppSettings["EnableReviewUrl"] == "1";
-
-            EmailEditModel model = new EmailEditModel();
-            var mailsettings = model.Get();
-
+           
             MailAddress frm = new MailAddress(mailsettings.emEmail, mailsettings.emDisplayName);
 
             bool addbc = int.Parse(ConfigurationManager.AppSettings["AddBccToDeveloper"]) == 1;
@@ -974,13 +947,10 @@ namespace MMLib.Helpers
                 string strorder = string.Concat("<strong>", string.Format(Resource.RequestFormat, Resource.Purchase), "</strong>");
                 string orderdesc = getOrderDesc(desc, pstCode);
 
-                if (SqlConnection.State == ConnectionState.Closed) SqlConnection.Open();
-
                 if (isThreshold == 1)
                 {
                     if (reactType == ReactType.PassedToMuseumDirector)
                     {
-                        var mdInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
 
                         foreach (var md in mdInfo)
@@ -996,7 +966,7 @@ namespace MMLib.Helpers
                     }
                     if (reactType == ReactType.PassedToDirectorBoard)
                     {
-                        var dbInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
+
                         var rejectonholdreasonremarktxt = string.Concat("<strong>", Resource.MsgToDB, ":</strong>");
 
                         message.Subject = string.Format(Resource.PendingReviewFormat, Resource.PurchaseOrder);
@@ -1016,7 +986,6 @@ namespace MMLib.Helpers
                     }
                     if (reactType == ReactType.ApprovedByDirectorBoard)
                     {
-                        var mdInfo = SqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
                         message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);
                         foreach (var md in mdInfo)
                         {
@@ -1042,7 +1011,6 @@ namespace MMLib.Helpers
                 {
                     if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || reactType == ReactType.RequestingByDirectorAssistant)
                     {
-
                         foreach (var superior in SuperiorList)
                         {
                             var name = superior.UserName;
@@ -1055,8 +1023,6 @@ namespace MMLib.Helpers
                             mailbody = hanldeReviewUrl(pstCode, DicReviewUrl, enableReviewUrl, mailbody, superior);
                             FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
                         }
-
-
                     }
                     else
                     {

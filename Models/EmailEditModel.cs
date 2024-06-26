@@ -88,7 +88,6 @@ namespace MMLib.Models
                     model.CreateTime = EmailSetting.CreateTime;
                     model.ModifyTime = EmailSetting.ModifyTime;
                     model.emOffice365 = EmailSetting.emOffice365;
-                    model.iOffice365 = EmailSetting.emOffice365 ? 1 : 0;
                 }
                 return model;
             }

@@ -45,12 +45,13 @@ namespace MMLib.Models.Purchase
 			
 			PurchaseOrderList = new List<PurchaseModel>();
 
-			bool isMD = IsUserRole.ismuseumdirector;
+			bool isDirector = IsUserRole.ismuseumdirector||IsUserRole.isdirectorassistant||IsUserRole.isdirectorboard;
 			bool isFin = IsUserRole.isfinancedept;
-            string userCode = (isMD||isFin) ? null: user.UserCode;
-			string sql = (isMD || isFin) ? "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder": "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode";
+		
+            string userCode = (isDirector||isFin) ? null: user.UserCode;
+			string sql = (isDirector || isFin) ? "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder": "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode";
             if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
-            var orderlist = SqlConnection.Query<PurchaseModel>(sql, (isMD || isFin) ? new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder } : new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
+            var orderlist = SqlConnection.Query<PurchaseModel>(sql, (isDirector || isFin) ? new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder } : new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
