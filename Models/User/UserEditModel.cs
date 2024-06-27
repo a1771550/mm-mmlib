@@ -187,7 +187,7 @@ namespace MMLib.Models.User
                 {
                     user.UserName = User.UserName;
                     user.Email = User.Email;
-
+                    user.Threshold4DA = User.Threshold4DA;
                     user.SuperiorIds = string.Join(",", User.SuperiorIdList);
 
                     if (User.checkpass) user.Password = HashHelper.ComputeHash(User.Password);
@@ -211,6 +211,7 @@ namespace MMLib.Models.User
                     UserName = User.UserName,
                     Password = HashHelper.ComputeHash(User.Password),
                     SuperiorIds = string.Join(",", User.SuperiorIdList),
+                    Threshold4DA = User.Threshold4DA,
                     surIsActive = true,
                     shopCode = shop,
                     dvcCode = device,
