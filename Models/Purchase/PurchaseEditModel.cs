@@ -256,7 +256,7 @@ namespace MMLib.Models.Purchase
 
                     GetReviewUrls(model, reviewurls, DicReviewUrl, SuperiorList);
 
-                    if (!model.IsEditMode && purchasestatus != PurchaseStatus.draft.ToString()) updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
+                    if (!model.IsEditMode) updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
                     else processPurchase(model, ps, dev, context, purchasestatus, SupplierList);
 
                     status = "purchaseordersaved";
