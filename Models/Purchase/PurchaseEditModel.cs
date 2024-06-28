@@ -232,68 +232,66 @@ namespace MMLib.Models.Purchase
 
             DeviceModel dev = HttpContext.Current.Session["Device"] as DeviceModel;
 
-            using (var context = new MMDbContext())
+            using var context = new MMDbContext();
+            MMDAL.Purchase ps = context.Purchases.Find(model.Id);
+
+            DateTime dateTime = DateTime.Now;
+
+            List<string> reviewurls = new();
+            List<GetSuperior4Notification2_Result> superiors = new();
+            Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
+            Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
+
+            if (sqlConnection.State == System.Data.ConnectionState.Closed) sqlConnection.Open();
+            using (sqlConnection)
             {
-                MMDAL.Purchase ps = context.Purchases.Find(model.Id);
+                SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId", new { apId, userId = user.surUID }).ToList();
 
-                DateTime dateTime = DateTime.Now;
-
-                List<string> reviewurls = new();
-                List<GetSuperior4Notification2_Result> superiors = new();
-                Dictionary<string, string> DicReviewUrl = new Dictionary<string, string>();
-                Dictionary<string, Dictionary<string, int>> dicItemLocQty = new Dictionary<string, Dictionary<string, int>>();
-
-                if (sqlConnection.State == System.Data.ConnectionState.Closed) sqlConnection.Open();
-                using (sqlConnection)
+                if (IsUserRole.isfinancedept)
                 {
-                    SuperiorList = sqlConnection.Query<Superior>(@"EXEC dbo.GetSuperior4Notification2 @apId=@apId,@userId=@userId", new { apId, userId = user.surUID }).ToList();
-
-                    if (IsUserRole.isfinancedept)
-                    {
-                        decimal Threshold4DA = Convert.ToDecimal(ConfigurationManager.AppSettings["Threshold4DA"]);
-                        SuperiorList = (ps.pstAmount > Threshold4DA) ? SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList() : SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.DirectorAssistant.ToString().ToLower()).ToList();
-                    }                   
-
-                    GetReviewUrls(model, reviewurls, DicReviewUrl, SuperiorList);
-
-                    if (!model.IsEditMode) updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
-                    else processPurchase(model, ps, dev, context, purchasestatus, SupplierList);
-
-                    status = "purchaseordersaved";
-
-                    if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
-                    {
-                        HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
-
-                        if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
-                        {
-                            #region Send Notification Email   
-                            if ((bool)comInfo.enableEmailNotification)
-                            {
-                                var mailsettings = sqlConnection.QueryFirstOrDefault<EmailModel>("EXEC dbo.GetEmailSettings @apId=@apId", new {apId});
-
-                                ReactType reactType = ReactType.RequestingByStaff;
-                                if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
-                                if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
-                                if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
-                                if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
-
-                                var mdInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
-                                var dbInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
-
-                                if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, mailsettings, model.pstDesc, null, null, null, 0, null, mdInfo, dbInfo))
-                                {
-                                    var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
-                                    purchase.pstSendNotification = true;
-                                    context.SaveChanges();
-                                }
-                            }
-                            #endregion
-                        }
-                        GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
-                    }
-                    return msglist;
+                    decimal Threshold4DA = Convert.ToDecimal(ConfigurationManager.AppSettings["Threshold4DA"]);
+                    SuperiorList = (ps.pstAmount > Threshold4DA) ? SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList() : SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.DirectorAssistant.ToString().ToLower()).ToList();
                 }
+
+                GetReviewUrls(model, reviewurls, DicReviewUrl, SuperiorList);
+
+                if (!model.IsEditMode) updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
+                else processPurchase(model, ps, dev, context, purchasestatus, SupplierList);
+
+                status = "purchaseordersaved";
+
+                if (model.pstStatus.ToLower() != PurchaseStatus.draft.ToString().ToLower() && model.pstStatus.ToLower() != PurchaseStatus.order.ToString())
+                {
+                    HandlingPurchaseOrderReview(model.pstCode, model.pqStatus, context);
+
+                    if (!IsUserRole.isdirectorboard && !IsUserRole.ismuseumdirector)
+                    {
+                        #region Send Notification Email   
+                        if ((bool)comInfo.enableEmailNotification)
+                        {
+                            var mailsettings = sqlConnection.QueryFirstOrDefault<EmailModel>("EXEC dbo.GetEmailSettings @apId=@apId", new { apId });
+
+                            ReactType reactType = ReactType.RequestingByStaff;
+                            if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
+                            if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
+                            if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
+                            if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+
+                            var mdInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
+                            var dbInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
+
+                            if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, mailsettings, model.pstDesc, null, null, null, 0, null, mdInfo, dbInfo))
+                            {
+                                var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
+                                purchase.pstSendNotification = true;
+                                context.SaveChanges();
+                            }
+                        }
+                        #endregion
+                    }
+                    GenReturnMsgList(model, supnames, ref msglist, SuperiorList, status, IsUserRole.isdirectorboard, DicReviewUrl, IsUserRole.ismuseumdirector);
+                }
+                return msglist;
             }
         }
 
