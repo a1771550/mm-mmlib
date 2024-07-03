@@ -463,7 +463,7 @@ namespace MMLib.Models.Purchase
                 ps.pstRemark = model.pstRemark;
                 ps.pstOnHoldReason = model.pstOnHoldReason;
 
-                ps.CreateBy = ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
+                ps.ModifyBy = user.UserCode; //maybe created by staff01 first, but populated by staff02 later 
                 ps.ModifyTime = DateTime.Now;
                 context.SaveChanges();
             }
