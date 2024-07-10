@@ -9,8 +9,8 @@ using System.Configuration;
 using MMLib.Models.POS.MYOB;
 using MyobSupplier = MMDAL.MyobSupplier;
 using CommonLib.Models.MYOB;
-using System.Data.Odbc;
 using MMLib.Models.MYOB;
+using PagedList;
 
 namespace MMLib.Models.Supplier
 {
@@ -80,14 +80,15 @@ namespace MMLib.Models.Supplier
         }
 
         public List<MyobSupplierModel> SupplierList { get; set; }
-        public PagedList.IPagedList<MyobSupplierModel> PagingSupplierList { get; set; }
-        public void GetList()
+        public IPagedList<MyobSupplierModel> PagingSupplierList { get; set; }
+        public void GetList(int PageNo = 1, string SortName = "supName", string SortOrder = "asc", string Keyword = null)
         {
             if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
             using (SqlConnection)
             {
                 SupplierList = SqlConnection.Query<MyobSupplierModel>(@"EXEC dbo.GetSupplierList6 @apId=@apId,@sortName=@sortName,@sortOrder=@sortOrder,@keyword=@keyword", new { apId, sortName = SortName, sortOrder = SortOrder, keyword = Keyword }).ToList();
-            }            
+            }
+            PagingSupplierList = SupplierList.ToPagedList(PageNo, PageSize);
         }
 
         public static MyobSupplierModel QuickAdd(string supName)

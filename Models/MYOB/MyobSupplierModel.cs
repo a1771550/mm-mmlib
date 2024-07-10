@@ -35,7 +35,7 @@ namespace MMLib.Models.POS.MYOB
         public HashSet<string> UploadFileList { get; set; } = new HashSet<string>();
         public List<string> ImgList;
         public List<string> FileList;
-        //public string supAccount { get; set; }
+        public bool Removable { get; set; }
 
         public string Remark { get; set; }
     }
