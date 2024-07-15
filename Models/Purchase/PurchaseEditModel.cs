@@ -126,17 +126,17 @@ namespace MMLib.Models.Purchase
             SupplierList = new List<MyobSupplierModel>();
         }
 
-        public PurchaseEditModel(long Id, int? idoapproval) : this()
+        public PurchaseEditModel(long? Id, int? idoapproval) : this()
         {
             Get(Id, null, idoapproval);
         }
-        public PurchaseEditModel(long Id, string status = "", int? idoapproval = 1, bool forprint = false) : this()
+        public PurchaseEditModel(long? Id, string status = "", int? idoapproval = 1, bool forprint = false) : this()
         {
             Get(Id, null, idoapproval, status, forprint);
         }
 
 
-        public void Get(long Id = 0, string pstCode = null, int? idoapproval = 1, string status = "", bool forprint = false)
+        public void Get(long? Id, string pstCode = null, int? idoapproval = 1, string status = "", bool forprint = false)
         {
             bool isMD = UserHelper.CheckIfMD(User);
             bool isDB = UserHelper.CheckIfDB(User);
@@ -234,6 +234,7 @@ namespace MMLib.Models.Purchase
 
             using var context = new MMDbContext();
             MMDAL.Purchase ps = context.Purchases.Find(model.Id);
+            //model.pstCode = ps.pstCode;
 
             DateTime dateTime = DateTime.Now;
 
@@ -271,16 +272,26 @@ namespace MMLib.Models.Purchase
                         {
                             var mailsettings = sqlConnection.QueryFirstOrDefault<EmailModel>("EXEC dbo.GetEmailSettings @apId=@apId", new { apId });
 
-                            ReactType reactType = ReactType.RequestingByStaff;
-                            if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
-                            if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
-                            if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
-                            if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+                            ReactType reactType;
+                            if (model.pstStatus.ToLower() == PurchaseStatus.withdraw.ToString())
+                            {
+                                model.CreateTime = ps.CreateTime;                               
+                                reactType = ReactType.WithDraw;
+                            }
+                            else
+                            {
+                                reactType = ReactType.RequestingByStaff;
+                                if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
+                                if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
+                                if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
+                                if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
+                            }
+                           
 
                             var mdInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetMDInfo @apId=@apId", new { apId }).ToList();
                             var dbInfo = sqlConnection.Query<UserModel>($"EXEC dbo.GetDBInfo @apId=@apId", new { apId }).ToList();
 
-                            if (ModelHelper.SendNotificationEmail(model.pstCode, user, SuperiorList, DicReviewUrl, reactType, mailsettings, model.pstDesc, null, null, null, 0, null, mdInfo, dbInfo))
+                            if (ModelHelper.SendNotificationEmail(user, SuperiorList, DicReviewUrl, reactType, mailsettings, model, null, null, null, 0, null, mdInfo, dbInfo))
                             {
                                 var purchase = context.Purchases.FirstOrDefault(x => x.Id == model.Id);
                                 purchase.pstSendNotification = true;
@@ -538,7 +549,7 @@ namespace MMLib.Models.Purchase
             return connection.QueryFirstOrDefault<PurchaseModel>(@"EXEC dbo.GetPurchaseByCodeId1 @apId=@apId,@Id=@Id", new { apId, Id });
         }
 
-        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref MMDAL.Purchase purchase, out string pqStatus, string SelectedSupCode, MMDbContext context, int poThreshold)
+        public void GetPurchaseRequestStatus(ref ReactType reactType, IsUserRole IsUserRole, ref PurchaseModel purchase, out string pqStatus, string SelectedSupCode, MMDbContext context, int poThreshold)
         {
             pqStatus = "";
             if (purchase.pstStatus == RequestStatus.approved.ToString())

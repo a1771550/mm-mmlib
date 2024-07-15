@@ -117,6 +117,7 @@ namespace MMLib.Models.Purchase
 
 		public bool IsSupplierABSS { get; set; }
 
+		public bool CanWithDraw { get; set; }
 		
 		public PurchaseModel() { }
 		

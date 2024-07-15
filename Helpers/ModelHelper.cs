@@ -29,6 +29,7 @@ using MMLib.Models.Account;
 using MMLib.Models.Invoice;
 using MMLib.Models.Purchase;
 using System.Net.Configuration;
+using System.Runtime.Versioning;
 
 namespace MMLib.Helpers
 {
@@ -912,13 +913,15 @@ namespace MMLib.Helpers
         }
 
 
-        public static bool SendNotificationEmail(string pstCode, SessUser creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType,EmailModel mailsettings, string desc = null, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> Inferiors = null, List<UserModel> mdInfo = null, List<UserModel> dbInfo = null)
+        public static bool SendNotificationEmail(SessUser creator, List<Superior> SuperiorList, Dictionary<string, string> DicReviewUrl, ReactType reactType, EmailModel mailsettings, PurchaseModel purchase, string rejectonholdreasonremark = null, string suppernames = null, MyobSupplierModel selectedSupplier = null, int isThreshold = 0, List<Inferior> Inferiors = null, List<UserModel> mdInfo = null, List<UserModel> dbInfo = null)
         {
             int okcount = 0;
             int ngcount = 0;
+            string pstCode = purchase.pstCode;
+            string desc = purchase.pstDesc;
 
             bool enableReviewUrl = ConfigurationManager.AppSettings["EnableReviewUrl"] == "1";
-           
+
             MailAddress frm = new MailAddress(mailsettings.emEmail, mailsettings.emDisplayName);
 
             bool addbc = int.Parse(ConfigurationManager.AppSettings["AddBccToDeveloper"]) == 1;
@@ -933,7 +936,7 @@ namespace MMLib.Helpers
             var ccmail = ConfigurationManager.AppSettings["CCEmailAddress"].ToString().Split(',')[1];
             message.CC.Add(new MailAddress(ccmail, ccname));
 
-            message.Subject = string.Format(Resource.PendingApprovalFormat, Resource.PurchaseOrder);
+            message.Subject = (purchase.pstStatus.ToLower() == PurchaseStatus.withdraw.ToString()) ? Resource.WithdrawnRequest : string.Format(Resource.PendingApprovalFormat, Resource.PurchaseOrder);
             message.BodyEncoding = Encoding.UTF8;
             message.IsBodyHtml = true;
 
@@ -1009,7 +1012,24 @@ namespace MMLib.Helpers
                 }
                 else
                 {
-                    if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || reactType == ReactType.RequestingByDirectorAssistant)
+                    if (reactType == ReactType.WithDraw)
+                    {
+                        string createTimeDisplay = CommonHelper.FormatDateTime(purchase.CreateTime);
+                        string modifyTimeDisplay = purchase.ModifyTime==null?"N/A": CommonHelper.FormatDateTime((DateTime)purchase.ModifyTime);
+                        foreach (var superior in SuperiorList)
+                        {
+                            var name = superior.UserName;
+                            var email = superior.Email;
+
+                            orderdesc = GetDesc(desc);
+                            message.To.Add(new MailAddress(email, name));
+
+                            //Procurement Request (QA Number {0} , submitted by {1} at {2}) was withdrawn by {3} at {4}.                            
+                            mailbody = string.Format(Resource.WithdrawMsgFormat4Approver, pstCode, creator.UserName, createTimeDisplay, creator.UserName, modifyTimeDisplay);
+                            FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
+                        }
+                    }
+                    else if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || reactType == ReactType.RequestingByDirectorAssistant)
                     {
                         foreach (var superior in SuperiorList)
                         {
@@ -1084,9 +1104,14 @@ namespace MMLib.Helpers
                 }
             }
 
+            static string GetDesc(string desc)
+            {
+                return $"<p><strong>{Resource.Description}</strong>: {desc}</p>";
+            }
+
             static string getOrderDesc(string desc, string ordercode)
             {
-                return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p><p><strong>{Resource.Description}</strong>: {desc}</p>";
+                return $"<p><strong>{string.Format(Resource.RequestFormat, Resource.Procurement)}</strong>: {ordercode}</p>{GetDesc(desc)}";
             }
 
             static string hanldeReviewUrl(string pstCode, Dictionary<string, string> DicReviewUrl, bool enableReviewUrl, string mailbody, UserModel senior)
