@@ -250,8 +250,15 @@ namespace MMLib.Models.Purchase
 
                 if (IsUserRole.isfinancedept)
                 {
-                    decimal Threshold4DA = Convert.ToDecimal(ConfigurationManager.AppSettings["Threshold4DA"]);
-                    SuperiorList = (ps.pstAmount > Threshold4DA) ? SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList() : SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.DirectorAssistant.ToString().ToLower()).ToList();
+                    if (enableAssistant)
+                    {
+                        decimal Threshold4DA = Convert.ToDecimal(ConfigurationManager.AppSettings["Threshold4DA"]);
+                        SuperiorList = (ps.pstAmount > Threshold4DA) ? SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList() : SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.DirectorAssistant.ToString().ToLower()).ToList();
+                    }
+                    else
+                    {                       
+                        SuperiorList = SuperiorList.Where(x => x.UserRole.ToLower() == RoleType.MuseumDirector.ToString().ToLower()).ToList();
+                    }
                 }
 
                 GetReviewUrls(model, reviewurls, DicReviewUrl, SuperiorList);
@@ -283,7 +290,7 @@ namespace MMLib.Models.Purchase
                                 reactType = ReactType.RequestingByStaff;
                                 if (IsUserRole.isdepthead) reactType = ReactType.RequestingByDeptHead;
                                 if (IsUserRole.isfinancedept) reactType = ReactType.RequestingByFinanceDept;
-                                if (IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
+                                if (enableAssistant && IsUserRole.isdirectorassistant) reactType = ReactType.RequestingByDirectorAssistant;
                                 if (IsUserRole.ismuseumdirector || IsUserRole.isdirectorboard) reactType = ReactType.Approved;
                             }
                            
@@ -557,8 +564,7 @@ namespace MMLib.Models.Purchase
                 if (poThreshold == 1)
                 {
                     if (IsUserRole.isdirectorboard)
-                    {
-                        //purchase.pstStatus = PurchaseStatus.order.ToString();
+                    {                        
                         pqStatus = RequestStatus.approvedByDirectorBoard.ToString();
                         reactType = ReactType.ApprovedByDirectorBoard;
                     }
@@ -591,23 +597,15 @@ namespace MMLib.Models.Purchase
                 }
                 else
                 {
-                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
+                    if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || (EnableAssistant && IsUserRole.isdirectorassistant) || IsUserRole.istransientmd)
                     {
-                        purchase.pstStatus = PurchaseStatus.order.ToString();
-                        //pqStatus = IsUserRole.isdirectorboard? RequestStatus.approvedByDirectorBoard.ToString():IsUserRole.ismuseumdirector? RequestStatus.approvedByMuseumDirector.ToString():IsUserRole.istransientmd?RequestStatus.approvedByTransientDirector.ToString(): RequestStatus.approvedByDirectorAssistant.ToString();
-                        //reactType = IsUserRole.isdirectorboard?ReactType.ApprovedByDirectorBoard:IsUserRole.ismuseumdirector? ReactType.ApprovedByMuseumDirector:IsUserRole.istransientmd?ReactType.ApprovedByTransientDirector: ReactType.ApprovedByDirectorAssistant;
+                        purchase.pstStatus = PurchaseStatus.order.ToString();                       
                         pqStatus = RequestStatus.approvedByMuseumDirector.ToString();
                         reactType = ReactType.Approved;
 
                         updatePurchase4MDApproval(purchase, SelectedSupCode, context);
                     }
-
-                    //if (IsUserRole.isdirectorassistant)
-                    //{
-                    //    pqStatus = RequestStatus.requestingByDirectorAssistant.ToString();
-                    //    reactType = ReactType.passedby;
-                    //}
-
+                    
                     if (IsUserRole.isfinancedept)
                     {
                         pqStatus = RequestStatus.requestingByFinanceDept.ToString();
@@ -631,7 +629,7 @@ namespace MMLib.Models.Purchase
             if (purchase.pstStatus == RequestStatus.rejected.ToString())
             {
                 reactType = ReactType.RejectedByDeptHead;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || (EnableAssistant && IsUserRole.isdirectorassistant) || IsUserRole.istransientmd)
                 {
                     pqStatus = RequestStatus.rejectedByMuseumDirector.ToString();
                     reactType = ReactType.Rejected;
@@ -655,7 +653,7 @@ namespace MMLib.Models.Purchase
             if (purchase.pstStatus == RequestStatus.onhold.ToString())
             {
                 reactType = ReactType.OnHoldByFinanceDept;
-                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || IsUserRole.isdirectorassistant || IsUserRole.istransientmd)
+                if (IsUserRole.isdirectorboard || IsUserRole.ismuseumdirector || (EnableAssistant && IsUserRole.isdirectorassistant) || IsUserRole.istransientmd)
                 {
                     pqStatus = RequestStatus.onholdByMuseumDirector.ToString();
                     reactType = ReactType.OnHoldByMuseumDirector;

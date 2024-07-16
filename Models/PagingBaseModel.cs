@@ -14,7 +14,9 @@ namespace MMLib.Models
 {
 	public class PagingBaseModel:MMCommonLib.BaseModels.PagingBaseModel
 	{
-		public bool EnableItemOptions { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemOptions"]) == 1; } }
+		public bool EnableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
+        public static bool enableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
+        public bool EnableItemOptions { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemOptions"]) == 1; } }
 		public bool EnableItemVari { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemVariations"]) == 1; } }
 		public static bool enableItemOptions { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemOptions"]) == 1; } }
 		public static bool enableItemVari { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemVariations"]) == 1; } }

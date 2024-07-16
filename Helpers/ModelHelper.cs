@@ -28,13 +28,12 @@ using CommonLib.App_GlobalResources;
 using MMLib.Models.Account;
 using MMLib.Models.Invoice;
 using MMLib.Models.Purchase;
-using System.Net.Configuration;
-using System.Runtime.Versioning;
 
 namespace MMLib.Helpers
 {
     public static class ModelHelper
     {
+        public static bool EnableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
         public const string sqlfields4Journal = "JournalNumber,JournalDate,Memo,Inclusive,AccountNumber,DebitExTaxAmount,DebitIncTaxAmount,CreditExTaxAmount,CreditIncTaxAmount,Job,AllocationMemo";
 
         public const string sqlfields4Sales = "InvoiceNumber,SaleDate,AmountPaid,ItemNumber,Quantity,Price,Discount,SaleStatus,Location,CardID,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,JobName,SalespersonFirstName,SalespersonLastName,Memo,TaxCode,CurrencyCode,ExchangeRate,AddressLine1,AddressLine2,AddressLine3,AddressLine4";
@@ -100,16 +99,6 @@ namespace MMLib.Helpers
                 }
             }
         }
-
-
-
-
-
-
-
-
-
-
 
         public static void SaveSuppliersFrmCentral(MMDbContext context, int apId, ComInfo comInfo = null)
         {
@@ -1029,7 +1018,7 @@ namespace MMLib.Helpers
                             FinalTouch4SendMail(creator, ref okcount, ref ngcount, mailsettings, message, ref mailbody, orderdesc);
                         }
                     }
-                    else if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || reactType == ReactType.RequestingByDirectorAssistant)
+                    else if (reactType == ReactType.RequestingByStaff || reactType == ReactType.RequestingByDeptHead || reactType == ReactType.RequestingByFinanceDept || (EnableAssistant && reactType == ReactType.RequestingByDirectorAssistant))
                     {
                         foreach (var superior in SuperiorList)
                         {
