@@ -11,13 +11,14 @@ using System.Threading.Tasks;
 using System;
 using System.Text.Json;
 using MMLib.Models.ForEx;
+using MMCommonLib.Models;
 
 namespace MMLib.Models.POS.Settings
 {
     public class ExchangeRateEditModel
     {
-        private ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfo; } }
-        private static ComInfo comInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfo; } }
+        private ComInfoModel ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfoModel; } }
+        private static ComInfoModel comInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfoModel; } }
         public bool UseForexAPI { get; set; } = false;
 
         public ExchangeRateEditModel()

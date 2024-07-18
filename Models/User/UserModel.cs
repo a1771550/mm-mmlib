@@ -49,6 +49,7 @@ namespace MMLib.Models.User
         public string ModifyTimeDisplay { get { return surModifyTime == null ? "N/A" : CommonLib.Helpers.CommonHelper.FormatDateTime((DateTime)surModifyTime); } }
         public int IsActive { get { return surIsActive ? 1 : 0; } }
        
+        public bool EnableAssistant { get; set; }
         public decimal? Threshold4DA { get; set; }
         public string Threshold4DADisplay { get { return Threshold4DA == null ? CommonLib.Helpers.CommonHelper.FormatNumber(0,false) : CommonLib.Helpers.CommonHelper.FormatNumber((decimal)Threshold4DA,false); } }
      
@@ -108,5 +109,6 @@ namespace MMLib.Models.User
 		public bool isapprover { get; set; }
         public bool isdirectorassistant { get; set; }
         public bool istransientmd { get; set; }
+        public bool issystemadmin { get; set; }
 	}
 }

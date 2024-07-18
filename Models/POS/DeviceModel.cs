@@ -1,4 +1,5 @@
-﻿using MMDAL;
+﻿using MMCommonLib.Models;
+using MMDAL;
 using System;
 using System.Configuration;
 using System.Web;
@@ -14,7 +15,7 @@ namespace MMLib.Models
         //public int AccountProfileId { getPG; set; }
 		public DeviceModel()
 		{           
-            DeviceInfoFileName = HttpContext.Current.Session["ComInfo"]==null? ConfigurationManager.AppSettings["DeviceInfoFileName"]: (HttpContext.Current.Session["ComInfo"] as ComInfo).DeviceInfoFileName;
+            DeviceInfoFileName = HttpContext.Current.Session["ComInfo"]==null? ConfigurationManager.AppSettings["DeviceInfoFileName"]: (HttpContext.Current.Session["ComInfo"] as ComInfoModel).DeviceInfoFileName;
 		}      
     }
 }

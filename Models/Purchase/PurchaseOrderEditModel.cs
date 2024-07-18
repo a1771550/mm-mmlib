@@ -7,8 +7,6 @@ using MMLib.Models.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
-using MMLib.Helpers;
 using Microsoft.Data.SqlClient;
 using MMLib.Models.Invoice;
 
@@ -24,7 +22,6 @@ namespace MMLib.Models.Purchase
 		public PagedList.IPagedList<PurchaseModel> PagingProcurementList { get; set; }
 		public string KPurchasemanCode { get; set; }
 		public string SearchModeList { get; set; }
-		public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
 		public void GetProcurementList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
 		{
 			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);

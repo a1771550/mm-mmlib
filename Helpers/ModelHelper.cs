@@ -28,12 +28,12 @@ using CommonLib.App_GlobalResources;
 using MMLib.Models.Account;
 using MMLib.Models.Invoice;
 using MMLib.Models.Purchase;
+using MMCommonLib.Models;
 
 namespace MMLib.Helpers
 {
     public static class ModelHelper
     {
-        public static bool EnableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
         public const string sqlfields4Journal = "JournalNumber,JournalDate,Memo,Inclusive,AccountNumber,DebitExTaxAmount,DebitIncTaxAmount,CreditExTaxAmount,CreditIncTaxAmount,Job,AllocationMemo";
 
         public const string sqlfields4Sales = "InvoiceNumber,SaleDate,AmountPaid,ItemNumber,Quantity,Price,Discount,SaleStatus,Location,CardID,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,JobName,SalespersonFirstName,SalespersonLastName,Memo,TaxCode,CurrencyCode,ExchangeRate,AddressLine1,AddressLine2,AddressLine3,AddressLine4";
@@ -47,10 +47,11 @@ namespace MMLib.Helpers
 
         private static string DefaultConnection { get { return ConfigurationManager.AppSettings["DefaultConnection"]; } }
         private static SqlConnection SqlConnection { get { return new SqlConnection(DefaultConnection); } }
-        private static ComInfo ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfo; } }
+        private static ComInfoModel ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfoModel; } }
         //private static List<string> Shops;
         private static int AccountProfileId { get { return ComInfo == null ? int.Parse(ConfigurationManager.AppSettings["apId"]) : ComInfo.AccountProfileId; } }
         private static int apId { get { return AccountProfileId; } }
+        public static bool EnableAssistant { get { return ComInfo.EnableAssistant; } }
         private static int CompanyId { get { return 1; } }
 
         public static List<Country> PopulateDefaultCountries()
@@ -986,7 +987,6 @@ namespace MMLib.Helpers
                             sendMail(ref okcount, ref ngcount, mailsettings, message, ref mailbody);
                         }
                     }
-
                     if (reactType == ReactType.ApprovedByMuseumDirector)
                     {
                         message.Subject = string.Format(Resource.ApprovedFormat, Resource.PurchaseOrder);

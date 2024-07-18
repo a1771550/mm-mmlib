@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
-
 using System.Linq;
 using System;
-using MMLib.Helpers;
 using System.Configuration;
 using System.Text.RegularExpressions;
 using MMDAL;
 using Dapper;
-using System.Runtime.Remoting.Contexts;
 using MMLib.Models.Account;
 using CommonLib.Helpers;
 using ModelHelper = MMLib.Helpers.ModelHelper;
@@ -88,29 +85,6 @@ namespace MMLib.Models.User
             bool active = (isactive == null) ? true : (int)isactive == 1;
             return sqlConnection.QueryFirstOrDefault<UserModel>(@"EXEC dbo.GetUsers @apId=@apId,@active=@active,@staffId=@staffId", new { apId, active, staffId });
         }
-
-        public static void Add(UserModel model)
-        {
-            using (var context = new MMDbContext())
-            {
-                var apId = ModelHelper.GetAccountProfileId(context);
-                var staffman = new SysUser
-                {
-                    UserCode = model.UserCode,
-                    UserName = model.UserName,
-                    surIsActive = true,
-                    Password = CommonLib.Helpers.HashHelper.ComputeHash(model.Password),
-                    surScope = "pos",
-                    surCreateTime = DateTime.Now,
-                    surModifyTime = DateTime.Now,
-                    AccountProfileId = apId,
-                };
-                context.SysUsers.Add(staffman);
-                context.SaveChanges();
-            }
-        }
-
-
         public static IsUserRole GetIsUserRole(SessUser user)
         {
             return new IsUserRole
@@ -122,6 +96,7 @@ namespace MMLib.Models.User
                 isdirectorboard = user.Roles.Contains(RoleType.DirectorBoard),
                 isapprover = user.Roles.Any(x => x != RoleType.Staff),
                 isdirectorassistant = user.Roles.Contains(RoleType.DirectorAssistant),
+                issystemadmin = user.Roles.Any(x=>x== RoleType.SystemAdmin),
             };
         }
 
@@ -188,11 +163,14 @@ namespace MMLib.Models.User
                     user.UserName = User.UserName;
                     user.Email = User.Email;
                     user.Threshold4DA = User.Threshold4DA;
-                    user.SuperiorIds = string.Join(",", User.SuperiorIdList);
-
+                    user.SuperiorIds = string.Join(",", User.SuperiorIdList);                   
                     if (User.checkpass) user.Password = HashHelper.ComputeHash(User.Password);
-
                     user.surModifyTime = DateTime.Now;
+
+                    ComInfo comInfo = context.ComInfoes.FirstOrDefault(x => x.AccountProfileId == apId);
+                    comInfo.EnableAssistant = User.EnableAssistant;
+                    comInfo.ModifyTime = DateTime.Now;
+
                     context.SaveChanges();
                 }
             }

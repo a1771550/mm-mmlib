@@ -2,12 +2,10 @@
 using Dapper;
 using PagedList;
 using MMDAL;
-using MMLib.Models.Supplier;
 using MMLib.Models.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using MMLib.Helpers;
 using Microsoft.Data.SqlClient;
 using MMLib.Models.MYOB;
@@ -15,9 +13,6 @@ using System.Text.Json;
 using ModelHelper = MMLib.Helpers.ModelHelper;
 using MMLib.Models.Purchase;
 using System.Configuration;
-using System.IO;
-using System.Web.UI;
-using System.IdentityModel.Tokens;
 
 namespace MMLib.Models.Invoice
 {
@@ -26,7 +21,7 @@ namespace MMLib.Models.Invoice
         public Dictionary<string, List<InvoicePayInfoModel>> DicInvPayFileList { get; set; } = new Dictionary<string, List<InvoicePayInfoModel>>();
         public Dictionary<string, List<InvoiceLineInfoModel>> DicInvLineFileList { get; set; } = new Dictionary<string, List<InvoiceLineInfoModel>>();
         public Dictionary<string, List<InvoicePayModel>> DicInvoicePays { get; set; } = new Dictionary<string, List<InvoicePayModel>>();
-        public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(user); } }
+      
         public bool IsMD { get { return IsUserRole.ismuseumdirector; } }
         public bool IsDB { get { return IsUserRole.isdirectorboard; } }
 

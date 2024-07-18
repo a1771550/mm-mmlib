@@ -16,9 +16,6 @@ namespace MMLib.Helpers
 {
     public static class MYOBHelper
 	{
-		private static string ConnectionString = ConfigurationManager.AppSettings["DefaultConnection"];
-		//private static ComInfo ComInfo = HttpContext.Current.Session == null?null: HttpContext.Current.Session["ComInfo"] as ComInfo;
-
 		public static DataTable GetQuotationList(AccountProfileDTO dto, int selectedLocationId = 0)
 		{
 			string sql = "SELECT main.InvoiceNumber as 'Order No',main.InvoiceDate as Date,c.Name as CustomerName,i.ItemNumber,i.ItemName,e.Name as 'SalesPersonName',l.Quantity as Qty,l.TaxInclusiveUnitPrice,main.SalesPersonID,c.CardRecordID as CustomerID FROM Sales main join ItemSaleLines l on main.SaleID = l.SaleID join Items i on l.ItemID = i.ItemID join Customers c on main.CardRecordID = c.CardRecordID left join Employees e on main.SalespersonID = e.EmployeeID where main.InvoiceStatusID = 'Q' ";

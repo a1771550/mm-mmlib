@@ -1,21 +1,15 @@
 ﻿using MMLib.Models.POS.MYOB;
 using MMLib.Models.Purchase;
-using MMLib.Models.Supplier;
-using System;
+using MMLib.Models.User;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace MMLib.Models
 {
-	public class PagingBaseModel:MMCommonLib.BaseModels.PagingBaseModel
+    public class PagingBaseModel:MMCommonLib.BaseModels.PagingBaseModel
 	{
-		public bool EnableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
-        public static bool enableAssistant { get { return ConfigurationManager.AppSettings["EnableAssistant"] == "1"; } }
         public bool EnableItemOptions { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemOptions"]) == 1; } }
 		public bool EnableItemVari { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemVariations"]) == 1; } }
 		public static bool enableItemOptions { get { return int.Parse(ConfigurationManager.AppSettings["EnableItemOptions"]) == 1; } }
@@ -23,7 +17,11 @@ namespace MMLib.Models
 	
 		public SessUser User => HttpContext.Current.Session["User"] as SessUser;
 		public static SessUser user => HttpContext.Current.Session["User"] as SessUser;
+        public IsUserRole IsUserRole { get { return UserEditModel.GetIsUserRole(User); } }
+        public static IsUserRole isUserRole { get { return UserEditModel.GetIsUserRole(user); } }
 
+        public bool EnableAssistant { get { return ComInfo.EnableAssistant; } }
+        public static bool enableAssistant { get { return comInfo.EnableAssistant; } }
         public List<string> ImgList;
         public List<string> FileList;
 

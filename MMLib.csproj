@@ -256,7 +256,6 @@
     <Compile Include="Models\Account\LoginUserModel.cs" />
     <Compile Include="Models\BaseModel.cs" />
     <Compile Include="Models\ComInfoEditModel.cs" />
-    <Compile Include="Models\ComInfoModel.cs" />
     <Compile Include="Models\Currency\CurrencyHelper.cs" />
     <Compile Include="Models\DayEndsItem.cs" />
     <Compile Include="Models\DayEndsModel.cs" />

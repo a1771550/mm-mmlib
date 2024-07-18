@@ -5,7 +5,7 @@ using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
 using MMDAL;
-using MMCommonLib.BaseModels;
+using MMCommonLib.Models;
 
 namespace MMLib.Models
 {
