@@ -45,7 +45,7 @@ namespace MMLib.Helpers
         public const string sqlfields4Deposit = "CardID,InvoiceNumber,SaleDate,AccountNumber,Amount4Abss,SaleStatus,DeliveryStatus,Memo,SalesPersonLastName,Description,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge";
 
 
-        private static string DefaultConnection { get { return ConfigurationManager.AppSettings["DefaultConnection"]; } }
+        private static string DefaultConnection { get { return ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString; } }
         private static SqlConnection SqlConnection { get { return new SqlConnection(DefaultConnection); } }
         private static ComInfoModel ComInfo { get { return HttpContext.Current.Session["ComInfo"] as ComInfoModel; } }
         //private static List<string> Shops;

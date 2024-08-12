@@ -16,13 +16,13 @@ namespace MMLib.Models.Purchase
 	{
 		public PurchaseModel PurchaseOrder { get; set; }
 		public List<PurchaseModel> PurchaseOrderList { get; set; }
-	
+		public bool ShowWithDrawn { get; set; }
 		public SupplierModel Supplier;
 		public PurchaseOrderEditModel() { }
 		public PagedList.IPagedList<PurchaseModel> PagingProcurementList { get; set; }
 		public string KPurchasemanCode { get; set; }
 		public string SearchModeList { get; set; }
-		public void GetProcurementList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode)
+		public void GetProcurementList(string strfrmdate, string strtodate, int PageNo, string SortName, string SortOrder, string Keyword, int filter, string searchmode, int iShowWithDrawn)
 		{
 			IsUserRole IsUserRole = UserEditModel.GetIsUserRole(user);
 
@@ -45,9 +45,9 @@ namespace MMLib.Models.Purchase
 			bool isStaff = IsUserRole.isstaff;
 		
             string userCode = isStaff? user.UserCode:null;
-			string sql = (!isStaff) ? "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder": "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@userCode=@userCode";
+			string sql = (!isStaff) ? "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@showWithDrawn=@showWithDrawn": "EXEC dbo.GetProcurementList @apId=@apId,@frmdate=@frmdate,@todate=@todate,@sortName=@sortName,@sortOrder=@sortOrder,@showWithDrawn=@showWithDrawn,@userCode=@userCode";
             if (SqlConnection.State == System.Data.ConnectionState.Closed) SqlConnection.Open();
-            var orderlist = SqlConnection.Query<PurchaseModel>(sql, (!isStaff) ? new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder } : new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, userCode }).ToList();
+            var orderlist = SqlConnection.Query<PurchaseModel>(sql, (!isStaff) ? new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, showWithDrawn=iShowWithDrawn==1 } : new { apId, frmdate, todate, sortName = SortName, sortOrder = SortOrder, showWithDrawn = iShowWithDrawn == 1, userCode }).ToList();
 			orderlist = FilterOrderList(Keyword, searchmode, orderlist);
 
 			List<PurchaseModel> filteredOrderList = new List<PurchaseModel>();
@@ -71,6 +71,8 @@ namespace MMLib.Models.Purchase
 				}
 				PagingProcurementList = PurchaseOrderList.ToPagedList(PageNo, PageSize);
 			}
+
+			ShowWithDrawn = iShowWithDrawn == 1;
 		}
 
 		private List<PurchaseModel> FilterOrderList(string Keyword, string searchmode, List<PurchaseModel> orderlist)

@@ -423,15 +423,16 @@ namespace MMLib.Models.Purchase
         private static MMDAL.Purchase updatePurchaseRequest(PurchaseModel model, MMDAL.Purchase ps, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList = null)
         {
             var supcodes = SupplierList != null ? string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList()) : null;
-            ps = _updatePurchaseRequest(model, ps, context, purchasestatus, supcodes);
+            ps = _updatePurchaseRequest(model, ps, context, purchasestatus, SupplierList);
 
             if (SupplierList != null)
-                AddSelectedSuppliers(model.pstCode, SupplierList, context);
+                EditSelectedSuppliers(model.pstCode, SupplierList, context);
             return ps;
         }
 
-        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, MMDAL.Purchase ps, MMDbContext context, string purchasestatus, string supcodes = null)
+        private static MMDAL.Purchase _updatePurchaseRequest(PurchaseModel model, MMDAL.Purchase ps, MMDbContext context, string purchasestatus, List<SupplierModel> SupplierList = null)
         {
+            var supcodes = SupplierList != null ? string.Join(",", SupplierList.Select(x => x.supCode).Distinct().ToList()) : null;
             var pstTime = DateTime.Now;
 
             var pqstatus = model.pstStatus.ToLower() == PurchaseStatus.draft.ToString() ? RequestStatus.draftingByStaff.ToString() : model.pqStatus;
@@ -481,18 +482,26 @@ namespace MMLib.Models.Purchase
                 context.SaveChanges();
             }
 
+            if (SupplierList != null)
+            {
+
+            }
+
             return ps;
         }
 
-        private static void AddSelectedSuppliers(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
+        private static void EditSelectedSuppliers(string pstCode, List<SupplierModel> SupplierList, MMDbContext context)
         {
-            List<PurchaseSupplier> pslist = [];
-            List<string> currentRecords = context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode)?.Select(x => x.supCode.ToLower()).ToList();            
+            DateTime dateTime = DateTime.Now;
+            List<PurchaseSupplier> newPSList = [];
+            List<PurchaseSupplier> pslist = [.. context.PurchaseSuppliers.Where(x => x.AccountProfileId == apId && x.pstCode == pstCode)];
+            
+            List<string> currentRecords = pslist?.Select(x => x.supCode.ToLower()).ToList();            
             if (currentRecords == null)
             {
                 foreach(var supplier in SupplierList)
                 {
-                    pslist.Add(new PurchaseSupplier
+                    newPSList.Add(new PurchaseSupplier
                     {
                         pstCode = pstCode,
                         supCode = supplier.supCode,
@@ -500,7 +509,7 @@ namespace MMLib.Models.Purchase
                         Remark = supplier.Remark,
                         Selected = false,
                         AccountProfileId = apId,
-                        CreateTime = DateTime.Now,
+                        CreateTime = dateTime,
                     });
                 }
             }
@@ -512,7 +521,7 @@ namespace MMLib.Models.Purchase
                     var supplier = group.FirstOrDefault();
                     if (!currentRecords.Contains(supplier.supCode.ToLower()))
                     {
-                        pslist.Add(new PurchaseSupplier
+                        newPSList.Add(new PurchaseSupplier
                         {
                             pstCode = pstCode,
                             supCode = supplier.supCode,
@@ -520,13 +529,22 @@ namespace MMLib.Models.Purchase
                             Remark = supplier.Remark,
                             Selected = false,
                             AccountProfileId = apId,
-                            CreateTime = DateTime.Now,
+                            CreateTime = dateTime,
                         });
+                    }
+                    else
+                    {
+                        var ps = pslist.FirstOrDefault(x=>x.supCode==supplier.supCode);
+                        if (ps != null)
+                        {
+                            ps.Amount = supplier.Amount;
+                            ps.Remark = supplier.Remark;
+                            ps.ModifyTime = dateTime;
+                        }
                     }
                 }
             }
-            
-            context.PurchaseSuppliers.AddRange(pslist);
+            if(newPSList.Count > 0) context.PurchaseSuppliers.AddRange(newPSList);            
             context.SaveChanges();
         }
 
